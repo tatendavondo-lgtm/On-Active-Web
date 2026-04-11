@@ -1,0 +1,17 @@
+{
+  "name": "On Active Wear",
+  "short_name": "On Active Wear",
+  "icons": [
+    {
+      "src": "/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "description": "Premium Fitness Apparel. Own It, Wear It, Feel It."
+}
