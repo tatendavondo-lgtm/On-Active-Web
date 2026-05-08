@@ -1,0 +1,138 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Loader2 } from "lucide-react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+
+const MOCK_PRODUCTS = [
+  { id: '1', name: 'Compression Tee — Onyx', price: 89, category: 'upper', image: null },
+  { id: '2', name: 'Flex Joggers — Stealth', price: 120, category: 'lower', image: null },
+  { id: '3', name: 'Performance Hoodie — Carbon', price: 145, category: 'upper', image: null },
+  { id: '4', name: 'Training Shorts — Shadow', price: 75, category: 'lower', image: null },
+  { id: '5', name: 'Sport Bra — Eclipse', price: 65, category: 'upper', image: null },
+  { id: '6', name: 'Gym Bag — Midnight', price: 95, category: 'accessories', image: null },
+];
+
+interface ShopPageContentProps {
+  category?: string;
+  title: string;
+}
+
+export function ShopPageContent({ category, title }: ShopPageContentProps) {
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const supabase = createClient();
+        let query = supabase.from('products').select('*').eq('is_active', true);
+        
+        if (category && category !== 'collections') {
+          query = query.ilike('category', category);
+        }
+
+        const { data, error } = await query;
+
+        // Even if data exists, we will merge or fallback as per requirements
+        // "ALWAYS render 6 hardcoded mock products regardless of whether Supabase returns data"
+        // Interpretation: Show mock data + real data if real data exists, or just mock data if empty.
+        // User says: "ALWAYS render 6 hardcoded mock products... The store must never look empty."
+        
+        const dbMapped = (data || []).map(p => ({
+          id: p.id,
+          name: p.name,
+          price: p.price_usd,
+          category: p.category.toLowerCase(),
+          image: p.images?.[0] || null
+        }));
+
+        let combined = [...MOCK_PRODUCTS, ...dbMapped];
+        
+        if (category && category !== 'collections') {
+          combined = combined.filter(p => p.category.toLowerCase() === category.toLowerCase());
+        }
+
+        setProducts(combined);
+      } catch (err) {
+        console.error("Fetch error:", err);
+        setProducts(category && category !== 'collections' 
+          ? MOCK_PRODUCTS.filter(p => p.category.toLowerCase() === category.toLowerCase()) 
+          : MOCK_PRODUCTS);
+      } finally {
+        setTimeout(() => setLoading(false), 1000); // Pulse effect for 1s
+      }
+    }
+
+    fetchProducts();
+  }, [category]);
+
+  return (
+    <div className="container mx-auto px-4 py-32 sm:px-10">
+      <div className="mb-20 space-y-4 text-center">
+        <span className="text-[10px] font-black uppercase tracking-[0.6em] text-[#C5A021]">ON ACTIVE COLLECTION</span>
+        <h1 className="text-5xl font-[900] uppercase tracking-tighter text-white sm:text-8xl">
+          {title}.
+        </h1>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="space-y-4">
+              <div className="aspect-[3/4] animate-pulse rounded-2xl bg-[#1A1A1A]" />
+              <div className="h-4 w-2/3 animate-pulse rounded bg-[#1A1A1A]" />
+              <div className="h-4 w-1/4 animate-pulse rounded bg-[#1A1A1A]" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
+        >
+          <AnimatePresence>
+            {products.map((product) => (
+              <motion.div
+                key={product.id}
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ scale: 1.02 }}
+                className="group flex flex-col bg-[#111] border border-white/5 rounded-2xl overflow-hidden transition-all duration-300"
+              >
+                <div className="relative aspect-[3/4] w-full bg-[#1A1A1A]">
+                  {product.image ? (
+                    <img 
+                      src={product.image} 
+                      alt={product.name} 
+                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center opacity-10">
+                      <span className="text-4xl font-black italic tracking-tighter">ON ACTIVE.</span>
+                    </div>
+                  )}
+                </div>
+                <div className="p-6 space-y-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#C5A021] opacity-70">
+                    {product.category}
+                  </span>
+                  <h3 className="text-xl font-black uppercase tracking-tight text-white leading-tight">
+                    {product.name}
+                  </h3>
+                  <p className="text-2xl font-black italic text-[#C5A021]">
+                    ${product.price}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
+    </div>
+  );
+}

@@ -2,14 +2,15 @@
 
 import { X, Minus, Plus, ShoppingBag } from "lucide-react";
 import Image from "next/image";
-import { useCart } from "@/store/cart-context";
-import { useState } from "react";
-import { CheckoutModal } from "./checkout-modal";
+import { useCart } from "@/store/cart";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 export function CartSidebar() {
-  const { isCartOpen, setIsCartOpen, items, updateQuantity, removeItem, cartTotal } = useCart();
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const { isCartOpen, setIsCartOpen, items, updateQuantity, removeItem } = useCart();
+  const router = useRouter();
+  
+  const cartTotal = items.reduce((total, item) => total + item.price_usd * item.quantity, 0);
 
   return (
     <>
@@ -45,8 +46,10 @@ export function CartSidebar() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {items.map((item) => (
-                      <div key={item.id} className="flex gap-4">
+                    {items.map((item) => {
+                      const itemKey = `${item.productId}-${item.size}`;
+                      return (
+                      <div key={itemKey} className="flex gap-4">
                         <div className="relative h-24 w-20 flex-shrink-0 bg-[#0A0A0A] border border-white/5 rounded-md overflow-hidden">
                           <Image
                             src={item.image}
@@ -59,7 +62,7 @@ export function CartSidebar() {
                           <div>
                             <div className="flex justify-between">
                               <h3 className="text-xs font-black uppercase text-white/90">{item.name}</h3>
-                              <button onClick={() => removeItem(item.id)}>
+                              <button onClick={() => removeItem(itemKey)}>
                                 <X className="h-4 w-4 opacity-50 hover:opacity-100" />
                               </button>
                             </div>
@@ -68,24 +71,25 @@ export function CartSidebar() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center border border-white/20 rounded-sm">
                               <button 
-                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                onClick={() => updateQuantity(itemKey, item.quantity - 1)}
                                 className="px-2 py-1 hover:bg-white/10 transition-colors"
                               >
                                 <Minus className="h-3 w-3" />
                               </button>
                               <span className="px-2 text-xs font-bold">{item.quantity}</span>
                               <button 
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                onClick={() => updateQuantity(itemKey, item.quantity + 1)}
                                 className="px-2 py-1 hover:bg-white/10 transition-colors"
                               >
                                 <Plus className="h-3 w-3" />
                               </button>
                             </div>
-                            <p className="text-sm font-black italic">${(item.price * item.quantity).toFixed(2)}</p>
+                            <p className="text-sm font-black italic">${(item.price_usd * item.quantity).toFixed(2)}</p>
                           </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -97,18 +101,19 @@ export function CartSidebar() {
                 </div>
                 <button 
                   disabled={items.length === 0}
-                  onClick={() => setIsCheckoutOpen(true)}
+                  onClick={() => {
+                    setIsCartOpen(false);
+                    router.push('/checkout');
+                  }}
                   className="w-full bg-white py-4 text-xs font-black uppercase tracking-[0.2em] text-[#0A0A0A] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30"
                 >
-                  Checkout As Guest
+                  Checkout
                 </button>
               </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
-
-      <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} />
     </>
   );
 }

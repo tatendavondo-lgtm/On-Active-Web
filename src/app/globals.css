@@ -6,8 +6,9 @@
   --color-primary: #FFFFFF;
   --color-accent: #C5A021;
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-mono);
   --animate-marquee: marquee 30s linear infinite;
+  --animate-ken-burns: kenburns 20s ease-in-out infinite alternate;
   
   @keyframes marquee {
     from {
@@ -15,6 +16,15 @@
     }
     to {
       transform: translateX(-100%);
+    }
+  }
+
+  @keyframes kenburns {
+    0% {
+      transform: scale(1);
+    }
+    100% {
+      transform: scale(1.1);
     }
   }
 }

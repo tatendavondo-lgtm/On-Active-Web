@@ -1,130 +1,138 @@
 "use client";
 
-import Image from "next/image";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus } from "lucide-react";
-import { useCart } from "@/store/cart-context";
-import { PRODUCTS, Product } from "@/data/products";
-import { useState } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+
+const MOCK_PRODUCTS = [
+  { id: '1', name: 'Compression Tee — Onyx', price: 89, category: 'upper', image: null },
+  { id: '2', name: 'Flex Joggers — Stealth', price: 120, category: 'lower', image: null },
+  { id: '3', name: 'Performance Hoodie — Carbon', price: 145, category: 'upper', image: null },
+  { id: '4', name: 'Training Shorts — Shadow', price: 75, category: 'lower', image: null },
+  { id: '5', name: 'Sport Bra — Eclipse', price: 65, category: 'upper', image: null },
+  { id: '6', name: 'Gym Bag — Midnight', price: 95, category: 'accessories', image: null },
+];
 
 const CATEGORIES = ["ALL", "UPPER", "LOWER", "ACCESSORIES"];
 
-export function BentoCard({ product }: { product: Product }) {
-  const { addItem } = useCart();
-
-  const handleAdd = (size: string) => {
-    addItem({
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      size,
-    });
-  };
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className={`group relative flex overflow-hidden bg-[#111111] border border-white/5 rounded-3xl ${product.className || "col-span-1 row-span-1"}`}
-    >
-      <div className="absolute inset-0 z-0">
-        <Image
-          src={product.image}
-          alt={product.name}
-          fill
-          className="object-cover transition-transform duration-1000 group-hover:scale-110 opacity-70"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent opacity-80" />
-      </div>
-      
-      {/* Content */}
-      <div className="relative z-10 flex h-full w-full flex-col justify-end p-6 sm:p-8">
-        <div className="transform transition-transform duration-500 group-hover:-translate-y-6">
-          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.4em] text-accent">
-            {product.category}
-          </p>
-          <h3 className="mb-1 text-xl font-[900] uppercase tracking-tighter text-white sm:text-2xl">
-            {product.name}
-          </h3>
-          <p className="text-lg font-black italic text-white/50">${product.price.toFixed(2)}</p>
-        </div>
-
-        {/* Quick Add Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 translate-y-full opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
-          <div className="flex flex-wrap gap-2 pt-6">
-            {["XS", "S", "M", "L", "XL"].map((size) => (
-              <button 
-                key={size}
-                onClick={() => handleAdd(size)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-[11px] font-bold text-white backdrop-blur-xl transition-all hover:bg-white hover:text-black hover:scale-110"
-              >
-                {size}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 export function ProductGrid() {
-  const [activeTab, setActiveTab] = useState("ALL");
+  const [activeCategory, setActiveCategory] = useState("ALL");
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredProducts = activeTab === "ALL" 
-    ? PRODUCTS 
-    : PRODUCTS.filter(p => p.category === activeTab);
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('is_active', true);
+
+        const dbMapped = (data || []).map(p => ({
+          id: p.id,
+          name: p.name,
+          price: p.price_usd,
+          category: p.category.toLowerCase(),
+          image: p.images?.[0] || null
+        }));
+
+        setProducts([...MOCK_PRODUCTS, ...dbMapped]);
+      } catch (err) {
+        setProducts(MOCK_PRODUCTS);
+      } finally {
+        setTimeout(() => setLoading(false), 1500);
+      }
+    }
+
+    fetchProducts();
+  }, []);
+
+  const filteredProducts = products.filter(p => 
+    activeCategory === "ALL" || p.category.toUpperCase() === activeCategory
+  );
 
   return (
-    <section id="trending-now" className="bg-background py-32 overflow-hidden">
+    <section id="trending-now" className="bg-[#0A0A0A] py-24 text-white sm:py-32">
       <div className="container mx-auto px-4 sm:px-10">
-        <div className="mb-20 flex flex-col items-center space-y-12 text-center">
+        <div className="mb-16 flex flex-col items-end justify-between gap-8 md:flex-row md:items-center">
           <div className="space-y-4">
-            <span className="text-[10px] font-black uppercase tracking-[0.6em] text-accent">THE 2026 ARCHIVE</span>
-            <h2 className="text-5xl font-[900] uppercase tracking-tighter text-white sm:text-8xl">
-              PRODUCT ARCHIVE.
+            <span className="text-[10px] font-black uppercase tracking-[0.6em] text-[#C5A021]">TRENDING NOW</span>
+            <h2 className="text-5xl font-[900] uppercase tracking-tighter sm:text-7xl">
+              PRODUCT <span className="text-white/20">ARCHIVE.</span>
             </h2>
           </div>
-
-          <div className="flex flex-wrap justify-center gap-4 border-y border-white/5 py-6">
+          
+          <div className="flex flex-wrap gap-4 border-b border-white/10 pb-4">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
-                onClick={() => setActiveTab(cat)}
-                className={`relative px-8 py-3 text-[11px] font-[900] uppercase tracking-[0.3em] transition-all
-                  ${activeTab === cat ? "text-white" : "text-white/30 hover:text-white/60"}`}
+                onClick={() => setActiveCategory(cat)}
+                className={`text-[10px] font-black uppercase tracking-widest transition-all ${
+                  activeCategory === cat ? "text-[#C5A021]" : "text-white/40 hover:text-white"
+                }`}
               >
                 {cat}
-                {activeTab === cat && (
-                  <motion.div 
-                    layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" 
-                  />
-                )}
               </button>
             ))}
           </div>
         </div>
 
-        <motion.div 
-          layout
-          className="grid auto-rows-[350px] grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-        >
-          <AnimatePresence mode="popLayout">
-            {filteredProducts.map((product) => (
-              <BentoCard key={product.id} product={product} />
+        {loading ? (
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="space-y-4">
+                <div className="aspect-[3/4] animate-pulse rounded-2xl bg-[#1A1A1A]" />
+                <div className="h-4 w-2/3 animate-pulse rounded bg-[#1A1A1A]" />
+                <div className="h-4 w-1/4 animate-pulse rounded bg-[#1A1A1A]" />
+              </div>
             ))}
-          </AnimatePresence>
-        </motion.div>
+          </div>
+        ) : (
+          <motion.div 
+            layout
+            className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
+          >
+            <AnimatePresence>
+              {filteredProducts.slice(0, 6).map((product) => (
+                <motion.div
+                  key={product.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  whileHover={{ scale: 1.02 }}
+                  className="group relative flex flex-col bg-[#111] border border-white/5 rounded-2xl overflow-hidden transition-all duration-300"
+                >
+                  <div className="relative aspect-[3/4] w-full bg-[#1A1A1A]">
+                    {product.image ? (
+                      <img src={product.image} alt={product.name} className="h-full w-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0 group-hover:scale-110" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center opacity-10">
+                        <span className="text-4xl font-black italic tracking-tighter">ON ACTIVE.</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-6 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <h3 className="text-xl font-black uppercase tracking-tight text-white leading-tight">{product.name}</h3>
+                      <p className="text-xl font-black italic text-[#C5A021]">${product.price}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        )}
 
         <div className="mt-20 flex justify-center">
-          <button className="group relative flex items-center gap-4 overflow-hidden border border-white/10 bg-transparent px-16 py-6 text-[12px] font-black uppercase tracking-[0.4em] text-white transition-all hover:bg-white hover:text-black">
-            <span className="relative z-10">Expand Archive (285+)</span>
-            <div className="absolute inset-0 translate-y-full bg-white transition-transform duration-500 group-hover:translate-y-0" />
-          </button>
+          <Link 
+            href="/shop/collections"
+            className="group relative flex items-center gap-4 border border-white/10 px-12 py-6 text-[10px] font-black uppercase tracking-[0.4em] transition-all hover:bg-[#C5A021] hover:text-black hover:border-[#C5A021]"
+          >
+            View All Products →
+          </Link>
         </div>
       </div>
     </section>

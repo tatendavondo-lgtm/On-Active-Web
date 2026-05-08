@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useCart } from "@/store/cart-context";
+import { useCart } from "@/store/cart";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle, Loader2, ArrowRight } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -11,18 +12,49 @@ interface CheckoutModalProps {
 }
 
 export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
-  const { cartTotal, clearCart, setIsCartOpen } = useCart();
+  const { items, clearCart, setIsCartOpen } = useCart();
+  const cartTotal = items.reduce((total, item) => total + item.price_usd * item.quantity, 0);
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStep("processing");
     
-    // Mock processing delay
-    setTimeout(() => {
+    try {
+      const orderRef = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
+      
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_ref: orderRef,
+          items: items.map(item => ({
+            productId: item.productId,
+            name: item.name,
+            price_usd: item.price_usd,
+            size: item.size,
+            quantity: item.quantity,
+            image: item.image
+          })),
+          total_usd: cartTotal,
+          delivery_fee_usd: 0
+        })
+      });
+
+      const result = await res.json();
+      if (result.error) {
+        console.error("Order error:", result.error);
+        alert(`Failed to submit order: ${result.error}`);
+        setStep("form");
+        return;
+      }
+
       setStep("success");
       clearCart();
-    }, 2000);
+    } catch (err) {
+      console.error(err);
+      setStep("form");
+    }
   };
 
   const handleClose = () => {

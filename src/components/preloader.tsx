@@ -10,58 +10,54 @@ export function Preloader() {
   useEffect(() => {
     setMounted(true);
     
+    const hasSeenPreloader = sessionStorage.getItem('on-active-loaded');
+    if (hasSeenPreloader) {
+      setIsLoading(false);
+      return;
+    }
+
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2200);
+      sessionStorage.setItem('on-active-loaded', 'true');
+    }, 1000);
 
     return () => {
       clearTimeout(timer);
     };
   }, []);
 
-  // Don't render anything on server or before mount - prevents black screen flash
+  const handleSkip = () => {
+    setIsLoading(false);
+    sessionStorage.setItem('on-active-loaded', 'true');
+  };
+
   if (!mounted) return null;
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {isLoading && (
         <motion.div
           key="preloader"
           initial={{ opacity: 1 }}
-          exit={{ opacity: 0, y: "-100%" }}
-          transition={{ duration: 0.8, ease: [0.76, 0, 0.24, 1] }}
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#0A0A0A] text-white"
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          onClick={handleSkip}
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#0A0A0A] cursor-pointer"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className="flex flex-col items-center gap-6"
+            exit={{ opacity: 0, scale: 1.1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="flex flex-col items-center gap-4"
           >
-            <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-white/20">
-              <img 
-                src="/images/logo.jpg" 
-                alt="On Active Wear" 
-                className="h-full w-full object-cover"
-              />
-            </div>
-            <div className="overflow-hidden">
-              <motion.h1 
-                initial={{ y: 50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
-                className="text-4xl font-[900] tracking-tighter uppercase"
-              >
-                ON ACTIVE WEAR.
-              </motion.h1>
-            </div>
+            <h1 className="text-4xl font-[900] tracking-[0.4em] uppercase text-[#C5A021] sm:text-6xl">
+              ON ACTIVE.
+            </h1>
+            <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-white/20">
+              CLICK TO SKIP
+            </span>
           </motion.div>
-          <motion.div 
-            className="absolute bottom-10 left-1/2 -translate-x-1/2 h-[1px] bg-white"
-            initial={{ width: 0 }}
-            animate={{ width: 200 }}
-            transition={{ duration: 1.5, ease: "easeInOut" }}
-          />
         </motion.div>
       )}
     </AnimatePresence>
