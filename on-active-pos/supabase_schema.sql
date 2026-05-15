@@ -21,7 +21,7 @@ CREATE TABLE employees (
   store_id UUID REFERENCES stores(id),
   full_name TEXT NOT NULL,
   pin_hash TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('salesman', 'till_operator', 'supervisor', 'manager', 'admin')),
+  role TEXT NOT NULL CHECK (role IN ('salesman', 'till_operator', 'supervisor', 'manager', 'admin', 'security_guard')),
   email TEXT,
   phone TEXT,
   is_active BOOLEAN DEFAULT true,
