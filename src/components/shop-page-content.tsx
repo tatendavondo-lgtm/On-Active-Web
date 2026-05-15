@@ -6,15 +6,6 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
-const MOCK_PRODUCTS = [
-  { id: '1', name: 'Compression Tee — Onyx', price: 89, category: 'upper', image: null },
-  { id: '2', name: 'Flex Joggers — Stealth', price: 120, category: 'lower', image: null },
-  { id: '3', name: 'Performance Hoodie — Carbon', price: 145, category: 'upper', image: null },
-  { id: '4', name: 'Training Shorts — Shadow', price: 75, category: 'lower', image: null },
-  { id: '5', name: 'Sport Bra — Eclipse', price: 65, category: 'upper', image: null },
-  { id: '6', name: 'Gym Bag — Midnight', price: 95, category: 'accessories', image: null },
-];
-
 interface ShopPageContentProps {
   category?: string;
   title: string;
@@ -35,34 +26,22 @@ export function ShopPageContent({ category, title }: ShopPageContentProps) {
         }
 
         const { data, error } = await query;
+        if (error) throw error;
 
-        // Even if data exists, we will merge or fallback as per requirements
-        // "ALWAYS render 6 hardcoded mock products regardless of whether Supabase returns data"
-        // Interpretation: Show mock data + real data if real data exists, or just mock data if empty.
-        // User says: "ALWAYS render 6 hardcoded mock products... The store must never look empty."
-        
         const dbMapped = (data || []).map(p => ({
           id: p.id,
           name: p.name,
           price: p.price_usd,
-          category: p.category.toLowerCase(),
+          category: p.category?.toLowerCase() || 'uncategorized',
           image: p.images?.[0] || null
         }));
 
-        let combined = [...MOCK_PRODUCTS, ...dbMapped];
-        
-        if (category && category !== 'collections') {
-          combined = combined.filter(p => p.category.toLowerCase() === category.toLowerCase());
-        }
-
-        setProducts(combined);
+        setProducts(dbMapped);
       } catch (err) {
         console.error("Fetch error:", err);
-        setProducts(category && category !== 'collections' 
-          ? MOCK_PRODUCTS.filter(p => p.category.toLowerCase() === category.toLowerCase()) 
-          : MOCK_PRODUCTS);
+        setProducts([]);
       } finally {
-        setTimeout(() => setLoading(false), 1000); // Pulse effect for 1s
+        setLoading(false);
       }
     }
 

@@ -160,7 +160,7 @@ export async function queueOrderForSync(order: Order): Promise<void> {
     });
   }
 
-  // 4. Queue inventory decrements (Directly to main products table)
+  // 4. Queue inventory decrements (Directly to main products table + store inventory)
   for (const item of order.items) {
     await db.syncQueue.add({
       table: 'products',
@@ -168,6 +168,8 @@ export async function queueOrderForSync(order: Order): Promise<void> {
       data: {
         id: item.product_id,
         product_id: item.product_id,
+        variant_id: item.variant_id,
+        store_id: order.store_id,
         decrement: item.quantity,
       },
       created_at: now,

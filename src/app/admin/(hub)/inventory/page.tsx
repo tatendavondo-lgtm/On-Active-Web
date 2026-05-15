@@ -14,8 +14,9 @@ export default async function InventoryPage() {
   const ago30 = new Date(Date.now() - 30 * 86400000).toISOString();
   const ago7 = new Date(Date.now() - 7 * 86400000).toISOString();
 
-  const [{ data: products }, { data: orders30d }, { data: posOrders30d }] = await Promise.all([
-    supabase.from('products').select('*').order('stock_quantity', { ascending: true }),
+  const [{ data: products }, { data: inventory }, { data: orders30d }, { data: posOrders30d }] = await Promise.all([
+    supabase.from('products').select('*').order('name'),
+    adminSupabase.from('store_inventory').select('*'),
     supabase
       .from('pending_orders')
       .select('items, created_at')
@@ -27,6 +28,13 @@ export default async function InventoryPage() {
       .select('product_id, quantity, created_at')
       .gte('created_at', ago30),
   ]);
+
+  const invMap: Record<string, number> = {};
+  (inventory || []).forEach(item => {
+    // If multiple variants exist, we'll sum them for this simple view or show them as variants if the table supports it
+    // For now, we sum the stock per product_id for this main view
+    invMap[item.product_id] = (invMap[item.product_id] ?? 0) + item.quantity;
+  });
 
   // Build sales maps from online orders
   const sales30: Record<string, number> = {};
@@ -52,9 +60,11 @@ export default async function InventoryPage() {
     const s30 = sales30[p.id] ?? 0;
     const s7 = sales7[p.id] ?? 0;
     const dailyVelocity = s30 / 30;
-    const daysUntilStockout = calculateStockoutDays(p.stock_quantity, dailyVelocity);
+    const stock = invMap[p.id] !== undefined ? invMap[p.id] : (p.stock_quantity ?? 0);
+    const daysUntilStockout = calculateStockoutDays(stock, dailyVelocity);
     return {
       ...p,
+      stock_quantity: stock,
       salesLast7Days: s7,
       salesLast30Days: s30,
       dailyVelocity,

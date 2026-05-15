@@ -50,21 +50,41 @@ export async function processSyncQueue(): Promise<{ synced: number; failed: numb
 
     try {
       if (item.table === 'store_inventory' || (item.table === 'products' && item.operation === 'update' && item.data.decrement)) {
-        // Decrement stock directly on the products table
-        // We use a raw update with GREATEST to avoid negative stock
-        const { data: current } = await supabase
+        const productId = item.data.product_id;
+        const variantId = item.data.variant_id;
+        const storeId = item.data.store_id;
+        const decrement = item.data.decrement;
+
+        // 1. Update Global Products Table
+        const { data: currentProd } = await supabase
           .from('products')
           .select('stock_quantity')
-          .eq('id', item.data.product_id)
+          .eq('id', productId)
           .single();
 
-        if (current) {
-          const newQty = Math.max(0, (current.stock_quantity ?? 0) - item.data.decrement);
-          const { error } = await supabase
+        if (currentProd) {
+          const newProdQty = Math.max(0, (currentProd.stock_quantity ?? 0) - decrement);
+          await supabase
             .from('products')
-            .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
-            .eq('id', item.data.product_id);
-          if (error) throw error;
+            .update({ stock_quantity: newProdQty, updated_at: new Date().toISOString() })
+            .eq('id', productId);
+        }
+
+        // 2. Update Branch Store Inventory
+        if (storeId) {
+          let invQuery = supabase.from('store_inventory').select('quantity').eq('store_id', storeId).eq('product_id', productId);
+          if (variantId) invQuery = invQuery.eq('variant_id', variantId);
+          else invQuery = invQuery.is('variant_id', null);
+
+          const { data: currentInv } = await invQuery.single();
+
+          if (currentInv) {
+            const newInvQty = Math.max(0, (currentInv.quantity ?? 0) - decrement);
+            let updateInvQuery = supabase.from('store_inventory').update({ quantity: newInvQty, updated_at: new Date().toISOString() }).eq('store_id', storeId).eq('product_id', productId);
+            if (variantId) updateInvQuery = updateInvQuery.eq('variant_id', variantId);
+            else updateInvQuery = updateInvQuery.is('variant_id', null);
+            await updateInvQuery;
+          }
         }
       } else if (item.operation === 'insert') {
         // Strip client-only fields that don't exist in Supabase tables
@@ -103,25 +123,38 @@ export async function processSyncQueue(): Promise<{ synced: number; failed: numb
 }
 
 export async function pullUpdates(storeId: string): Promise<void> {
-  // 0. Pull product catalog
-  const { data: products } = await supabase
-    .from('products')
-    .select('*, product_variants(*)');
+  // 0. Pull product catalog and store-specific inventory
+  const [
+    { data: products },
+    { data: inventory }
+  ] = await Promise.all([
+    supabase.from('products').select('*, product_variants(*)'),
+    supabase.from('store_inventory').select('*').eq('store_id', storeId)
+  ]);
 
   if (products) {
+    const invMap: Record<string, number> = {};
+    (inventory || []).forEach(item => {
+      const key = item.variant_id ? `${item.product_id}-${item.variant_id}` : item.product_id;
+      invMap[key] = item.quantity;
+    });
+
     const localProducts = products.map((p) => ({
       id: p.id,
       name: p.name,
       category: p.category || 'uncategorized',
       sku: p.sku || '',
       image_url: p.image_url || p.images?.[0] || '',
-      variants: (p.product_variants || []).map((v: any) => ({
-        id: v.id,
-        name: v.name || 'Standard',
-        sku: v.sku || p.sku || '',
-        price: Number(v.price) || Number(p.price_usd) || 0,
-        stock: Number(p.stock_quantity) || 0, // Using global product stock directly
-      })),
+      variants: (p.product_variants || []).map((v: any) => {
+        const invKey = `${p.id}-${v.id}`;
+        return {
+          id: v.id,
+          name: v.name || 'Standard',
+          sku: v.sku || p.sku || '',
+          price: Number(v.price) || Number(p.price_usd) || 0,
+          stock: invMap[invKey] !== undefined ? invMap[invKey] : (Number(p.stock_quantity) || 0),
+        };
+      }),
       updated_at: p.updated_at || new Date().toISOString(),
     }));
 

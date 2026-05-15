@@ -27,6 +27,17 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   if (!product || !product.is_active) {
     notFound();
   }
+
+  // Get real-time stock from the branch inventory
+  const { data: inventory } = await supabase
+    .from('store_inventory')
+    .select('quantity')
+    .eq('product_id', product.id)
+    .single();
+    
+  if (inventory) {
+    product.stock_quantity = inventory.quantity;
+  }
   
   const settings = await getSettings();
 

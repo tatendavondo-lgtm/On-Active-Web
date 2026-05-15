@@ -5,15 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
-const MOCK_PRODUCTS = [
-  { id: '1', name: 'Compression Tee — Onyx', price: 89, category: 'upper', image: null },
-  { id: '2', name: 'Flex Joggers — Stealth', price: 120, category: 'lower', image: null },
-  { id: '3', name: 'Performance Hoodie — Carbon', price: 145, category: 'upper', image: null },
-  { id: '4', name: 'Training Shorts — Shadow', price: 75, category: 'lower', image: null },
-  { id: '5', name: 'Sport Bra — Eclipse', price: 65, category: 'upper', image: null },
-  { id: '6', name: 'Gym Bag — Midnight', price: 95, category: 'accessories', image: null },
-];
-
 const CATEGORIES = ["ALL", "UPPER", "LOWER", "ACCESSORIES"];
 
 export function ProductGrid() {
@@ -30,19 +21,22 @@ export function ProductGrid() {
           .select('*')
           .eq('is_active', true);
 
+        if (error) throw error;
+
         const dbMapped = (data || []).map(p => ({
           id: p.id,
           name: p.name,
           price: p.price_usd,
-          category: p.category.toLowerCase(),
+          category: p.category?.toLowerCase() || 'uncategorized',
           image: p.images?.[0] || null
         }));
 
-        setProducts([...MOCK_PRODUCTS, ...dbMapped]);
+        setProducts(dbMapped);
       } catch (err) {
-        setProducts(MOCK_PRODUCTS);
+        console.error("Fetch error:", err);
+        setProducts([]);
       } finally {
-        setTimeout(() => setLoading(false), 1500);
+        setLoading(false);
       }
     }
 

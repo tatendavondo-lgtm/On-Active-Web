@@ -46,7 +46,7 @@ export default async function DashboardPage() {
     supabase.from('pending_orders').select('id').gte('created_at', startOfToday),
     supabase.from('pending_orders').select('id').gte('created_at', yesterday).lt('created_at', startOfToday),
     supabase.from('products').select('id').eq('is_active', true),
-    supabase.from('products').select('id, name, stock_quantity').lte('stock_quantity', 5),
+    adminSupabase.from('store_inventory').select('id, quantity').lte('quantity', 5),
     supabase.from('pending_orders').select('*').order('created_at', { ascending: false }).limit(10),
     supabase.from('pending_orders').select('created_at, total_usd, items').gte('created_at', ago90).neq('status', 'cancelled'),
     supabase.from('settings').select('key, value'),
