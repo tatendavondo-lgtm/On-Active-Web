@@ -74,8 +74,38 @@ export function OrdersTable({ filters, userRole }: OrdersTableProps) {
       .from('pending_orders')
       .update({ status: 'confirmed', updated_at: new Date().toISOString() })
       .eq('id', orderId);
-    if (error) toast.error('Failed to confirm order');
-    else { toast.success('Order confirmed'); fetchOrders(); }
+    if (error) {
+      toast.error('Failed to confirm order');
+      return;
+    }
+
+    toast.success('Order confirmed');
+
+    // Bridge to POS — fetch default store and bridge the order
+    try {
+      const { data: stores } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('is_active', true)
+        .limit(1);
+
+      if (stores && stores.length > 0) {
+        await fetch('/api/admin/bridge-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId,
+            storeId: stores[0].id,
+            fulfillment: 'collection',
+          }),
+        });
+      }
+    } catch (bridgeErr) {
+      // Non-blocking — order is confirmed even if bridge fails
+      console.warn('Bridge to POS failed:', bridgeErr);
+    }
+
+    fetchOrders();
   };
 
   const handleCancel = async (orderId: string) => {

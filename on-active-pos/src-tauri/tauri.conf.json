@@ -1,0 +1,20 @@
+{
+  "productName": "On Active POS",
+  "identifier": "com.onactive.pos",
+  "build": { "frontendDist": "../dist" },
+  "app": {
+    "windows": [{
+      "title": "On Active POS",
+      "fullscreen": false,
+      "width": 1280,
+      "height": 800,
+      "resizable": true
+    }]
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/icon.ico"],
+    "windows": { "nsis": { "installMode": "currentUser" } }
+  }
+}
