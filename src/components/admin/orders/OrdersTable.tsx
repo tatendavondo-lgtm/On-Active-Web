@@ -25,6 +25,7 @@ interface OrdersTableProps {
 
 export function OrdersTable({ filters, userRole }: OrdersTableProps) {
   const [orders, setOrders] = useState<PendingOrder[]>([]);
+  const [zigRate, setZigRate] = useState(13.5); // Default fallback
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<PendingOrder | null>(null);
   const [cancelTarget, setCancelTarget] = useState<PendingOrder | null>(null);
@@ -33,15 +34,16 @@ export function OrdersTable({ filters, userRole }: OrdersTableProps) {
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     const supabase = createClient();
-    let query = supabase
-      .from('pending_orders')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(200);
-    if (filters.status !== 'all') query = query.eq('status', filters.status);
-    const { data, error } = await query;
-    if (error) toast.error('Failed to load orders');
-    else setOrders(data ?? []);
+    
+    const [ordersRes, settingsRes] = await Promise.all([
+      supabase.from('pending_orders').select('*').order('created_at', { ascending: false }).limit(200),
+      supabase.from('settings').select('key, value').eq('key', 'zig_rate').single()
+    ]);
+
+    if (settingsRes.data) setZigRate(Number(settingsRes.data.value));
+
+    if (ordersRes.error) toast.error('Failed to load orders');
+    else setOrders(ordersRes.data ?? []);
     setLoading(false);
   }, [filters.status]);
 
@@ -207,7 +209,7 @@ export function OrdersTable({ filters, userRole }: OrdersTableProps) {
                     <span className="text-white text-sm font-semibold">{formatUSD(order.total_usd)}</span>
                   </td>
                   <td className="px-4 py-3.5">
-                    <span className="text-[#444] text-xs">ZiG {Math.round(order.total_usd * 13500).toLocaleString()}</span>
+                    <span className="text-[#444] text-xs">ZiG {Math.round(order.total_usd * zigRate).toLocaleString()}</span>
                   </td>
                   <td className="px-4 py-3.5">
                     <StatusBadge status={order.status} />

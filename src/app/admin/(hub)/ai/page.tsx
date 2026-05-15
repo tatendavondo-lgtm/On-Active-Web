@@ -17,6 +17,7 @@ export default async function AIPage() {
   const [
     { data: thisMonthOrders },
     { data: products },
+    { data: inventory },
     { data: pendingToday },
     { data: settings },
     { data: orders30d },
@@ -25,7 +26,8 @@ export default async function AIPage() {
     { data: posOrders30d },
   ] = await Promise.all([
     supabase.from('pending_orders').select('total_usd').gte('created_at', startOfMonth).neq('status', 'cancelled'),
-    supabase.from('products').select('id, name, stock_quantity, is_active').eq('is_active', true),
+    supabase.from('products').select('id, name, is_active').eq('is_active', true),
+    adminSupabase.from('store_inventory').select('*'),
     supabase.from('pending_orders').select('id').gte('created_at', today).eq('status', 'pending'),
     supabase.from('settings').select('key, value'),
     supabase.from('pending_orders').select('items').gte('created_at', ago30).neq('status', 'cancelled'),
@@ -34,7 +36,12 @@ export default async function AIPage() {
     adminSupabase.from('pos_orders').select('id, total').gte('created_at', ago30).neq('status', 'cancelled'),
   ]);
 
-  const zigRate = Number(settings?.find((s) => s.key === 'zig_rate')?.value ?? 13500);
+  const invMap: Record<string, number> = {};
+  (inventory || []).forEach(item => {
+    invMap[item.product_id] = (invMap[item.product_id] ?? 0) + item.quantity;
+  });
+
+  const zigRate = Number(settings?.find((s) => s.key === 'zig_rate')?.value ?? 13.5);
   const onlineRevenue = (thisMonthOrders ?? []).reduce((s, o) => s + (o.total_usd ?? 0), 0);
   const posRevenue = (thisMonthPosOrders ?? []).reduce((s, o) => s + (o.total ?? 0), 0);
   const revenue = onlineRevenue + posRevenue;
@@ -60,7 +67,7 @@ export default async function AIPage() {
   }
 
   const topSeller = Object.values(salesMap).sort((a, b) => b.count - a.count)[0]?.name ?? null;
-  const lowStock = (products ?? []).filter((p) => p.stock_quantity <= 5).length;
+  const lowStock = (products ?? []).filter((p) => (invMap[p.id] ?? 0) <= 5).length;
 
   const totalOrders = (orders30d ?? []).length + (posOrders30d ?? []).length;
 
@@ -74,7 +81,7 @@ export default async function AIPage() {
     lowStockItems: lowStock,
     inventorySnapshot: (products ?? []).map((p) => ({
       name: p.name,
-      stock: p.stock_quantity,
+      stock: invMap[p.id] ?? 0,
       salesLast30Days: salesMap[p.id]?.count ?? 0,
     })),
   };

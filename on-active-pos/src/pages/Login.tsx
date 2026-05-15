@@ -31,12 +31,9 @@ export default function Login() {
   const handleLogin = async (pin: string) => {
     setError('');
     
-    // 1. Verify PIN against Supabase
+    // 1. Verify PIN via secure RPC
     const { data: employee, error: authError } = await supabase
-      .from('employees')
-      .select('*')
-      .eq('pin', pin)
-      .eq('is_active', true)
+      .rpc('verify_employee_pin', { p_pin: pin })
       .single();
 
     if (authError || !employee) {

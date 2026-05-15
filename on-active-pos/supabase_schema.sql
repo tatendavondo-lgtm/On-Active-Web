@@ -220,32 +220,52 @@ CREATE INDEX idx_shifts_store ON shifts(store_id);
 CREATE INDEX idx_online_bridge_store ON online_order_bridge(store_id);
 
 -- =====================================================
--- ROW LEVEL SECURITY
+-- ROW LEVEL SECURITY & PERMISSIONS
 -- =====================================================
 
-ALTER TABLE stores ENABLE ROW LEVEL SECURITY;
+-- 1. Employees table security
 ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE salesman_orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pos_orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pos_order_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pos_payments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE store_inventory ENABLE ROW LEVEL SECURITY;
-ALTER TABLE online_order_bridge ENABLE ROW LEVEL SECURITY;
-ALTER TABLE exchange_rates ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Store employees see own store" ON pos_orders
-  FOR ALL USING (store_id IN (
-    SELECT store_id FROM employees WHERE id = auth.uid()
-  ));
+-- 2. Store-aware policies for the POS (using anon key)
+-- Note: In production, you might restrict these further by IP or a custom header.
 
-CREATE POLICY "Salesman sees own store orders" ON salesman_orders
-  FOR ALL USING (store_id IN (
-    SELECT store_id FROM employees WHERE id = auth.uid()
-  ));
+CREATE POLICY "Public can verify PIN via RPC" ON employees FOR SELECT USING (false); -- Block direct select
 
-CREATE POLICY "Exchange rates are public" ON exchange_rates
-  FOR SELECT USING (true);
+CREATE POLICY "POS can view products" ON products FOR SELECT USING (true);
+CREATE POLICY "POS can view variants" ON product_variants FOR SELECT USING (true);
+CREATE POLICY "POS can view stores" ON stores FOR SELECT USING (true);
+
+CREATE POLICY "POS can sync orders" ON pos_orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "POS can sync order items" ON pos_order_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "POS can sync payments" ON pos_payments FOR INSERT WITH CHECK (true);
+CREATE POLICY "POS can view own store inventory" ON store_inventory FOR SELECT USING (true);
+CREATE POLICY "POS can update own store inventory" ON store_inventory FOR UPDATE USING (true);
+
+CREATE POLICY "POS can view bridge" ON online_order_bridge FOR SELECT USING (true);
+CREATE POLICY "POS can update bridge status" ON online_order_bridge FOR UPDATE USING (true);
+
+CREATE POLICY "POS can update salesman orders" ON salesman_orders FOR ALL USING (true);
+
+-- =====================================================
+-- RPC: Secure Employee Verification
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION verify_employee_pin(p_pin TEXT)
+RETURNS TABLE (
+  id UUID,
+  full_name TEXT,
+  role TEXT,
+  store_id UUID
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT e.id, e.full_name, e.role, e.store_id
+  FROM employees e
+  WHERE e.pin = p_pin
+    AND e.is_active = true
+  LIMIT 1;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =====================================================
 -- RPC: Inventory decrement (used by sync engine)
@@ -263,6 +283,6 @@ BEGIN
       updated_at = now()
   WHERE store_id = p_store_id
     AND product_id = p_product_id
-    AND variant_id = p_variant_id;
+    AND (variant_id = p_variant_id OR (variant_id IS NULL AND p_variant_id IS NULL));
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

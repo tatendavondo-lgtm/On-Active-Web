@@ -43,7 +43,13 @@ ${JSON.stringify(storeContext, null, 2)}`;
 
   const lastMessage = messages[messages.length - 1];
 
-  const chat = model.startChat({ history, systemInstruction });
+  const chat = model.startChat({ 
+    history, 
+    systemInstruction: {
+      role: 'system',
+      parts: [{ text: systemInstruction }]
+    } 
+  });
 
   const encoder = new TextEncoder();
 
@@ -56,8 +62,10 @@ ${JSON.stringify(storeContext, null, 2)}`;
           if (text) controller.enqueue(encoder.encode(text));
         }
         controller.close();
-      } catch (err) {
-        controller.enqueue(encoder.encode('Sorry, I encountered an error. Please try again.'));
+      } catch (err: any) {
+        console.error('AI Chat Error:', err);
+        const errorMessage = err?.message || 'Sorry, I encountered an error. Please try again.';
+        controller.enqueue(encoder.encode(errorMessage));
         controller.close();
       }
     },
