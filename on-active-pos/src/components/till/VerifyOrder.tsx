@@ -69,15 +69,17 @@ export function VerifyOrder({ order, onCancel, onPay }: VerifyOrderProps) {
     setAddItemOpen(false);
   };
 
+  const orderItems = order?.items || [];
+
   useEffect(() => {
     const handleTriggerPayment = () => {
-      if (verifiedItems.size === order.items.length && !showPayment && !completedReceipt) {
+      if (verifiedItems.size === orderItems.length && !showPayment && !completedReceipt) {
         setShowPayment(true);
       }
     };
     window.addEventListener('pos-trigger-payment', handleTriggerPayment);
     return () => window.removeEventListener('pos-trigger-payment', handleTriggerPayment);
-  }, [verifiedItems.size, order.items.length, showPayment, completedReceipt]);
+  }, [verifiedItems.size, orderItems.length, showPayment, completedReceipt]);
 
   const handleCompleteSale = async (payments: any[]) => {
     if (!employee || !store) return;
@@ -90,7 +92,7 @@ export function VerifyOrder({ order, onCancel, onPay }: VerifyOrderProps) {
         source: 'salesman',
         salesmanId: order.salesman_id,
         salesmanOrderId: order.id,
-        items: order.items,
+        items: orderItems,
         payments,
         subtotal,
         autoDiscount,
@@ -116,8 +118,8 @@ export function VerifyOrder({ order, onCancel, onPay }: VerifyOrderProps) {
 
   // Load order into cart store on mount, and auto-verify all items
   useEffect(() => {
-    loadFromSalesmanOrder(order.items as any[]);
-  }, [order, loadFromSalesmanOrder]);
+    loadFromSalesmanOrder(orderItems as any[]);
+  }, [order, loadFromSalesmanOrder, orderItems]);
 
   // Auto-verify items once they appear in the cart
   useEffect(() => {
