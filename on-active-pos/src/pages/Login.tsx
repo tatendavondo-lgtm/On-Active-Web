@@ -57,19 +57,50 @@ export default function Login() {
       // return;
     }
 
-    // 3. Shift Logic (mocked for salesman, null for till to trigger opening)
-    const shiftId = isSalesmanRole(employee.role) ? 'mock-sales-shift' : null;
-
-    // 4. Pull Initial Data (clear stale cache first)
+    // 3. Pull Initial Data (clear stale cache first) & Check Shift Session Recovery
+    let shiftId = isSalesmanRole(employee.role) ? 'mock-sales-shift' : null;
     try {
       const { db } = await import('../db/dexie');
+      
+      // Clear stale cache and pull updates
       await db.products.clear();
       await pullUpdates(selectedStore.id);
+
+      // Check if this cashier already has an active open shift in this store
+      if (!isSalesmanRole(employee.role)) {
+        const existingShifts = await db.shifts
+          .where('employee_id')
+          .equals(employee.id)
+          .toArray();
+        const activeShift = existingShifts.find(
+          s => s.store_id === selectedStore.id && s.status === 'open'
+        );
+        if (activeShift) {
+          shiftId = activeShift.id;
+          console.log('Recovered active POS shift:', shiftId);
+        }
+      }
     } catch (err) {
-      console.warn('Initial sync failed, using offline data', err);
+      console.warn('Initial sync or shift recovery failed, using offline data', err);
+      // Fallback: still try to recover shift locally in case sync failed but DB exists
+      try {
+        const { db } = await import('../db/dexie');
+        const existingShifts = await db.shifts
+          .where('employee_id')
+          .equals(employee.id)
+          .toArray();
+        const activeShift = existingShifts.find(
+          s => s.store_id === selectedStore.id && s.status === 'open'
+        );
+        if (activeShift) {
+          shiftId = activeShift.id;
+        }
+      } catch (dbErr) {
+        console.error('Dexie direct shift recovery failed:', dbErr);
+      }
     }
 
-    // 5. Login & Redirect
+    // 4. Login & Redirect
     login(employee, selectedStore, shiftId);
     if (isSalesmanRole(employee.role)) {
       navigate('/sales');
