@@ -9,9 +9,10 @@ import { createClient } from "@/lib/supabase/client";
 interface ShopPageContentProps {
   category?: string;
   title: string;
+  searchQuery?: string;
 }
 
-export function ShopPageContent({ category, title }: ShopPageContentProps) {
+export function ShopPageContent({ category, title, searchQuery }: ShopPageContentProps) {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,6 +24,10 @@ export function ShopPageContent({ category, title }: ShopPageContentProps) {
         
         if (category && category !== 'collections') {
           query = query.ilike('category', category);
+        }
+
+        if (searchQuery) {
+          query = query.ilike('name', `%${searchQuery}%`);
         }
 
         const { data, error } = await query;

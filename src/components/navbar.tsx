@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, Menu, Search, User, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/store/cart";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,6 +12,16 @@ export function Navbar() {
   const cartCount = useCart(state => state.getCartCount());
   const setIsCartOpen = useCart(state => state.setIsCartOpen);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      router.push(`/shop/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setIsMenuOpen(false);
+      setSearchQuery("");
+    }
+  };
 
   const navItems = ["Men", "Women", "Accessories", "Collections"];
 
@@ -52,6 +63,9 @@ export function Navbar() {
             <input 
               type="text" 
               placeholder="SEARCH" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
               className="w-full bg-transparent text-[11px] font-bold tracking-widest text-white outline-none placeholder:text-white/30"
             />
           </div>
@@ -95,6 +109,9 @@ export function Navbar() {
                 <input 
                   type="text" 
                   placeholder="SEARCH" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearch}
                   className="w-full bg-transparent text-sm font-bold tracking-widest text-white outline-none placeholder:text-white/30"
                 />
               </div>
