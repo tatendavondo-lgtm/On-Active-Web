@@ -27,7 +27,15 @@ export async function POST(request: NextRequest) {
 
   const { messages, storeContext } = await request.json();
 
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: 'Gemini API key is not configured. Please add GEMINI_API_KEY to your Vercel project environment variables.' },
+      { status: 500 }
+    );
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const systemInstruction = `You are Samkee's personal business assistant for On Active, a premium fitness apparel brand based in Zimbabwe. You have access to real-time store data. Be concise, insightful, and actionable. Always speak in USD unless the user specifically asks about ZiG. Keep responses under 200 words unless a detailed breakdown is requested.

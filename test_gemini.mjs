@@ -18,22 +18,13 @@ if (!key) {
 const genAI = new GoogleGenerativeAI(key);
 
 async function testGemini() {
-  console.log("Testing Gemini API with model: gemini-2.0-flash...");
+  console.log("Testing Gemini API with model: gemini-2.5-flash...");
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const result = await model.generateContent("Hello, are you working?");
     console.log("Response:", result.response.text());
   } catch (err) {
-    console.error("Error with gemini-2.0-flash:", err.message);
-    
-    console.log("\nRetrying with gemini-1.5-flash...");
-    try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      const result = await model.generateContent("Hello, are you working?");
-      console.log("Response:", result.response.text());
-    } catch (err2) {
-      console.error("Error with gemini-1.5-flash:", err2.message);
-    }
+    console.error("Error with gemini-2.5-flash:", err);
   }
 }
 

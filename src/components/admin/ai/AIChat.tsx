@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,6 +49,18 @@ export function AIChat({ initialContext }: AIChatProps) {
         }),
       });
 
+      if (!res.ok) {
+        const errorText = await res.text();
+        let errorMessage = 'Sorry, something went wrong. Please try again.';
+        try {
+          const parsed = JSON.parse(errorText);
+          if (parsed.error) errorMessage = parsed.error;
+        } catch {
+          if (errorText) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
+      }
+
       if (!res.body) throw new Error('No stream');
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -66,10 +78,10 @@ export function AIChat({ initialContext }: AIChatProps) {
         ...prev,
         { role: 'model', content: full, timestamp: Date.now() },
       ]);
-    } catch {
+    } catch (err: any) {
       setMessages((prev) => [
         ...prev,
-        { role: 'model', content: 'Sorry, something went wrong. Please try again.', timestamp: Date.now() },
+        { role: 'model', content: err?.message || 'Sorry, something went wrong. Please try again.', timestamp: Date.now() },
       ]);
     } finally {
       setStreaming(false);

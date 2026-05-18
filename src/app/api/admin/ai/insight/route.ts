@@ -27,7 +27,15 @@ export async function POST(request: NextRequest) {
 
   const { storeContext } = await request.json();
 
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return Response.json(
+      { error: 'Gemini API key is not configured.' },
+      { status: 500 }
+    );
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const prompt = `You are a business intelligence assistant for On Active, a fitness apparel brand in Zimbabwe. Based on the following store data, generate ONE concise actionable insight (2-3 sentences max). Focus on the most important trend, risk, or opportunity right now. Be specific with numbers.
