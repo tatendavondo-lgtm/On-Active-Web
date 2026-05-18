@@ -1,18 +1,63 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useIncomingOrders } from '../../hooks/useIncomingOrders';
 import { IncomingQueue } from '../../components/till/IncomingQueue';
 import { WalkInRegister } from '../../components/till/WalkInRegister';
 import { VerifyOrder } from '../../components/till/VerifyOrder';
 import type { SalesmanOrder } from '../../types/order';
+import { db } from '../../db/dexie';
+import toast from 'react-hot-toast';
 
 export default function TillRegister() {
   const { orders, acceptOrder, cancelOrder, completeOrder } = useIncomingOrders();
   const [activeTab, setActiveTab] = useState<'incoming' | 'walkin'>('incoming');
   const [selectedOrder, setSelectedOrder] = useState<SalesmanOrder | null>(null);
 
+  // Restore any active accepted order from local DB on mount/update
+  useEffect(() => {
+    async function restoreAcceptedOrder() {
+      try {
+        const accepted = await db.salesmanOrders
+          .where('status')
+          .equals('accepted')
+          .first();
+        if (accepted) {
+          setSelectedOrder(accepted);
+        }
+      } catch (err) {
+        console.error('Failed to restore accepted order:', err);
+      }
+    }
+    restoreAcceptedOrder();
+  }, [orders]);
+
   const pendingOrders = orders.filter(o => o.status === 'pending');
 
   const handleAccept = async (order: SalesmanOrder) => {
+    // 1. Refuse if there is an active order in the UI state
+    if (selectedOrder) {
+      toast.error('You already have an active order in progress. Complete or cancel it first!', {
+        id: 'active-order-refuse',
+      });
+      return;
+    }
+
+    // 2. Refuse if there is already an accepted order in IndexedDB
+    try {
+      const alreadyAccepted = await db.salesmanOrders
+        .where('status')
+        .equals('accepted')
+        .first();
+      if (alreadyAccepted) {
+        toast.error('You already have an active order in progress. Complete or cancel it first!', {
+          id: 'active-order-refuse-db',
+        });
+        setSelectedOrder(alreadyAccepted);
+        return;
+      }
+    } catch (err) {
+      console.warn('Check accepted order DB query failed:', err);
+    }
+
     await acceptOrder(order.id);
     setSelectedOrder({ ...order, status: 'accepted' });
   };
