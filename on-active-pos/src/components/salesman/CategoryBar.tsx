@@ -14,10 +14,10 @@ export function CategoryBar({ categories, activeId, onChange }: CategoryBarProps
           key={c.id}
           onClick={() => onChange(c.id)}
           className={cn(
-            "h-10 px-6 rounded-full font-medium whitespace-nowrap transition-all select-none flex-shrink-0",
+            "h-10 px-6 rounded-full text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all select-none flex-shrink-0 border",
             activeId === c.id 
-              ? "bg-[var(--pos-accent)] text-white shadow-lg shadow-[var(--pos-accent)]/20" 
-              : "bg-[var(--pos-surface)] text-[var(--pos-text-muted)] border border-[var(--pos-border)] hover:bg-[var(--pos-surface-elevated)] hover:text-white"
+              ? "bg-[var(--pos-accent)] text-black border-[var(--pos-accent)] shadow-lg shadow-[var(--pos-accent)]/15" 
+              : "bg-[#111111] text-[var(--pos-text-muted)] border-white/5 hover:border-[var(--pos-accent)] hover:text-white"
           )}
         >
           {c.label}

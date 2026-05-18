@@ -27,8 +27,8 @@ export function SearchBar({ value, onChange }: SearchBarProps) {
         type="text"
         value={localValue}
         onChange={e => setLocalValue(e.target.value)}
-        placeholder="Search products, SKU..."
-        className="block w-full pl-11 pr-10 h-12 bg-[var(--pos-surface-elevated)] border border-[var(--pos-border)] rounded-full text-white placeholder-[var(--pos-text-muted)] focus:outline-none focus:border-[var(--pos-accent)] transition-colors"
+        placeholder="SEARCH PRODUCTS, SKU..."
+        className="block w-full pl-11 pr-10 h-12 bg-[#111111] border border-white/5 rounded-full text-xs font-black uppercase tracking-widest text-white placeholder-white/30 focus:outline-none focus:border-[var(--pos-accent)] focus:ring-1 focus:ring-[var(--pos-accent)] transition-all"
       />
       {localValue && (
         <button 

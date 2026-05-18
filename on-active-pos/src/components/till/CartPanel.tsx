@@ -65,42 +65,45 @@ export function CartPanel() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--pos-surface-elevated)] border-l border-[var(--pos-border)] relative">
-      <div className="p-4 border-b border-[var(--pos-border)] flex-shrink-0">
-        <h2 className="text-lg font-semibold">Walk-in Order</h2>
+    <div className="flex flex-col h-full bg-[#0d0d0d] border-l border-white/5 relative">
+      <div className="p-4 border-b border-white/5 bg-[#111111]/80 flex justify-between items-center backdrop-blur-md flex-shrink-0">
+        <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white">Walk-in Order</h2>
+        <span className="text-[9px] font-black uppercase tracking-widest bg-[var(--pos-accent)]/10 text-[var(--pos-accent)] py-1 px-2.5 rounded-full border border-[var(--pos-accent)]/20">
+          Live Terminal
+        </span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         {items.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-[var(--pos-text-muted)] gap-4">
-            <div className="w-16 h-16 rounded-full bg-[var(--pos-surface)] flex items-center justify-center border border-[var(--pos-border)]">
-              <span className="text-2xl">🛒</span>
+            <div className="w-14 h-14 rounded-full bg-[#111] flex items-center justify-center border border-white/5">
+              <span className="text-xl opacity-60">🛒</span>
             </div>
-            <p>Cart is empty</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Cart is empty</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {items.map(item => (
-              <div key={item.id} className="flex flex-col gap-2 p-3 bg-[var(--pos-surface)] rounded-[var(--pos-radius)] border border-[var(--pos-border)]">
+              <div key={item.id} className="flex flex-col gap-3 p-4 bg-[#111111]/80 rounded-[var(--pos-radius-lg)] border border-white/5 hover:border-[var(--pos-accent)]/30 transition-all duration-300">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
-                    <span className="font-medium text-sm text-white line-clamp-1">{item.product_name}</span>
-                    {item.variant_name && <span className="text-xs text-[var(--pos-text-muted)]">{item.variant_name}</span>}
+                    <span className="font-black text-xs uppercase tracking-wide text-white leading-tight">{item.product_name}</span>
+                    {item.variant_name && <span className="text-[10px] font-black uppercase tracking-widest text-[var(--pos-text-muted)] mt-1">{item.variant_name}</span>}
                   </div>
                   <button 
                     onClick={() => removeItem(item.id)}
                     className="text-[var(--pos-text-muted)] hover:text-[var(--pos-error)] transition-colors p-1"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <div className="flex justify-between items-center mt-2">
+                <div className="flex justify-between items-center mt-1 pt-2 border-t border-white/5">
                   <QuantityControl 
                     quantity={item.quantity} 
                     onChange={(q) => updateQuantity(item.id, q)} 
                     min={1} 
                   />
-                  <span className="font-mono text-[var(--pos-accent)] font-medium">
+                  <span className="font-mono text-xs text-[var(--pos-accent)] font-black">
                     {formatUSD(item.line_total)}
                   </span>
                 </div>
@@ -110,13 +113,13 @@ export function CartPanel() {
         )}
       </div>
 
-      <div className="p-4 border-t border-[var(--pos-border)] bg-[var(--pos-surface)] flex-shrink-0 flex flex-col gap-4">
+      <div className="p-4 border-t border-white/5 bg-[#111111]/90 flex-shrink-0 flex flex-col gap-4">
         {autoDiscount.applied && <AutoDiscountBanner autoDiscount={autoDiscount} />}
         
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between text-[var(--pos-text-secondary)]">
+        <div className="space-y-2.5 text-xs font-black uppercase tracking-wider text-[var(--pos-text-secondary)]">
+          <div className="flex justify-between">
             <span>Subtotal</span>
-            <span className="font-mono">{formatUSD(subtotal)}</span>
+            <span className="font-mono text-white">{formatUSD(subtotal)}</span>
           </div>
           {manualDiscountAmount > 0 && (
             <div className="flex justify-between text-[#10B981]">
@@ -124,24 +127,39 @@ export function CartPanel() {
               <span className="font-mono">-{formatUSD(manualDiscountAmount)}</span>
             </div>
           )}
-          <div className="flex justify-between text-[var(--pos-text-secondary)] pt-2 border-t border-[var(--pos-border-subtle)] mt-2">
+          <div className="flex justify-between pt-2 border-t border-white/5 mt-2">
             <span>Tax (0%)</span>
-            <span className="font-mono">$0.00</span>
+            <span className="font-mono text-white">$0.00</span>
           </div>
-          <div className="flex justify-between items-center text-xl font-bold text-white pt-2">
+          <div className="flex justify-between items-center text-sm font-black text-white pt-3 border-t-2 border-[var(--pos-accent)]/30 mt-3">
             <span>Total</span>
-            <span className="font-mono">{formatUSD(total)}</span>
+            <span className="font-mono text-2xl text-[var(--pos-accent)]">{formatUSD(total)}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-4 gap-3 mt-2">
-          <Button variant="ghost" onClick={clearCart} disabled={items.length === 0} className="col-span-1 p-0 text-sm">
+          <Button 
+            variant="ghost" 
+            onClick={clearCart} 
+            disabled={items.length === 0} 
+            className="col-span-1 p-0 text-[10px] font-black uppercase tracking-widest border border-white/5 hover:border-[var(--pos-error)] hover:text-[var(--pos-error)] transition-colors h-11"
+          >
             Clear
           </Button>
-          <Button variant="secondary" onClick={() => setShowDiscount(true)} disabled={items.length === 0} className="col-span-1 px-0 text-sm">
-            Discount
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowDiscount(true)} 
+            disabled={items.length === 0} 
+            className="col-span-1 px-0 text-[10px] font-black uppercase tracking-widest border border-white/5 hover:border-[var(--pos-accent)] hover:text-white transition-colors h-11"
+          >
+            Disc
           </Button>
-          <Button variant="primary" onClick={() => setShowPayment(true)} disabled={items.length === 0} className="col-span-2">
+          <Button 
+            variant="primary" 
+            onClick={() => setShowPayment(true)} 
+            disabled={items.length === 0} 
+            className="col-span-2 text-xs font-black uppercase tracking-widest bg-[var(--pos-accent)] text-black hover:scale-[1.02] shadow-[0_0_25px_rgba(197,160,33,0.18)] transition-all h-11 cursor-pointer flex items-center justify-center"
+          >
             Pay
           </Button>
         </div>

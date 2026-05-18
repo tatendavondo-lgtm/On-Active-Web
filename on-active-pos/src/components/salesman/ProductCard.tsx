@@ -36,28 +36,28 @@ export function ProductCard({ product }: ProductCardProps) {
     <>
       <button 
         onClick={handleClick}
-        className="group relative flex flex-col bg-[var(--pos-surface-elevated)] border border-[var(--pos-border)] rounded-[var(--pos-radius-lg)] overflow-hidden hover:border-[var(--pos-accent)] transition-all text-left"
+        className="group relative flex flex-col bg-[#111111] border border-white/5 rounded-[var(--pos-radius-lg)] overflow-hidden hover:border-[var(--pos-accent)] hover:shadow-[0_0_20px_rgba(197,160,33,0.12)] transition-all duration-300 text-left"
       >
-        <div className="aspect-square bg-[var(--pos-surface)] w-full overflow-hidden relative">
+        <div className="aspect-square bg-[#1a1a1a] w-full overflow-hidden relative">
           {product.image_url ? (
-            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-[var(--pos-text-muted)] text-4xl font-bold opacity-20">
-              OA
+            <div className="w-full h-full flex items-center justify-center text-[var(--pos-text-muted)] text-3xl font-black italic opacity-10 tracking-tighter">
+              ON ACTIVE.
             </div>
           )}
           {totalStock <= 0 && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[2px]">
-              <span className="bg-[var(--pos-error)] text-white text-xs font-bold px-2 py-1 rounded">OUT OF STOCK</span>
+            <div className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-[2px]">
+              <span className="bg-[var(--pos-error)] text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded">OUT OF STOCK</span>
             </div>
           )}
         </div>
-        <div className="p-3 w-full flex flex-col gap-1">
-          <span className="font-semibold text-sm line-clamp-1">{product.name}</span>
-          <div className="flex items-center justify-between mt-auto">
-            <span className="font-mono font-medium text-[var(--pos-accent)]">{formatUSD(basePrice)}</span>
-            <span className={`text-xs ${totalStock <= 0 ? 'text-[var(--pos-error)]' : 'text-[var(--pos-text-muted)]'}`}>
-              {Math.max(0, totalStock)} in stock
+        <div className="p-4 w-full flex flex-col gap-2 mt-auto">
+          <span className="font-black text-xs uppercase tracking-wider text-white line-clamp-1 leading-tight">{product.name}</span>
+          <div className="flex items-center justify-between mt-1 pt-2 border-t border-white/5">
+            <span className="font-mono font-black text-xs text-[var(--pos-accent)]">{formatUSD(basePrice)}</span>
+            <span className={`text-[9px] font-black uppercase tracking-wider ${totalStock <= 0 ? 'text-[var(--pos-error)]' : 'text-[var(--pos-text-muted)]'}`}>
+              {Math.max(0, totalStock)} on hand
             </span>
           </div>
         </div>
