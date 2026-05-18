@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Users,
 } from 'lucide-react';
 import { useAdmin } from '@/store/admin';
 import { createClient } from '@/lib/supabase/client';
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { href: '/admin/orders', icon: Receipt, label: 'Orders' },
   { href: '/admin/products', icon: Shirt, label: 'Products' },
   { href: '/admin/inventory', icon: Box, label: 'Inventory' },
+  { href: '/admin/staff', icon: Users, label: 'Staff' },
   { href: '/admin/ai', icon: Sparkles, label: 'AI Assistant' },
 ];
 
@@ -181,16 +183,16 @@ export function AdminSidebar() {
         </div>
       </motion.aside>
 
-      {/* â”€â”€ Mobile Bottom Tab Bar â”€â”€ */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0d0d0d]/95 backdrop-blur border-t border-[#1f1f1f] flex items-center justify-around px-1 py-2">
-        {allItems.slice(0, 5).map((item) => {
+      {/* ── Mobile Bottom Tab Bar ── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0d0d0d]/95 backdrop-blur border-t border-[#1f1f1f] flex items-center justify-around px-1 py-2 overflow-x-auto hide-scroll-arrows">
+        {allItems.map((item) => {
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
           const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-[6px] transition-colors ${
+              className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-[6px] transition-colors flex-shrink-0 ${
                 isActive ? 'text-[#C5A021]' : 'text-[#444]'
               }`}
             >

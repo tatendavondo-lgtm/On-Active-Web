@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { usePathname } from 'next/navigation';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
@@ -14,6 +14,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/orders': 'Orders',
   '/admin/products': 'Products',
   '/admin/inventory': 'Inventory',
+  '/admin/staff': 'Staff',
   '/admin/ai': 'AI Assistant',
   '/admin/settings': 'Settings',
 };
