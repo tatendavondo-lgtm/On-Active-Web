@@ -15,8 +15,8 @@
   --pos-text-muted: #6B6B6B;
 
   /* Brand accent */
-  --pos-accent: #FFFFFF;
-  --pos-accent-muted: rgba(255, 255, 255, 0.08);
+  --pos-accent: #C5A021;
+  --pos-accent-muted: rgba(197, 160, 33, 0.08);
 
   /* Functional */
   --pos-success: #22C55E;

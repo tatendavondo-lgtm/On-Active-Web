@@ -14,8 +14,16 @@ export function SalesmanSidebar() {
 
   return (
     <aside className="w-[var(--pos-sidebar-width)] bg-[var(--pos-surface-elevated)] border-r border-[var(--pos-border)] flex flex-col items-center py-6 gap-8">
-      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center font-bold text-black text-xl tracking-tighter">
-        OA
+      <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-[var(--pos-accent)] shadow-[0_0_10px_rgba(197,160,33,0.2)] bg-black flex items-center justify-center">
+        <img 
+          src="/logo.jpg" 
+          alt="On Active Wear" 
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+          }}
+        />
       </div>
 
       <nav className="flex-1 flex flex-col w-full gap-2 px-2">
