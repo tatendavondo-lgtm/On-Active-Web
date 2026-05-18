@@ -56,7 +56,7 @@ export default async function InventoryPage() {
     }
   }
 
-  const inventory: InventoryItem[] = (products ?? []).map((p) => {
+  const inventoryItems: InventoryItem[] = (products ?? []).map((p) => {
     const s30 = sales30[p.id] ?? 0;
     const s7 = sales7[p.id] ?? 0;
     const dailyVelocity = s30 / 30;
@@ -73,12 +73,12 @@ export default async function InventoryPage() {
     };
   });
 
-  const lowStock = inventory.filter((p) => p.stock_quantity <= 5);
+  const lowStock = inventoryItems.filter((p) => p.stock_quantity <= 5);
 
   return (
     <div className="space-y-6">
       {lowStock.length > 0 && <LowStockAlert items={lowStock} />}
-      <InventoryTable inventory={inventory} />
+      <InventoryTable inventory={inventoryItems} />
     </div>
   );
 }
