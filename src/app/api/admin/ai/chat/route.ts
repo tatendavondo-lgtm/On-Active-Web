@@ -27,6 +27,45 @@ export async function POST(request: NextRequest) {
 
   const { messages, storeContext } = await request.json();
 
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  // Fetch AI Context in parallel (bypassing client-side RLS limits for high-fidelity responses)
+  const [posOrders, openShifts, pendingOnline] = await Promise.all([
+    adminSupabase
+      .from('pos_orders')
+      .select('id, order_number, source, total, status, created_at, auto_discount_applied, auto_discount_amount')
+      .eq('status', 'completed')
+      .gte('created_at', todayStart.toISOString()),
+
+    adminSupabase
+      .from('shifts')
+      .select('id, employee_id, store_id, opened_at, opening_cash')
+      .eq('status', 'open'),
+
+    adminSupabase
+      .from('online_order_bridge')
+      .select('id, fulfillment, status, total, customer_name, assigned_at')
+      .not('status', 'in', '("completed","cancelled")')
+  ]);
+
+  const posContext = `
+## POS Sales Today
+- Total POS orders: ${posOrders.data?.length ?? 0}
+- POS revenue: $${(posOrders.data?.reduce((s, o) => s + (o.total || 0), 0) ?? 0).toFixed(2)}
+- Walk-in: ${posOrders.data?.filter(o => o.source === 'walk_in').length ?? 0}
+- Salesman: ${posOrders.data?.filter(o => o.source === 'salesman').length ?? 0}
+- Auto-discounts applied: ${posOrders.data?.filter(o => o.auto_discount_applied).length ?? 0}
+
+## Open Shifts
+- ${openShifts.data?.length ?? 0} staff currently on shift
+
+## Online Orders Pending Fulfillment
+- ${pendingOnline.data?.length ?? 0} orders waiting
+- Collection: ${pendingOnline.data?.filter(o => o.fulfillment === 'collection').length ?? 0}
+- Delivery: ${pendingOnline.data?.filter(o => o.fulfillment === 'delivery').length ?? 0}
+`;
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -41,7 +80,10 @@ export async function POST(request: NextRequest) {
   const systemInstruction = `You are Samkee's personal business assistant for On Active, a premium fitness apparel brand based in Zimbabwe. You have access to real-time store data. Be concise, insightful, and actionable. Always speak in USD unless the user specifically asks about ZiG. Keep responses under 200 words unless a detailed breakdown is requested.
 
 Current store data:
-${JSON.stringify(storeContext, null, 2)}`;
+${JSON.stringify(storeContext, null, 2)}
+
+POS and Unified Channel Real-time Context:
+${posContext}`;
 
   // Convert to Gemini history format (all except last message)
   const history = messages.slice(0, -1).map((m: { role: string; content: string }) => ({

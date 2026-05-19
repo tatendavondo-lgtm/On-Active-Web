@@ -19,16 +19,23 @@ import { useAdmin } from '@/store/admin';
 import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
 
-const NAV_ITEMS = [
+const OWNER_ITEMS = [
   { href: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/admin/orders', icon: Receipt, label: 'Orders' },
   { href: '/admin/products', icon: Shirt, label: 'Products' },
   { href: '/admin/inventory', icon: Box, label: 'Inventory' },
   { href: '/admin/staff', icon: Users, label: 'Staff' },
   { href: '/admin/ai', icon: Sparkles, label: 'AI Assistant' },
+  { href: '/admin/settings', icon: Settings, label: 'Settings' },
 ];
 
-const OWNER_ITEMS = [{ href: '/admin/settings', icon: Settings, label: 'Settings' }];
+const MANAGER_ITEMS = [
+  { href: '/admin/manager', icon: LayoutDashboard, label: 'My Store Dashboard' },
+  { href: '/admin/orders', icon: Receipt, label: 'My Store Orders' },
+  { href: '/admin/inventory', icon: Box, label: 'My Store Inventory' },
+  { href: '/admin/staff', icon: Users, label: 'My Store Staff' },
+  { href: '/admin/ai', icon: Sparkles, label: 'AI Assistant' },
+];
 
 export function AdminSidebar() {
   const { isCollapsed, toggleCollapsed, profile } = useAdmin();
@@ -43,7 +50,7 @@ export function AdminSidebar() {
     router.refresh();
   };
 
-  const allItems = [...NAV_ITEMS, ...(profile?.role === 'owner' ? OWNER_ITEMS : [])];
+  const allItems = profile?.role === 'manager' ? MANAGER_ITEMS : OWNER_ITEMS;
 
   return (
     <>

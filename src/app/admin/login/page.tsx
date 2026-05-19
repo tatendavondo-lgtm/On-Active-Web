@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -38,7 +38,11 @@ export default function AdminLoginPage() {
         return;
       }
       toast.success('Welcome back');
-      router.push('/admin/dashboard');
+      if (role === 'manager') {
+        router.push('/admin/manager');
+      } else {
+        router.push('/admin/dashboard');
+      }
       router.refresh();
     } finally {
       setLoading(false);

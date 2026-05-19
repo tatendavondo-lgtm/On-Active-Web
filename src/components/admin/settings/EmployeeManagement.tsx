@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Loader2, Trash2, UserPlus, Users, Store, Shield, Wallet, Briefcase, UserCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { addStaffMember, deactivateStaffMember } from '@/app/admin/(hub)/staff/actions';
 import { ConfirmModal } from '../ConfirmModal';
 import { EmptyState } from '../ui/EmptyState';
 import { formatDate } from '@/lib/admin/utils';
@@ -36,7 +37,8 @@ const ROLES = [
 ];
 
 export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagementProps) {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  // Only show active employees
+  const [employees, setEmployees] = useState<Employee[]>(initialEmployees.filter(e => e.is_active));
   const [form, setForm] = useState({
     fullName: '',
     role: 'salesman',
@@ -52,29 +54,14 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
       return;
     }
 
-    if (form.pin.length !== 4 || isNaN(Number(form.pin))) {
-      toast.error('PIN must be a 4-digit number');
+    if (form.pin.length < 4 || isNaN(Number(form.pin))) {
+      toast.error('PIN must be at least a 4-digit number');
       return;
     }
 
     setAdding(true);
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('employees')
-        .insert({
-          full_name: form.fullName,
-          role: form.role,
-          pin: form.pin,
-          pin_hash: form.pin, // Assuming pin_hash is used as a plain pin for now based on project state
-          store_id: form.storeId,
-          is_active: true,
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await addStaffMember(form);
 
       toast.success(`${form.fullName} added to POS staff`);
       setEmployees((prev) => [data, ...prev]);
@@ -92,13 +79,13 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
   };
 
   const handleRemove = async (id: string) => {
-    const supabase = createClient();
-    const { error } = await supabase.from('employees').delete().eq('id', id);
-    if (error) toast.error('Failed to remove staff member');
-    else {
-      toast.success('Staff member removed');
+    try {
+      await deactivateStaffMember(id);
+      toast.success('Staff member deactivated');
       setEmployees((prev) => prev.filter((e) => e.id !== id));
       setRemoveTarget(null);
+    } catch (err) {
+      toast.error('Failed to deactivate staff member');
     }
   };
 

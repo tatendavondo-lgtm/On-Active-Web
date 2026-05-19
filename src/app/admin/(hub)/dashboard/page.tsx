@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { MetricCards } from '@/components/admin/dashboard/MetricCards';
+import { CombinedMetricsPanel } from '@/components/admin/dashboard/CombinedMetricsPanel';
+import { getCombinedMetrics } from '@/lib/admin/getCombinedMetrics';
 import { AIInsightBanner } from '@/components/admin/dashboard/AIInsightBanner';
 import { RevenueChart } from '@/components/admin/dashboard/RevenueChart';
 import { RecentOrdersTable } from '@/components/admin/dashboard/RecentOrdersTable';
@@ -58,9 +59,11 @@ export default async function DashboardPage() {
     adminSupabase.from('pos_orders').select('id, created_at, total').gte('created_at', ago90).neq('status', 'cancelled'),
   ]);
 
+  const combinedMetrics = await getCombinedMetrics();
+
   const zigRate = Number(settings?.find((s) => s.key === 'zig_rate')?.value ?? 13500);
 
-  // Build metrics — combine online + POS revenue
+  // Build metrics — combine online + POS revenue (for older components if still used, but we rely on combinedMetrics now)
   const onlineRevenue = (thisMonthOrders ?? []).reduce((s, o) => s + (o.total_usd ?? 0), 0);
   const posRevenue = (thisMonthPosOrders ?? []).reduce((s, o) => s + (o.total ?? 0), 0);
   const thisRevenue = onlineRevenue + posRevenue;
@@ -71,15 +74,6 @@ export default async function DashboardPage() {
 
   const totalOrdersToday = (todayOrders?.length ?? 0) + (todayPosOrders?.length ?? 0);
   const totalOrdersYesterday = (yesterdayOrders?.length ?? 0) + (yesterdayPosOrders?.length ?? 0);
-
-  const metrics: DashboardMetrics = {
-    totalRevenue: thisRevenue,
-    ordersToday: totalOrdersToday,
-    activeProducts: activeProducts?.length ?? 0,
-    lowStockItems: lowStockProducts?.length ?? 0,
-    revenueChange: getPercentChange(thisRevenue, lastRevenue),
-    ordersTodayChange: getPercentChange(totalOrdersToday, totalOrdersYesterday),
-  };
 
   // Build 90-day revenue chart data — combine both channels
   const revenueByDay: Record<string, number> = {};
@@ -153,7 +147,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Metric cards */}
-      <MetricCards metrics={metrics} />
+      <CombinedMetricsPanel metrics={combinedMetrics} />
 
       {/* AI Insight */}
       <AIInsightBanner storeContext={storeContext} />
