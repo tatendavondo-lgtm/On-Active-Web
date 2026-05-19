@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (profile?.role !== 'owner') {
-    return Response.json({ error: 'Forbidden â€” owner only' }, { status: 403 });
+    return Response.json({ error: 'Forbidden — owner only' }, { status: 403 });
   }
 
   const { email } = await request.json();

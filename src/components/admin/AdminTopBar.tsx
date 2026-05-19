@@ -78,7 +78,7 @@ export function AdminTopBar({ pageTitle }: AdminTopBarProps) {
                   {notifications.length === 0 ? (
                     <div className="px-4 py-8 text-center">
                       <Bell size={20} className="text-[#2a2a2a] mx-auto mb-2" />
-                      <p className="text-[#444] text-xs">All clear â€” no notifications yet</p>
+                      <p className="text-[#444] text-xs">All clear — no notifications yet</p>
                     </div>
                   ) : (
                     <div className="max-h-72 overflow-y-auto">

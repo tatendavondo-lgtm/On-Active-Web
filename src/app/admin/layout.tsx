@@ -3,7 +3,7 @@ import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
   title: 'On Active Admin Hub',
-  description: 'Premium AI-powered management dashboard â€” On Active fitness apparel.',
+  description: 'Premium AI-powered management dashboard — On Active fitness apparel.',
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

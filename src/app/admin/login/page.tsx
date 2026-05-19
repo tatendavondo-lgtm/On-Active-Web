@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
 
       if (roleError || !['owner', 'manager'].includes(role)) {
         await supabase.auth.signOut();
-        toast.error(`Access denied â€” ${roleError || 'not an admin account.'}`);
+        toast.error(`Access denied — ${roleError || 'not an admin account.'}`);
         return;
       }
       toast.success('Welcome back');
@@ -110,7 +110,7 @@ export default function AdminLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-[#111] border border-[#1f1f1f] rounded-[6px] px-4 py-3 pr-12 text-white text-sm outline-none focus:border-[#C5A021]/50 transition-colors placeholder:text-[#333]"
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="••••••••"
                 />
                 <button
                   type="button"
@@ -131,7 +131,7 @@ export default function AdminLoginPage() {
               {loading ? (
                 <>
                   <Loader2 size={15} className="animate-spin" />
-                  Signing inâ€¦
+                  Signing in...
                 </>
               ) : (
                 'Sign in to Admin Hub'
@@ -141,7 +141,7 @@ export default function AdminLoginPage() {
         </div>
 
         <p className="text-center text-[#2a2a2a] text-xs mt-6">
-          On Active Admin Hub Â· Restricted access
+          On Active Admin Hub · Restricted access
         </p>
       </motion.div>
     </div>

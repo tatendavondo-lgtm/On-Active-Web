@@ -4,7 +4,7 @@ import { createServerClient } from '@supabase/ssr';
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public admin route â€” allow through
+  // Public admin route — allow through
   if (pathname === '/admin/login') {
     return NextResponse.next();
   }

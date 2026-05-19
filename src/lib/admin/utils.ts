@@ -1,4 +1,4 @@
-﻿// â”€â”€â”€ On Active Admin Hub â€” Shared Utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+﻿// ─── On Active Admin Hub — Shared Utilities ──────────────────────────────────
 
 export function formatUSD(amount: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -76,5 +76,5 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
 
 export function truncate(str: string, length: number): string {
   if (str.length <= length) return str;
-  return str.slice(0, length) + 'â€¦';
+  return str.slice(0, length) + '...';
 }

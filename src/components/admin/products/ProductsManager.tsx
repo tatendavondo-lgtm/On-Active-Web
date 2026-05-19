@@ -122,7 +122,7 @@ export function ProductsManager({ userRole }: ProductsManagerProps) {
                       <p className="text-[#444] text-xs">{product.slug}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-[#666] text-sm">{product.category ?? 'â€”'}</span>
+                      <span className="text-[#666] text-sm">{product.category ?? '—'}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-white text-sm font-semibold">{formatUSD(product.price_usd)}</span>

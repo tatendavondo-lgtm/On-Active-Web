@@ -96,7 +96,7 @@ export function InventoryTable({ inventory }: InventoryTableProps) {
                   <p className="text-white text-sm font-medium">{item.name}</p>
                 </td>
                 <td className="px-4 py-3.5">
-                  <span className="text-[#555] text-sm">{item.category ?? 'â€”'}</span>
+                  <span className="text-[#555] text-sm">{item.category ?? '—'}</span>
                 </td>
                 <td className="px-4 py-3.5">
                   <span className="text-white text-sm">{formatUSD(item.price_usd)}</span>
@@ -142,7 +142,7 @@ export function InventoryTable({ inventory }: InventoryTableProps) {
                       Order ~{item.suggestedRestock} units
                     </span>
                   ) : (
-                    <span className="text-[#333] text-xs">â€”</span>
+                    <span className="text-[#333] text-xs">—</span>
                   )}
                 </td>
               </motion.tr>

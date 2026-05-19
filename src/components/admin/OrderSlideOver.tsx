@@ -74,7 +74,7 @@ export function OrderSlideOver({ order, onClose }: OrderSlideOverProps) {
                       <div className="flex-1 min-w-0">
                         <p className="text-white text-sm font-medium truncate">{item.name}</p>
                         <p className="text-[#444] text-xs">
-                          Size {item.size} Â· Qty {item.quantity}
+                          Size {item.size} · Qty {item.quantity}
                         </p>
                       </div>
                       <p className="text-white text-sm font-semibold flex-shrink-0">

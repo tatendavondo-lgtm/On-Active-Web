@@ -47,7 +47,7 @@ export function AdminSidebar() {
 
   return (
     <>
-      {/* â”€â”€ Desktop Sidebar â”€â”€ */}
+      {/* ── Desktop Sidebar ── */}
       <motion.aside
         animate={{ width: isCollapsed ? 64 : 240 }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}

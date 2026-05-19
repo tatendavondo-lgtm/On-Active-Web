@@ -46,7 +46,7 @@ export function OrderFilters({ status, search, onStatusChange, onSearchChange }:
           type="text"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search by order refâ€¦"
+          placeholder="Search by order ref..."
           className="w-full bg-[#111] border border-[#1f1f1f] rounded-[6px] pl-9 pr-4 py-2 text-white text-sm outline-none focus:border-[#2a2a2a] transition-colors placeholder:text-[#333]"
         />
       </div>

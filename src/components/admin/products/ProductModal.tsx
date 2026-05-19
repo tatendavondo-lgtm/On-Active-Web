@@ -241,7 +241,7 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                       value={form.description}
                       onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                       className="input-admin h-24 resize-none"
-                      placeholder="Premium breathable fabric, ergonomic fitâ€¦"
+                      placeholder="Premium breathable fabric, ergonomic fit..."
                     />
                   </div>
 

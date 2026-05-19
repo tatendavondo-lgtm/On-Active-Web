@@ -35,7 +35,7 @@ export function TeamManagement({ managers: initialManagers }: TeamManagementProp
         setInviteEmail('');
       }
     } catch {
-      toast.error('Network error â€” please try again');
+      toast.error('Network error — please try again');
     } finally {
       setInviting(false);
     }
@@ -98,7 +98,7 @@ export function TeamManagement({ managers: initialManagers }: TeamManagementProp
                     </span>
                   </div>
                   <div>
-                    <p className="text-white text-sm font-medium">{manager.full_name ?? 'â€”'}</p>
+                    <p className="text-white text-sm font-medium">{manager.full_name ?? '—'}</p>
                     <p className="text-[#444] text-xs">{formatDate(manager.created_at)}</p>
                   </div>
                 </div>

@@ -62,7 +62,7 @@ export function RecentOrdersTable({ orders }: RecentOrdersTableProps) {
                   </td>
                   <td className="px-4 py-3.5">
                     <span className="text-[#888] text-sm">
-                      {truncate(order.items?.map((it) => it.name).join(', ') ?? 'â€”', 32)}
+                      {truncate(order.items?.map((it) => it.name).join(', ') ?? '—', 32)}
                     </span>
                   </td>
                   <td className="px-4 py-3.5">

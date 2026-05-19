@@ -57,7 +57,7 @@ export default function Home() {
               href="/shop/collections" 
               className="group mt-4 inline-block relative bg-[#C5A021] px-12 py-5 text-[11px] font-black uppercase tracking-[0.4em] text-black transition-all hover:scale-[1.02] active:scale-95 duration-300"
             >
-              Shop the 2026 Collection →
+              Shop the 2026 Collection -&#62;
             </Link>
           </motion.div>
         </div>
@@ -95,7 +95,7 @@ export default function Home() {
             href="/shop/collections" 
             className="group inline-block border border-[#C5A021] px-10 py-4 text-[10px] font-black uppercase tracking-[0.3em] text-[#C5A021] transition-all hover:bg-[#C5A021] hover:text-black hover:scale-[1.02] duration-300"
           >
-            Discover the Collection →
+            Discover the Collection -&#62;
           </Link>
         </motion.div>
       </section>

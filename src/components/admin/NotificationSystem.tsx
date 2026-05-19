@@ -24,7 +24,7 @@ export function NotificationSystem() {
             id: `order-${order.id}-${Date.now()}`,
             type: 'new_order',
             title: `New Order ${order.order_ref}`,
-            message: `${formatUSD(order.total_usd)} Â· ${order.items?.length ?? 1} item(s)`,
+            message: `${formatUSD(order.total_usd)} · ${order.items?.length ?? 1} item(s)`,
             timestamp: Date.now(),
             read: false,
           };

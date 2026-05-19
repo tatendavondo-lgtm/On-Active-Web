@@ -59,7 +59,7 @@ function MetricCard({ title, rawValue, displayValue, change, icon: Icon, color, 
         <span
           className={`text-xs font-bold ${change > 0 ? 'text-[#C5A021]' : change < 0 ? 'text-red-400' : 'text-[#444]'}`}
         >
-          {change > 0 ? '+' : ''}{change !== 0 ? `${change}%` : 'â€”'}
+          {change > 0 ? '+' : ''}{change !== 0 ? `${change}%` : '—'}
         </span>
       </div>
       <p className="text-white text-3xl font-black tracking-tight mb-1.5 font-mono">

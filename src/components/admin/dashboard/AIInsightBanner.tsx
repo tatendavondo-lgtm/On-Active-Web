@@ -65,7 +65,7 @@ export function AIInsightBanner({ storeContext }: AIInsightBannerProps) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[#C5A021] text-[11px] font-bold uppercase tracking-widest mb-1.5">
-              AI Insight â€” Today
+              AI Insight — Today
             </p>
             <AnimatePresence mode="wait">
               <p className="text-white text-sm leading-relaxed">

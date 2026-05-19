@@ -100,7 +100,7 @@ export function AIChat({ initialContext }: AIChatProps) {
           </div>
           <div>
             <p className="text-white text-sm font-bold">Samkee&apos;s AI Assistant</p>
-            <p className="text-[#444] text-xs">Gemini 2.5 Flash Â· Live store data</p>
+            <p className="text-[#444] text-xs">Gemini 2.5 Flash · Live store data</p>
           </div>
           <div className="ml-auto flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 bg-[#C5A021] rounded-full animate-pulse" />
@@ -178,7 +178,7 @@ export function AIChat({ initialContext }: AIChatProps) {
                 {streamingText || (
                   <div className="flex items-center gap-1.5">
                     <Loader2 size={13} className="animate-spin text-[#C5A021]" />
-                    <span className="text-[#555] text-xs">Thinkingâ€¦</span>
+                    <span className="text-[#555] text-xs">Thinking...</span>
                   </div>
                 )}
                 {streamingText && (
@@ -204,7 +204,7 @@ export function AIChat({ initialContext }: AIChatProps) {
                 }
               }}
               rows={1}
-              placeholder="Ask about sales, inventory, or trendsâ€¦"
+              placeholder="Ask about sales, inventory, or trends..."
               className="flex-1 bg-[#0a0a0a] border border-[#1f1f1f] rounded-[6px] px-4 py-3 text-white text-sm outline-none focus:border-[#2a2a2a] transition-colors placeholder:text-[#333] resize-none"
             />
             <button
@@ -216,7 +216,7 @@ export function AIChat({ initialContext }: AIChatProps) {
               <Send size={16} />
             </button>
           </div>
-          <p className="text-[#2a2a2a] text-[10px] mt-2 text-center">Shift+Enter for new line Â· Enter to send</p>
+          <p className="text-[#2a2a2a] text-[10px] mt-2 text-center">Shift+Enter for new line · Enter to send</p>
         </div>
       </div>
 

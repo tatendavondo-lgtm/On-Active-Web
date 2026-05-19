@@ -125,7 +125,7 @@ export function ProductGrid() {
             href="/shop/collections"
             className="group relative flex items-center gap-4 border border-white/10 px-12 py-6 text-[10px] font-black uppercase tracking-[0.4em] transition-all hover:bg-[#C5A021] hover:text-black hover:border-[#C5A021]"
           >
-            View All Products →
+            View All Products -&#62;
           </Link>
         </div>
       </div>

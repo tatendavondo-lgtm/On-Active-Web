@@ -25,8 +25,8 @@ export const metadata: Metadata = {
 import { Preloader } from '@/components/preloader';
 
 // Root layout: bare HTML shell only.
-// - Storefront providers (CartProvider, Preloader, CustomCursor) â†’ src/app/(store)/layout.tsx
-// - Admin shell â†’ src/app/admin/(hub)/layout.tsx
+// - Storefront providers (CartProvider, Preloader, CustomCursor) -> src/app/(store)/layout.tsx
+// - Admin shell -> src/app/admin/(hub)/layout.tsx
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
