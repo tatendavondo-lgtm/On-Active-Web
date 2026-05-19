@@ -37,7 +37,6 @@ async function exhaustModels() {
       const testData = await testRes.json();
       if (testRes.ok) {
         console.log(`✅ ${cleanName} is working!`);
-        process.exit(0);
       } else {
         console.log(`❌ ${cleanName} failed: ${testData.error?.message || 'Unknown error'}`);
       }

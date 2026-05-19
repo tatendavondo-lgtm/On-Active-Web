@@ -12,11 +12,17 @@ export async function POST(req: NextRequest) {
 
     const adminSupabase = createAdminClient();
     
-    const { data: newOrder, error } = await adminSupabase.from('pending_orders').insert({
-      ...payload,
+    // Sanitize payload for pending_orders
+    const orderData = {
+      order_ref: payload.order_ref,
+      items: payload.items,
+      total_usd: payload.total_usd,
+      delivery_fee_usd: payload.delivery_fee_usd || 0,
+      status: 'pending',
       created_at: new Date().toISOString(),
-      status: 'pending' // Force pending status on creation
-    }).select().single();
+    };
+
+    const { data: newOrder, error } = await adminSupabase.from('pending_orders').insert(orderData).select().single();
 
     if (error) {
        return NextResponse.json({ error: error.message }, { status: 400 });

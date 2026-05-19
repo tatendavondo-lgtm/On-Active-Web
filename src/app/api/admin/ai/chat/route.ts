@@ -107,8 +107,8 @@ export async function POST(request: NextRequest) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  // Use the stable flash alias — avoids per-model daily free-tier caps on gemini-2.5-flash
-  const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+  // Use the latest 2.5 Flash model as requested for superior reasoning and speed
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const systemInstruction = `You are Samkee's personal business assistant for On Active, a premium fitness apparel brand based in Zimbabwe. You have access to real-time store data. Be concise, insightful, and actionable. Always speak in USD unless the user specifically asks about ZiG. Keep responses under 200 words unless a detailed breakdown is requested.
 

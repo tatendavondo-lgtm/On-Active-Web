@@ -1,12 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Trash2, UserPlus, Users, Store, Shield, Wallet, Briefcase, UserCircle } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-import { addStaffMember, deactivateStaffMember } from '@/app/admin/(hub)/staff/actions';
+import { Loader2, Trash2, UserPlus, Users, Store, Shield, Wallet, Briefcase, UserCircle, Eye, EyeOff, Edit2, X, Phone, Mail } from 'lucide-react';
+import { addStaffMember, updateStaffMember, deactivateStaffMember } from '@/app/admin/(hub)/staff/actions';
 import { ConfirmModal } from '../ConfirmModal';
 import { EmptyState } from '../ui/EmptyState';
-import { formatDate } from '@/lib/admin/utils';
 import toast from 'react-hot-toast';
 
 interface Employee {
@@ -15,6 +13,8 @@ interface Employee {
   role: string;
   pin: string;
   store_id: string;
+  email?: string;
+  phone?: string;
   created_at: string;
   is_active: boolean;
 }
@@ -33,48 +33,86 @@ const ROLES = [
   { id: 'manager', label: 'Management', icon: Briefcase },
   { id: 'salesman', label: 'Salesman', icon: UserCircle },
   { id: 'till_operator', label: 'Till Operator', icon: Wallet },
-  { id: 'security_guard', label: 'Security Guard', icon: Shield },
+  { id: 'supervisor', label: 'Supervisor', icon: Shield },
 ];
 
 export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagementProps) {
-  // Only show active employees
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees.filter(e => e.is_active));
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showPins, setShowPins] = useState<Record<string, boolean>>({});
+  
   const [form, setForm] = useState({
     fullName: '',
     role: 'salesman',
     pin: '',
+    email: '',
+    phone: '',
     storeId: stores[0]?.id || '',
   });
-  const [adding, setAdding] = useState(false);
+  
+  const [submitting, setSubmitting] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<Employee | null>(null);
 
-  const handleAdd = async () => {
-    if (!form.fullName.trim() || !form.pin.trim() || !form.storeId) {
-      toast.error('All fields are required');
+  const togglePin = (id: string) => {
+    setShowPins(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const resetForm = () => {
+    setForm({
+      fullName: '',
+      role: 'salesman',
+      pin: '',
+      email: '',
+      phone: '',
+      storeId: stores[0]?.id || '',
+    });
+    setEditingId(null);
+  };
+
+  const handleEdit = (emp: Employee) => {
+    setEditingId(emp.id);
+    setForm({
+      fullName: emp.full_name,
+      role: emp.role,
+      pin: '', // Keep PIN empty unless changing
+      email: emp.email || '',
+      phone: emp.phone || '',
+      storeId: emp.store_id,
+    });
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSubmit = async () => {
+    if (!form.fullName.trim() || !form.storeId) {
+      toast.error('Name and Store are required');
       return;
     }
 
-    if (form.pin.length < 4 || isNaN(Number(form.pin))) {
-      toast.error('PIN must be at least a 4-digit number');
+    if (!editingId && (!form.pin.trim() || form.pin.length < 4)) {
+      toast.error('A 4-digit PIN is required for new staff');
       return;
     }
 
-    setAdding(true);
+    setSubmitting(true);
     try {
-      const data = await addStaffMember(form);
-
-      toast.success(`${form.fullName} added to POS staff`);
-      setEmployees((prev) => [data, ...prev]);
-      setForm({
-        fullName: '',
-        role: 'salesman',
-        pin: '',
-        storeId: stores[0]?.id || '',
-      });
+      if (editingId) {
+        const updated = await updateStaffMember(editingId, {
+          ...form,
+          pin: form.pin.trim() || undefined
+        });
+        setEmployees(prev => prev.map(e => e.id === editingId ? updated : e));
+        toast.success('Staff member updated');
+      } else {
+        const data = await addStaffMember(form);
+        setEmployees(prev => [data, ...prev]);
+        toast.success(`${form.fullName} added to POS staff`);
+      }
+      resetForm();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to add employee');
+      toast.error(err.message || 'Operation failed');
     } finally {
-      setAdding(false);
+      setSubmitting(false);
     }
   };
 
@@ -102,36 +140,52 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
   return (
     <>
       <div className="bg-[#111] border border-[#1f1f1f] rounded-[8px] p-6">
-        <div className="flex items-center gap-2 mb-1">
-          <Store size={16} className="text-[#C5A021]" />
-          <h3 className="text-white font-bold text-sm">POS Staff Management</h3>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <Store size={16} className="text-[#C5A021]" />
+            <h3 className="text-white font-bold text-sm">POS Staff Management</h3>
+          </div>
+          {editingId && (
+            <button onClick={resetForm} className="text-[10px] font-bold uppercase text-red-500 flex items-center gap-1 hover:underline">
+              <X size={12} /> Cancel Edit
+            </button>
+          )}
         </div>
         <p className="text-[#444] text-xs mb-6">
-          Manage physical store staff, their roles, and POS login PINs.
+          {editingId ? `Currently editing ${form.fullName}` : 'Manage physical store staff, their roles, and POS login PINs.'}
         </p>
 
-        {/* Add Employee Form */}
-        <div className="space-y-4 mb-8 p-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-[6px]">
+        {/* Form */}
+        <div className={`space-y-4 mb-8 p-4 bg-[#0a0a0a] border rounded-[6px] transition-colors ${editingId ? 'border-[#C5A021]/30' : 'border-[#1a1a1a]'}`}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
+            <div className="sm:col-span-2">
               <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">Full Name</label>
               <input
                 type="text"
                 value={form.fullName}
                 onChange={(e) => setForm(f => ({ ...f, fullName: e.target.value }))}
                 placeholder="John Doe"
-                className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#2a2a2a] transition-colors"
+                className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#2a2a2a]"
               />
             </div>
             <div>
-              <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">4-Digit PIN</label>
+              <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">Email (Optional)</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="john@onactive.co.zw"
+                className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#2a2a2a]"
+              />
+            </div>
+            <div>
+              <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">Phone (Optional)</label>
               <input
                 type="text"
-                maxLength={4}
-                value={form.pin}
-                onChange={(e) => setForm(f => ({ ...f, pin: e.target.value.replace(/\D/g, '') }))}
-                placeholder="1234"
-                className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#2a2a2a] transition-colors font-mono tracking-[0.2em]"
+                value={form.phone}
+                onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))}
+                placeholder="+263 7..."
+                className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#2a2a2a]"
               />
             </div>
             <div>
@@ -139,33 +193,46 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
               <select
                 value={form.role}
                 onChange={(e) => setForm(f => ({ ...f, role: e.target.value }))}
-                className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#2a2a2a] transition-colors"
+                className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none"
               >
                 {ROLES.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">Assign Store</label>
+              <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">Store</label>
               <select
                 value={form.storeId}
                 onChange={(e) => setForm(f => ({ ...f, storeId: e.target.value }))}
-                className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#2a2a2a] transition-colors"
+                className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none"
               >
                 {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
+            <div className="sm:col-span-2">
+              <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">
+                {editingId ? 'Change PIN (Leave blank to keep current)' : 'Login PIN (4-Digits)'}
+              </label>
+              <input
+                type="text"
+                maxLength={4}
+                value={form.pin}
+                onChange={(e) => setForm(f => ({ ...f, pin: e.target.value.replace(/\D/g, '') }))}
+                placeholder={editingId ? '••••' : '1234'}
+                className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#C5A021]/50 font-mono tracking-[0.2em]"
+              />
+            </div>
           </div>
           <button
-            onClick={handleAdd}
-            disabled={adding}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#C5A021] text-black text-sm font-bold rounded-[6px] hover:bg-[#A6861C] disabled:opacity-50 transition-colors mt-2"
+            onClick={handleSubmit}
+            disabled={submitting}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-black text-sm font-bold rounded-[6px] transition-colors mt-2 ${editingId ? 'bg-white hover:bg-gray-200' : 'bg-[#C5A021] hover:bg-[#A6861C]'}`}
           >
-            {adding ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
-            Add Staff Member
+            {submitting ? <Loader2 size={14} className="animate-spin" /> : editingId ? <Edit2 size={14} /> : <UserPlus size={14} />}
+            {editingId ? 'Update Staff Member' : 'Add Staff Member'}
           </button>
         </div>
 
-        {/* Staff list */}
+        {/* List */}
         {employees.length === 0 ? (
           <EmptyState icon={Users} title="No staff members" description="Add your first POS employee above." />
         ) : (
@@ -173,31 +240,50 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
             {employees.map((emp) => (
               <div
                 key={emp.id}
-                className="flex items-center justify-between px-4 py-3 bg-[#0d0d0d] border border-[#1a1a1a] rounded-[6px]"
+                className={`group flex items-center justify-between px-4 py-3 bg-[#0d0d0d] border rounded-[6px] transition-colors ${editingId === emp.id ? 'border-[#C5A021] bg-[#C5A021]/5' : 'border-[#1a1a1a] hover:border-[#222]'}`}
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-[#1a1a1a] rounded-[4px] flex items-center justify-center text-[#C5A021]">
                     {getRoleIcon(emp.role)}
                   </div>
                   <div>
-                    <p className="text-white text-sm font-medium">{emp.full_name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-white text-sm font-medium">{emp.full_name}</p>
+                      {emp.email && <Mail size={10} className="text-[#333]" title={emp.email} />}
+                      {emp.phone && <Phone size={10} className="text-[#333]" title={emp.phone} />}
+                    </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[#444] text-[10px] uppercase font-bold tracking-wider">{getStoreName(emp.store_id)}</span>
                       <span className="text-[#222] text-[10px]">•</span>
-                      <span className="text-[#C5A021] text-[10px] font-mono font-bold tracking-widest">PIN: {emp.pin}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[#C5A021] text-[10px] font-mono font-bold tracking-widest">
+                          PIN: {showPins[emp.id] ? emp.pin : '••••'}
+                        </span>
+                        <button onClick={() => togglePin(emp.id)} className="text-[#333] hover:text-[#555] transition-colors">
+                          {showPins[emp.id] ? <EyeOff size={10} /> : <Eye size={10} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-[3px] bg-[#1f1f1f] text-[#555]">
+                <div className="flex items-center gap-2">
+                  <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-[3px] bg-[#1f1f1f] text-[#555]">
                     {ROLES.find(r => r.id === emp.role)?.label || emp.role}
                   </span>
-                  <button
-                    onClick={() => setRemoveTarget(emp)}
-                    className="p-1.5 text-red-500/40 hover:text-red-400 hover:bg-red-500/10 rounded-[4px] transition-colors"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleEdit(emp)}
+                      className="p-1.5 text-[#444] hover:text-white hover:bg-white/5 rounded-[4px]"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                    <button
+                      onClick={() => setRemoveTarget(emp)}
+                      className="p-1.5 text-red-500/40 hover:text-red-400 hover:bg-red-500/10 rounded-[4px]"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -217,3 +303,4 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
     </>
   );
 }
+

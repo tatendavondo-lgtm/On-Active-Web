@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Forbidden — owner only' }, { status: 403 });
   }
 
-  const { email } = await request.json();
+  const { email, fullName, role } = await request.json();
   if (!email) return Response.json({ error: 'Email required' }, { status: 400 });
 
   // Use service role client to send the invite
@@ -27,7 +27,12 @@ export async function POST(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { error } = await adminClient.auth.admin.inviteUserByEmail(email);
+  const { error } = await adminClient.auth.admin.inviteUserByEmail(email, {
+    data: {
+      full_name: fullName || 'New Manager',
+      role: role || 'manager',
+    }
+  });
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
   return Response.json({ success: true });

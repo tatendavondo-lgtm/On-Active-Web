@@ -8,12 +8,13 @@ const CLIENT_ONLY_FIELDS = ['synced', 'synced_at', 'device_id', 'created_offline
 // Per-table field whitelist based on actual database columns
 const TABLE_COLUMNS: Record<string, string[]> = {
   salesman_orders: ['id', 'store_id', 'salesman_id', 'salesman_name', 'customer_name', 'items', 'subtotal', 'item_count', 'notes', 'status', 'created_at'],
-  pos_shifts: ['id', 'store_id', 'employee_id', 'opened_at', 'closed_at', 'opening_cash', 'closing_cash', 'actual_cash', 'status', 'created_at'],
+  shifts: ['id', 'store_id', 'employee_id', 'opened_at', 'closed_at', 'opening_cash', 'closing_cash', 'expected_cash', 'cash_difference', 'status', 'notes'],
   pos_orders: ['id', 'order_number', 'store_id', 'employee_id', 'salesman_id', 'salesman_order_id', 'shift_id', 'customer_id', 'source', 'fulfillment', 'status', 'subtotal', 'total_discount', 'total', 'currency', 'exchange_rate_zig', 'exchange_rate_zar', 'created_at', 'completed_at'],
   pos_order_items: ['id', 'order_id', 'product_id', 'variant_id', 'product_name', 'variant_name', 'quantity', 'unit_price', 'line_total'],
-  pos_payments: ['id', 'order_id', 'method', 'amount_usd', 'status', 'created_at'],
-  pos_customers: ['id', 'store_id', 'name', 'phone', 'email', 'address', 'loyalty_points', 'notes', 'created_at', 'updated_at'],
-  products: ['id', 'stock_quantity'], // For inventory updates
+  pos_payments: ['id', 'order_id', 'method', 'amount_usd', 'amount_local', 'local_currency', 'exchange_rate_used', 'reference', 'status', 'created_at'],
+  customers: ['id', 'full_name', 'phone', 'email', 'address', 'notes', 'source', 'created_at'],
+  online_order_bridge: ['id', 'webstore_order_id', 'pos_order_id', 'store_id', 'fulfillment', 'status', 'assigned_at', 'accepted_at', 'ready_at', 'completed_at'],
+  products: ['id', 'stock_quantity'], 
 };
 
 function sanitizeForRemote(table: string, data: any): any {

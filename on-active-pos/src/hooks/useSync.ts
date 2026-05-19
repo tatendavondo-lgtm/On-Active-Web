@@ -87,6 +87,8 @@ export function useSync(): SyncState {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handleCatalogChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'product_variants' }, handleCatalogChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'store_inventory', filter: `store_id=eq.${store.id}` }, handleCatalogChange)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'salesman_orders', filter: `store_id=eq.${store.id}` }, handleCatalogChange)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'online_order_bridge', filter: `store_id=eq.${store.id}` }, handleCatalogChange)
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log(`Subscribed to ${channelName}`);

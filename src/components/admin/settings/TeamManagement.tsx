@@ -16,23 +16,33 @@ interface TeamManagementProps {
 export function TeamManagement({ managers: initialManagers }: TeamManagementProps) {
   const [managers, setManagers] = useState(initialManagers);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [inviteRole, setInviteRole] = useState('manager');
   const [inviting, setInviting] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<Profile | null>(null);
 
   const handleInvite = async () => {
-    if (!inviteEmail.trim()) { toast.error('Enter an email address'); return; }
+    if (!inviteEmail.trim() || !inviteName.trim()) { 
+      toast.error('Email and Name are required'); 
+      return; 
+    }
     setInviting(true);
     try {
       const res = await fetch('/api/admin/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail }),
+        body: JSON.stringify({ 
+          email: inviteEmail,
+          fullName: inviteName,
+          role: inviteRole
+        }),
       });
       const data = await res.json();
       if (!res.ok) toast.error(data.error ?? 'Failed to send invite');
       else {
-        toast.success(`Invite sent to ${inviteEmail}`);
+        toast.success(`Invite sent to ${inviteName}`);
         setInviteEmail('');
+        setInviteName('');
       }
     } catch {
       toast.error('Network error — please try again');
@@ -61,24 +71,42 @@ export function TeamManagement({ managers: initialManagers }: TeamManagementProp
         </p>
 
         {/* Invite */}
-        <div className="flex gap-2.5 mb-6">
-          <input
-            type="email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            placeholder="manager@onactive.co.zw"
-            className="flex-1 bg-[#0a0a0a] border border-[#1f1f1f] rounded-[6px] px-4 py-2.5 text-white text-sm outline-none focus:border-[#2a2a2a] transition-colors placeholder:text-[#333]"
-            onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
-          />
-          <button
-            id="invite-manager-btn"
-            onClick={handleInvite}
-            disabled={inviting}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#1a1a1a] border border-[#1f1f1f] text-white text-sm font-semibold rounded-[6px] hover:bg-[#222] disabled:opacity-50 transition-colors"
-          >
-            {inviting ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
-            Invite
-          </button>
+        <div className="space-y-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input
+              type="text"
+              value={inviteName}
+              onChange={(e) => setInviteName(e.target.value)}
+              placeholder="Full Name"
+              className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-[6px] px-4 py-2.5 text-white text-sm outline-none focus:border-[#2a2a2a] transition-colors"
+            />
+            <input
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="manager@onactive.co.zw"
+              className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-[6px] px-4 py-2.5 text-white text-sm outline-none focus:border-[#2a2a2a] transition-colors"
+            />
+          </div>
+          <div className="flex gap-2.5">
+            <select
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value)}
+              className="flex-1 bg-[#0a0a0a] border border-[#1f1f1f] rounded-[6px] px-4 py-2.5 text-white text-sm outline-none"
+            >
+              <option value="manager">Manager</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button
+              id="invite-manager-btn"
+              onClick={handleInvite}
+              disabled={inviting}
+              className="flex items-center gap-2 px-6 py-2.5 bg-[#C5A021] text-black text-sm font-bold rounded-[6px] hover:bg-[#A6861C] disabled:opacity-50 transition-colors"
+            >
+              {inviting ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
+              Invite
+            </button>
+          </div>
         </div>
 
         {/* Manager list */}
