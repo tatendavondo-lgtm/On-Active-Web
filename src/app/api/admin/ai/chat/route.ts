@@ -107,7 +107,8 @@ export async function POST(request: NextRequest) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  // Use the stable flash alias — avoids per-model daily free-tier caps on gemini-2.5-flash
+  const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 
   const systemInstruction = `You are Samkee's personal business assistant for On Active, a premium fitness apparel brand based in Zimbabwe. You have access to real-time store data. Be concise, insightful, and actionable. Always speak in USD unless the user specifically asks about ZiG. Keep responses under 200 words unless a detailed breakdown is requested.
 
@@ -147,13 +148,18 @@ ${posContext}`;
       } catch (err: any) {
         console.error('AI Chat Error:', err);
         let errorMessage = 'Sorry, I encountered an error. Please try again.';
-        if (err && err.message) {
-          errorMessage = `AI Chat Error: ${err.message}`;
-        } else if (typeof err === 'object' && err !== null) {
-          errorMessage = `AI Chat Error: ${JSON.stringify(err)}`;
-        } else if (err) {
-          errorMessage = `AI Chat Error: ${String(err)}`;
+
+        const rawMessage: string = err?.message ?? JSON.stringify(err) ?? String(err);
+
+        if (rawMessage.includes('429') || rawMessage.toLowerCase().includes('quota')) {
+          // Friendly daily quota message
+          errorMessage = '⚠️ Daily AI quota reached for this API key. The assistant will be available again tomorrow, or you can upgrade your Gemini API key at https://ai.dev to unlock higher limits.';
+        } else if (rawMessage.includes('403') || rawMessage.toLowerCase().includes('permission')) {
+          errorMessage = '⚠️ The AI assistant is not authorized to use this model. Please check your Gemini API key permissions.';
+        } else if (rawMessage) {
+          errorMessage = `AI Assistant Error: ${rawMessage.slice(0, 300)}`;
         }
+
         controller.enqueue(encoder.encode(errorMessage));
         controller.close();
       }
