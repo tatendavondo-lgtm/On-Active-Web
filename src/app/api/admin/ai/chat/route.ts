@@ -30,40 +30,72 @@ export async function POST(request: NextRequest) {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  // Fetch AI Context in parallel (bypassing client-side RLS limits for high-fidelity responses)
-  const [posOrders, openShifts, pendingOnline] = await Promise.all([
-    adminSupabase
+  // Resilient queries with graceful schema fallbacks
+  const getPosOrders = async () => {
+    const res = await adminSupabase
       .from('pos_orders')
       .select('id, order_number, source, total, status, created_at, auto_discount_applied, auto_discount_amount')
       .eq('status', 'completed')
-      .gte('created_at', todayStart.toISOString()),
+      .gte('created_at', todayStart.toISOString());
+    
+    if (res.error) {
+      // Fallback if auto-discount columns do not exist
+      const fallback = await adminSupabase
+        .from('pos_orders')
+        .select('id, order_number, source, total, status, created_at')
+        .eq('status', 'completed')
+        .gte('created_at', todayStart.toISOString());
+      return fallback.data ?? [];
+    }
+    return res.data ?? [];
+  };
 
-    adminSupabase
+  const getOpenShifts = async () => {
+    const res = await adminSupabase
       .from('shifts')
       .select('id, employee_id, store_id, opened_at, opening_cash')
-      .eq('status', 'open'),
+      .eq('status', 'open');
+    return res.data ?? [];
+  };
 
-    adminSupabase
+  const getPendingOnline = async () => {
+    const res = await adminSupabase
       .from('online_order_bridge')
       .select('id, fulfillment, status, total, customer_name, assigned_at')
-      .not('status', 'in', '("completed","cancelled")')
+      .not('status', 'in', '("completed","cancelled")');
+    
+    if (res.error) {
+      // Fallback if total or customer_name do not exist
+      const fallback = await adminSupabase
+        .from('online_order_bridge')
+        .select('id, fulfillment, status, assigned_at')
+        .not('status', 'in', '("completed","cancelled")');
+      return fallback.data ?? [];
+    }
+    return res.data ?? [];
+  };
+
+  const [posOrdersList, openShiftsList, pendingOnlineList] = await Promise.all([
+    getPosOrders(),
+    getOpenShifts(),
+    getPendingOnline()
   ]);
 
   const posContext = `
 ## POS Sales Today
-- Total POS orders: ${posOrders.data?.length ?? 0}
-- POS revenue: $${(posOrders.data?.reduce((s, o) => s + (o.total || 0), 0) ?? 0).toFixed(2)}
-- Walk-in: ${posOrders.data?.filter(o => o.source === 'walk_in').length ?? 0}
-- Salesman: ${posOrders.data?.filter(o => o.source === 'salesman').length ?? 0}
-- Auto-discounts applied: ${posOrders.data?.filter(o => o.auto_discount_applied).length ?? 0}
+- Total POS orders: ${posOrdersList.length}
+- POS revenue: $${posOrdersList.reduce((s, o) => s + (o.total || 0), 0).toFixed(2)}
+- Walk-in: ${posOrdersList.filter(o => o.source === 'walk_in').length}
+- Salesman: ${posOrdersList.filter(o => o.source === 'salesman').length}
+- Auto-discounts applied: ${posOrdersList.filter((o: any) => o.auto_discount_applied).length}
 
 ## Open Shifts
-- ${openShifts.data?.length ?? 0} staff currently on shift
+- ${openShiftsList.length} staff currently on shift
 
 ## Online Orders Pending Fulfillment
-- ${pendingOnline.data?.length ?? 0} orders waiting
-- Collection: ${pendingOnline.data?.filter(o => o.fulfillment === 'collection').length ?? 0}
-- Delivery: ${pendingOnline.data?.filter(o => o.fulfillment === 'delivery').length ?? 0}
+- ${pendingOnlineList.length} orders waiting
+- Collection: ${pendingOnlineList.filter(o => o.fulfillment === 'collection').length}
+- Delivery: ${pendingOnlineList.filter(o => o.fulfillment === 'delivery').length}
 `;
 
   const apiKey = process.env.GEMINI_API_KEY;
