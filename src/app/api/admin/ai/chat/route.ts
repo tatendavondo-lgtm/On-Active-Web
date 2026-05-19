@@ -72,7 +72,14 @@ ${JSON.stringify(storeContext, null, 2)}`;
         controller.close();
       } catch (err: any) {
         console.error('AI Chat Error:', err);
-        const errorMessage = err?.message || 'Sorry, I encountered an error. Please try again.';
+        let errorMessage = 'Sorry, I encountered an error. Please try again.';
+        if (err && err.message) {
+          errorMessage = `AI Chat Error: ${err.message}`;
+        } else if (typeof err === 'object' && err !== null) {
+          errorMessage = `AI Chat Error: ${JSON.stringify(err)}`;
+        } else if (err) {
+          errorMessage = `AI Chat Error: ${String(err)}`;
+        }
         controller.enqueue(encoder.encode(errorMessage));
         controller.close();
       }
