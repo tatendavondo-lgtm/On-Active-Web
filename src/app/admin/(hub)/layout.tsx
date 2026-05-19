@@ -7,7 +7,8 @@ import { NotificationSystem } from '@/components/admin/NotificationSystem';
 import { motion } from 'framer-motion';
 import type { Profile } from '@/types';
 import { useAdmin } from '@/store/admin';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 const PAGE_TITLES: Record<string, string> = {
   '/admin/dashboard': 'Dashboard',
@@ -33,7 +34,9 @@ function HubShell({
   const setProfile = useAdmin((state) => state.setProfile);
 
   useEffect(() => {
-    setProfile(profile);
+    if (profile) {
+      setProfile(profile);
+    }
   }, [profile, setProfile]);
 
   return (
@@ -58,6 +61,29 @@ function HubShell({
 }
 
 export default function HubLayout({ children }: { children: React.ReactNode }) {
-  // Profile is fetched client-side via AdminProvider; middleware guarantees auth
-  return <HubShell children={children} profile={null} />;
+  const [profile, setProfileState] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    async function loadProfile() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          if (data) {
+            setProfileState(data as Profile);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load admin profile client-side:', err);
+      }
+    }
+    loadProfile();
+  }, []);
+
+  return <HubShell children={children} profile={profile} />;
 }
