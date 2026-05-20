@@ -140,24 +140,40 @@ export async function pullUpdates(storeId: string): Promise<void> {
       invMap[key] = item.quantity;
     });
 
-    const localProducts = products.map((p) => ({
-      id: p.id,
-      name: p.name,
-      category: p.category || 'uncategorized',
-      sku: p.sku || '',
-      image_url: p.image_url || p.images?.[0] || '',
-      variants: (p.product_variants || []).map((v: any) => {
-        const invKey = `${p.id}-${v.id}`;
-        return {
-          id: v.id,
-          name: v.name || 'Standard',
-          sku: v.sku || p.sku || '',
-          price: Number(v.price) || Number(p.price_usd) || 0,
-          stock: invMap[invKey] !== undefined ? invMap[invKey] : (Number(p.stock_quantity) || 0),
-        };
-      }),
-      updated_at: p.updated_at || new Date().toISOString(),
-    }));
+    const webstoreUrl = import.meta.env.VITE_WEBSTORE_URL || '';
+
+    const localProducts = products.map((p) => {
+      let imageUrl = p.image_url || p.images?.[0] || '';
+      
+      // If it's a relative path starting with /, prepend the webstore URL
+      if (imageUrl.startsWith('/') && webstoreUrl) {
+        // Encode only the path part to handle spaces correctly
+        const encodedPath = imageUrl.split('/').map(segment => encodeURIComponent(segment)).join('/');
+        // The split/map/join above will turn /images/products/TGIS 10.jpg into /images/products/TGIS%2010.jpg
+        // But we need to be careful with the leading slash being removed/re-added by join if not careful.
+        // Actually, just using a simple replace for space is often enough for filenames.
+        imageUrl = `${webstoreUrl}${imageUrl.replace(/ /g, '%20')}`;
+      }
+
+      return {
+        id: p.id,
+        name: p.name,
+        category: p.category || 'uncategorized',
+        sku: p.sku || '',
+        image_url: imageUrl,
+        variants: (p.product_variants || []).map((v: any) => {
+          const invKey = `${p.id}-${v.id}`;
+          return {
+            id: v.id,
+            name: v.name || 'Standard',
+            sku: v.sku || p.sku || '',
+            price: Number(v.price) || Number(p.price_usd) || 0,
+            stock: invMap[invKey] !== undefined ? invMap[invKey] : (Number(p.stock_quantity) || 0),
+          };
+        }),
+        updated_at: p.updated_at || new Date().toISOString(),
+      };
+    });
 
     if (localProducts.length > 0) {
       // Find products that exist locally but not in the fetched list and delete them
@@ -218,90 +234,101 @@ export async function pullUpdates(storeId: string): Promise<void> {
     }
   }
 
-  // 3.5 Pull customers
-  const { data: customers } = await supabase
-    .from('pos_customers')
-    .select('*')
-    .eq('store_id', storeId);
+  // 3.5 Pull customers (all of them, as they are not store-scoped in the schema)
+  try {
+    const { data: customers, error: custErr } = await supabase
+      .from('customers')
+      .select('*');
 
-  if (customers) {
-    await db.customers.bulkPut(customers);
+    if (custErr) throw custErr;
+    if (customers) {
+      await db.customers.bulkPut(customers);
+    }
+  } catch (err) {
+    console.warn('Failed to pull customers:', err);
   }
 
   // 4. Pull online orders via the bridge
-  const { data: onlineOrders } = await supabase
-    .from('online_order_bridge')
-    .select('*')
-    .eq('store_id', storeId)
-    .in('status', ['pending', 'confirmed', 'preparing', 'ready']);
+  try {
+    const { data: onlineOrders, error: ooErr } = await supabase
+      .from('online_order_bridge')
+      .select('*')
+      .eq('store_id', storeId)
+      .in('status', ['pending', 'confirmed', 'preparing', 'ready']);
 
-  if (onlineOrders && onlineOrders.length > 0) {
-    // Fetch the actual webstore order details for each bridged order
-    const webOrderIds = onlineOrders.map(bo => bo.webstore_order_id).filter(Boolean);
-    const { data: webOrders } = webOrderIds.length > 0
-      ? await supabase
-          .from('pending_orders')
-          .select('id, order_ref, items, total_usd, delivery_fee_usd, status')
-          .in('id', webOrderIds)
-      : { data: [] };
+    if (ooErr) throw ooErr;
 
-    const webOrderMap: Record<string, any> = {};
-    for (const wo of webOrders ?? []) {
-      webOrderMap[wo.id] = wo;
-    }
+    if (onlineOrders && onlineOrders.length > 0) {
+      // Fetch the actual webstore order details for each bridged order
+      const webOrderIds = onlineOrders.map(bo => bo.webstore_order_id).filter(Boolean);
+      const { data: webOrders } = webOrderIds.length > 0
+        ? await supabase
+            .from('pending_orders')
+            .select('id, order_ref, items, total_usd, delivery_fee_usd, status')
+            .in('id', webOrderIds)
+        : { data: [] };
 
-    for (const bo of onlineOrders) {
-      const exists = await db.orders.get(bo.id);
-      const webOrder = webOrderMap[bo.webstore_order_id];
+      const webOrderMap: Record<string, any> = {};
+      for (const wo of webOrders ?? []) {
+        webOrderMap[wo.id] = wo;
+      }
 
-      // Build items from web order data
-      const items = (webOrder?.items ?? []).map((item: any) => ({
-        id: crypto.randomUUID(),
-        product_id: item.productId || item.product_id || '',
-        product_name: item.name || 'Unknown',
-        variant_name: item.size || '',
-        quantity: item.quantity || 1,
-        unit_price: item.price_usd || 0,
-        discount_amount: 0,
-        line_total: (item.price_usd || 0) * (item.quantity || 1),
-      }));
+      for (const bo of onlineOrders) {
+        const exists = await db.orders.get(bo.id);
+        const webOrder = webOrderMap[bo.webstore_order_id];
 
-      const total = webOrder?.total_usd ?? 0;
-      const orderRef = webOrder?.order_ref ?? `ONLINE-${bo.id.slice(0, 8)}`;
+        // Build items from web order data
+        const items = (webOrder?.items ?? []).map((item: any) => ({
+          id: crypto.randomUUID(),
+          product_id: item.productId || item.product_id || '',
+          product_name: item.name || 'Unknown',
+          variant_name: item.size || '',
+          quantity: item.quantity || 1,
+          unit_price: item.price_usd || 0,
+          discount_amount: 0,
+          line_total: (item.price_usd || 0) * (item.quantity || 1),
+        }));
 
-      if (!exists) {
-        const o: Order = {
-          id: bo.id,
-          order_number: orderRef,
-          source: 'online',
-          fulfillment: bo.fulfillment,
-          status: bo.status,
-          salesman_id: undefined,
-          salesman_order_id: undefined,
-          items,
-          payments: [{ id: crypto.randomUUID(), method: 'online_payment', amount_usd: total, status: 'completed', order_id: bo.id } as any],
-          subtotal: total,
-          auto_discount_applied: false,
-          auto_discount_amount: 0,
-          manual_discount_amount: 0,
-          total_discount: 0,
-          tax_amount: 0,
-          total,
-          currency: 'USD',
-          employee_id: '',
-          shift_id: '',
-          store_id: storeId,
-          created_at: bo.assigned_at,
-          updated_at: bo.assigned_at,
-          created_offline: false,
-          synced: true,
-          device_id: '',
-        };
-        await db.orders.add(o as any);
-      } else if (exists.status !== bo.status) {
-        // Update status if changed remotely
-        await db.orders.update(bo.id, { status: bo.status } as any);
+        const total = webOrder?.total_usd ?? 0;
+        const orderRef = webOrder?.order_ref || (typeof bo.id === 'string' ? `ONLINE-${bo.id.slice(0, 8)}` : `ONLINE-${Math.random().toString(36).substring(7)}`);
+
+        if (!exists) {
+          console.log(`Ingesting online order: ${orderRef}`);
+          const o: Order = {
+            id: bo.id,
+            order_number: orderRef,
+            source: 'online',
+            fulfillment: bo.fulfillment,
+            status: bo.status,
+            salesman_id: undefined,
+            salesman_order_id: undefined,
+            items,
+            payments: [{ id: crypto.randomUUID(), method: 'online_payment', amount_usd: total, status: 'completed', order_id: bo.id } as any],
+            subtotal: total,
+            auto_discount_applied: false,
+            auto_discount_amount: 0,
+            manual_discount_amount: 0,
+            total_discount: 0,
+            tax_amount: 0,
+            total,
+            currency: 'USD',
+            employee_id: '',
+            shift_id: '',
+            store_id: storeId,
+            created_at: bo.assigned_at,
+            updated_at: bo.assigned_at,
+            created_offline: false,
+            synced: true,
+            device_id: '',
+          };
+          await db.orders.add(o as any);
+        } else if (exists.status !== bo.status) {
+          // Update status if changed remotely
+          await db.orders.update(bo.id, { status: bo.status } as any);
+        }
       }
     }
+  } catch (err) {
+    console.warn('Failed to pull online orders:', err);
   }
 }

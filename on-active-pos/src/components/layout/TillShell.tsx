@@ -29,7 +29,7 @@ export function TillShell({ children }: { children: ReactNode }) {
     
     // Add to sync queue
     await db.syncQueue.add({
-      table: 'pos_shifts',
+      table: 'shifts',
       operation: 'insert',
       data: shiftData,
       created_at: now,

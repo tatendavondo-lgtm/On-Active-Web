@@ -118,8 +118,10 @@ export function VerifyOrder({ order, onCancel, onPay }: VerifyOrderProps) {
 
   // Load order into cart store on mount, and auto-verify all items
   useEffect(() => {
-    loadFromSalesmanOrder(orderItems as any[]);
-  }, [order, loadFromSalesmanOrder, orderItems]);
+    if (order?.id) {
+      loadFromSalesmanOrder(order.items || []);
+    }
+  }, [order?.id, loadFromSalesmanOrder]);
 
   // Auto-verify items once they appear in the cart
   useEffect(() => {

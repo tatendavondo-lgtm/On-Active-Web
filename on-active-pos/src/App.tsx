@@ -1,3 +1,4 @@
+import React, { useState, useEffect, Component, ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useSessionStore } from './stores/sessionStore';
 import { isSalesmanRole } from './types/employee';
@@ -15,13 +16,11 @@ import MyOrders from './pages/salesman/MyOrders';
 import TillRegister from './pages/till/TillRegister';
 import Settings from './pages/till/Settings';
 import Customers from './pages/Customers';
-
 import Orders from './pages/till/Orders';
-
 import OnlineOrders from './pages/till/OnlineOrders';
 import EndOfDay from './pages/till/EndOfDay';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children }: { children: ReactNode }) {
   const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }

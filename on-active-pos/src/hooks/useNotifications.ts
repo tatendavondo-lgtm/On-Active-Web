@@ -56,10 +56,15 @@ export function useNotificationListener() {
       if (order.id !== lastNotified && order.status === 'pending') {
         localStorage.setItem('last_notified_online_order', order.id);
         
+        const orderNum = order.order_number || 'UNKNOWN';
+        const shortId = typeof orderNum === 'string' && orderNum.includes('-') 
+          ? orderNum.split('-').pop() 
+          : orderNum;
+
         addNotification({
           type: 'online_order',
           title: 'New Online Order',
-          message: `Order #${order.order_number.split('-').pop()} — ${order.fulfillment}`,
+          message: `#${shortId} — ${order.fulfillment || 'Pending'}`,
           action: { label: 'View Kanban', route: '/till/online-orders' }
         });
         playNotificationSound.newOnlineOrder();

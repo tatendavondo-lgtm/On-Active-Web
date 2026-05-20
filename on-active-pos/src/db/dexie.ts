@@ -73,15 +73,13 @@ export interface SyncQueueItem {
 
 export interface PosCustomer {
   id: string;
-  store_id: string;
-  name: string;
+  full_name: string;
   phone?: string;
   email?: string;
   address?: string;
-  loyalty_points: number;
   notes?: string;
+  source?: string;
   created_at: string;
-  updated_at: string;
 }
 
 export interface PosShift {
@@ -117,13 +115,13 @@ class PosDatabase extends Dexie {
 
   constructor() {
     super('OnActivePOS');
-    this.version(5).stores({
+    this.version(6).stores({
       products: 'id, category, sku, updated_at',
       salesmanOrders: 'id, store_id, salesman_id, status, created_at',
       orders: 'id, order_number, source, fulfillment, status, synced, created_at, shift_id, store_id',
       syncQueue: '++id, table, operation, created_at',
       exchangeRates: 'id, target_currency',
-      customers: 'id, name, phone, email, store_id',
+      customers: 'id, full_name, phone, email',
       shifts: 'id, store_id, employee_id, status'
     });
   }
