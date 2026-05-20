@@ -249,8 +249,8 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-white text-sm font-medium">{emp.full_name}</p>
-                      {emp.email && <Mail size={10} className="text-[#333]" title={emp.email} />}
-                      {emp.phone && <Phone size={10} className="text-[#333]" title={emp.phone} />}
+                      {emp.email && <Mail size={10} className="text-[#333]" />}
+                      {emp.phone && <Phone size={10} className="text-[#333]" />}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[#444] text-[10px] uppercase font-bold tracking-wider">{getStoreName(emp.store_id)}</span>
