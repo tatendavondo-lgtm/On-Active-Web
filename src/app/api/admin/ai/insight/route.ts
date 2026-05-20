@@ -30,8 +30,8 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return Response.json(
-      { error: 'Gemini API key is not configured.' },
-      { status: 500 }
+      { insight: '⚠️ GEMINI_API_KEY is missing in Vercel. Please add it to Environment Variables.' },
+      { status: 200 } // Return 200 so the UI can display the message safely
     );
   }
 

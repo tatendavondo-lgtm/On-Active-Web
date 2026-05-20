@@ -69,8 +69,8 @@ export function AIInsightBanner({ storeContext }: AIInsightBannerProps) {
             </p>
             <AnimatePresence mode="wait">
               <p className="text-white text-sm leading-relaxed">
-                {displayed}
-                {displayed.length < insight.length && (
+                {displayed || (loading ? 'Analyzing store data...' : insight)}
+                {!loading && displayed.length < insight.length && (
                   <span className="inline-block w-0.5 h-3.5 bg-[#C5A021] ml-0.5 animate-pulse" />
                 )}
               </p>
