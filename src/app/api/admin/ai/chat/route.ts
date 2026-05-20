@@ -107,16 +107,21 @@ export async function POST(request: NextRequest) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  // Use the latest 2.5 Flash model as requested for superior reasoning and speed
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-  const systemInstruction = `You are Samkee's personal business assistant for On Active, a premium fitness apparel brand based in Zimbabwe. You have access to real-time store data. Be concise, insightful, and actionable. Always speak in USD unless the user specifically asks about ZiG. Keep responses under 200 words unless a detailed breakdown is requested.
+  
+  // Use the latest 2.5 Flash model with model-level system instruction (newest SDK pattern)
+  const model = genAI.getGenerativeModel({ 
+    model: 'gemini-2.5-flash',
+    systemInstruction: {
+      role: 'system',
+      parts: [{ text: `You are Samkee's personal business assistant for On Active, a premium fitness apparel brand based in Zimbabwe. You have access to real-time store data. Be concise, insightful, and actionable. Always speak in USD unless the user specifically asks about ZiG. Keep responses under 200 words unless a detailed breakdown is requested.
 
 Current store data:
 ${JSON.stringify(storeContext, null, 2)}
 
 POS and Unified Channel Real-time Context:
-${posContext}`;
+${posContext}` }]
+    }
+  });
 
   // Convert to Gemini history format (all except last message)
   const history = messages.slice(0, -1).map((m: { role: string; content: string }) => ({
@@ -126,51 +131,43 @@ ${posContext}`;
 
   const lastMessage = messages[messages.length - 1];
 
-  const chat = model.startChat({ 
-    history, 
-    systemInstruction: {
-      role: 'system',
-      parts: [{ text: systemInstruction }]
-    } 
-  });
+  try {
+    const chat = model.startChat({ history });
+    const encoder = new TextEncoder();
 
-  const encoder = new TextEncoder();
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      try {
-        const result = await chat.sendMessageStream(lastMessage.content);
-        for await (const chunk of result.stream) {
-          const text = chunk.text();
-          if (text) controller.enqueue(encoder.encode(text));
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          const result = await chat.sendMessageStream(lastMessage.content);
+          for await (const chunk of result.stream) {
+            const text = chunk.text();
+            if (text) controller.enqueue(encoder.encode(text));
+          }
+          controller.close();
+        } catch (err: any) {
+          console.error('AI Stream Error:', err);
+          const rawMessage = err?.message || String(err);
+          let errorMessage = `Assistant Error: ${rawMessage.slice(0, 200)}`;
+          
+          if (rawMessage.includes('429') || rawMessage.toLowerCase().includes('quota')) {
+            errorMessage = '⚠️ Daily AI quota reached for Gemini 2.5 Flash. Please try again tomorrow or upgrade your plan.';
+          }
+          
+          controller.enqueue(encoder.encode(errorMessage));
+          controller.close();
         }
-        controller.close();
-      } catch (err: any) {
-        console.error('AI Chat Error:', err);
-        let errorMessage = 'Sorry, I encountered an error. Please try again.';
+      },
+    });
 
-        const rawMessage: string = err?.message ?? JSON.stringify(err) ?? String(err);
-
-        if (rawMessage.includes('429') || rawMessage.toLowerCase().includes('quota')) {
-          // Friendly daily quota message
-          errorMessage = '⚠️ Daily AI quota reached for this API key. The assistant will be available again tomorrow, or you can upgrade your Gemini API key at https://ai.dev to unlock higher limits.';
-        } else if (rawMessage.includes('403') || rawMessage.toLowerCase().includes('permission')) {
-          errorMessage = '⚠️ The AI assistant is not authorized to use this model. Please check your Gemini API key permissions.';
-        } else if (rawMessage) {
-          errorMessage = `AI Assistant Error: ${rawMessage.slice(0, 300)}`;
-        }
-
-        controller.enqueue(encoder.encode(errorMessage));
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-cache',
-      'X-Accel-Buffering': 'no',
-    },
-  });
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      },
+    });
+  } catch (err: any) {
+    console.error('AI Chat Setup Error:', err);
+    return NextResponse.json({ error: `AI Setup Error: ${err.message}` }, { status: 500 });
+  }
 }
