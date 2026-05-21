@@ -17,9 +17,17 @@ export default async function StaffPage() {
     .eq('id', user.id)
     .single();
 
-  // Allow both Owner and Manager roles
-  if (!profile || !['owner', 'manager'].includes(profile.role)) {
-    redirect('/admin/dashboard');
+  // Redirect only if absolutely no access
+  if (!profile) {
+    console.error('No profile found for user:', user.id);
+    redirect('/admin/dashboard?error=no_profile');
+  }
+
+  // Debug role check
+  const allowedRoles = ['owner', 'manager', 'admin'];
+  if (!allowedRoles.includes(profile.role?.toLowerCase())) {
+     console.warn(`User ${user.id} has insufficient role: ${profile.role}`);
+     redirect('/admin/dashboard?error=insufficient_role');
   }
 
   const { data: managers } = await supabase.from('profiles').select('*').order('created_at');
