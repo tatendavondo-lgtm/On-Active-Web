@@ -23,11 +23,11 @@ export default function Customers() {
 
   const customers = useLiveQuery(
     () => {
-      let query = db.customers.where('store_id').equals(store?.id || '');
+      let query = db.customers;
       if (search) {
         return query
           .filter(c => 
-            c.name.toLowerCase().includes(search.toLowerCase()) || 
+            (c.full_name || '').toLowerCase().includes(search.toLowerCase()) || 
             (c.phone || '').includes(search) || 
             (c.email || '').toLowerCase().includes(search.toLowerCase())
           )
@@ -35,7 +35,7 @@ export default function Customers() {
       }
       return query.toArray();
     },
-    [store?.id, search]
+    [search]
   );
 
   return (
@@ -94,9 +94,9 @@ export default function Customers() {
 
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-xl font-bold text-white group-hover:text-[var(--pos-accent)] transition-colors line-clamp-1">{customer.name}</h3>
+                    <h3 className="text-xl font-bold text-white group-hover:text-[var(--pos-accent)] transition-colors line-clamp-1">{customer.full_name}</h3>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="info" className="text-[10px]">LOYALTY: {customer.loyalty_points}</Badge>
+                      <Badge variant="info" className="text-[10px] uppercase">Client</Badge>
                     </div>
                   </div>
 
@@ -149,7 +149,7 @@ export default function Customers() {
 
 function AddCustomerModal({ isOpen, onClose, storeId }: { isOpen: boolean; onClose: () => void; storeId: string }) {
   const [formData, setFormData] = useState({
-    name: '',
+    full_name: '',
     phone: '',
     email: '',
     address: '',
@@ -163,16 +163,13 @@ function AddCustomerModal({ isOpen, onClose, storeId }: { isOpen: boolean; onClo
     
     const customer: PosCustomer = {
       id,
-      store_id: storeId,
       ...formData,
-      loyalty_points: 0,
-      created_at: now,
-      updated_at: now
+      created_at: now
     };
 
     await db.customers.add(customer);
     await db.syncQueue.add({
-      table: 'pos_customers',
+      table: 'customers',
       operation: 'insert',
       data: customer,
       created_at: now,
@@ -199,8 +196,8 @@ function AddCustomerModal({ isOpen, onClose, storeId }: { isOpen: boolean; onClo
               required
               type="text" 
               className="w-full bg-[var(--pos-bg)] border border-[var(--pos-border)] rounded px-4 py-2 focus:outline-none focus:border-[var(--pos-accent)]" 
-              value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
+              value={formData.full_name}
+              onChange={e => setFormData({...formData, full_name: e.target.value})}
             />
           </div>
           
