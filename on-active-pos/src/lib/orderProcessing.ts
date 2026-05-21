@@ -6,6 +6,7 @@ import type { Payment, Order } from '../types/order';
 interface ProcessOrderParams {
   storeId: string;
   employeeId: string;
+  shiftId: string;
   deviceId: string;
   source: 'walk_in' | 'salesman';
   salesmanId?: string;
@@ -25,7 +26,7 @@ interface ProcessOrderParams {
 }
 
 export async function processOrder(params: ProcessOrderParams) {
-  const { storeId } = params;
+  const { storeId, shiftId } = params;
   const orderNumber = await generateOrderNumber(storeId);
   const now = new Date().toISOString();
   const orderId = crypto.randomUUID();
@@ -38,7 +39,7 @@ export async function processOrder(params: ProcessOrderParams) {
     employee_id: params.employeeId,
     salesman_id: params.salesmanId,
     salesman_order_id: params.salesmanOrderId,
-    shift_id: 'mock-shift', // TODO: From session
+    shift_id: shiftId,
     source: params.source,
     fulfillment: 'immediate',
     status: 'completed',

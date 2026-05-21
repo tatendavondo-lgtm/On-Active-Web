@@ -24,7 +24,7 @@ interface VerifyOrderProps {
 
 export function VerifyOrder({ order, onCancel, onPay }: VerifyOrderProps) {
   const { items, subtotal, loadFromSalesmanOrder, removeItem, updateQuantity, addItem, autoDiscount, manualDiscountAmount, manualDiscountType, totalDiscount, taxAmount, applyManualDiscount, total, clearCart } = useCartStore();
-  const { employee, store, deviceId } = useSessionStore();
+  const { employee, store, shiftId, deviceId } = useSessionStore();
   const { rates } = useExchangeRates();
   const [verifiedItems, setVerifiedItems] = useState<Set<string>>(new Set());
   const [showPayment, setShowPayment] = useState(false);
@@ -82,17 +82,21 @@ export function VerifyOrder({ order, onCancel, onPay }: VerifyOrderProps) {
   }, [verifiedItems.size, orderItems.length, showPayment, completedReceipt]);
 
   const handleCompleteSale = async (payments: any[]) => {
-    if (!employee || !store) return;
+    if (!employee || !store || !shiftId) {
+      alert('You must have an open shift to process a sale.');
+      return;
+    }
     
     try {
       const processedOrder = await processOrder({
         storeId: store.id,
         employeeId: employee.id,
+        shiftId: shiftId,
         deviceId: deviceId || 'unknown',
         source: 'salesman',
         salesmanId: order.salesman_id,
         salesmanOrderId: order.id,
-        items: orderItems,
+        items: items,
         payments,
         subtotal,
         autoDiscount,

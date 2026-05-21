@@ -33,13 +33,68 @@ export async function POST(req: NextRequest) {
        return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    // If new product, initialize Harare store inventory
-    if (!payload.id && result) {
-      await adminSupabase.from('store_inventory').insert({
-        store_id: '00000000-0000-0000-0000-000000000001',
-        product_id: result.id,
-        quantity: payload.stock_quantity || 0
-      });
+    if (result) {
+      const productId = result.id;
+      const sizes = result.sizes || [];
+      const defaultStoreId = '00000000-0000-0000-0000-000000000001';
+
+      // 1. Get existing variants
+      const { data: existingVariants } = await adminSupabase
+        .from('product_variants')
+        .select('id, name')
+        .eq('product_id', productId);
+
+      // 2. Determine which variants to add, update or remove
+      const existingNames = (existingVariants || []).map(v => v.name);
+      
+      // If no sizes, create a 'Standard' variant
+      const targetSizes = sizes.length > 0 ? sizes : ['Standard'];
+
+      // Add missing variants
+      for (const size of targetSizes) {
+        if (!existingNames.includes(size)) {
+          const { data: newVar } = await adminSupabase
+            .from('product_variants')
+            .insert({
+              product_id: productId,
+              name: size,
+              price: result.price_usd,
+              created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (newVar) {
+            // Initialize inventory for this variant
+            await adminSupabase.from('store_inventory').insert({
+              store_id: defaultStoreId,
+              product_id: productId,
+              variant_id: newVar.id,
+              quantity: sizes.length > 0 ? 0 : (result.stock_quantity || 0)
+            });
+          }
+        }
+      }
+
+      // 3. Ensure global inventory is initialized if it's a new product with no variants
+      if (!payload.id && sizes.length === 0) {
+        const { data: existingInv } = await adminSupabase
+          .from('store_inventory')
+          .select('id')
+          .eq('store_id', defaultStoreId)
+          .eq('product_id', productId)
+          .is('variant_id', null)
+          .single();
+
+        if (!existingInv) {
+          await adminSupabase.from('store_inventory').insert({
+            store_id: defaultStoreId,
+            product_id: productId,
+            variant_id: null,
+            quantity: result.stock_quantity || 0
+          });
+        }
+      }
     }
 
     return NextResponse.json({ success: true });

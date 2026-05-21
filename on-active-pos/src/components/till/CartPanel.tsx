@@ -32,12 +32,16 @@ export function CartPanel() {
   }, [items.length, showPayment, completedReceipt]);
 
   const handleCompleteSale = async (payments: any[]) => {
-    if (!employee || !store) return;
+    if (!employee || !store || !shiftId) {
+      alert('You must have an open shift to process a sale.');
+      return;
+    }
     
     try {
       const order = await processOrder({
         storeId: store.id,
         employeeId: employee.id,
+        shiftId: shiftId,
         deviceId: deviceId || 'unknown',
         source: 'walk_in',
         items,
