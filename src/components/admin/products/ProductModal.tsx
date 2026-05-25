@@ -9,7 +9,15 @@ import { generateSlug, formatUSD } from '@/lib/admin/utils';
 import toast from 'react-hot-toast';
 
 const CATEGORIES = ['Tops', 'Bottoms', 'Leggings', 'Sports Bras', 'Shorts', 'Accessories', 'Outerwear'];
-const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'];
+
+interface Variant {
+  id?: string;
+  size: string;
+  color: string;
+  price: number;
+  stock: number;
+}
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -24,11 +32,14 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
     price_usd: '', sizes: [] as string[], stock_quantity: '',
     images: [] as string[], is_active: true, is_featured: false,
   });
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [newVariant, setNewVariant] = useState({ size: 'M', color: '', price: '', stock: '' });
+  
   const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (product) {
+    if (product && isOpen) {
       setForm({
         name: product.name,
         slug: product.slug,
@@ -41,12 +52,52 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
         is_active: product.is_active,
         is_featured: product.is_featured ?? false,
       });
+      
+      // Load variants if they exist
+      const fetchVariants = async () => {
+        const supabase = createClient();
+        const { data: vars } = await supabase
+          .from('product_variants')
+          .select('*, store_inventory(quantity)')
+          .eq('product_id', product.id);
+        
+        if (vars) {
+          setVariants(vars.map(v => ({
+            id: v.id,
+            size: v.size || '',
+            color: v.color || '',
+            price: v.price || product.price_usd,
+            stock: v.store_inventory?.[0]?.quantity || 0
+          })));
+        }
+      };
+      fetchVariants();
       setFiles([]);
-    } else {
+    } else if (!product && isOpen) {
       setForm({ name: '', slug: '', description: '', category: '', price_usd: '', sizes: [], stock_quantity: '', images: [], is_active: true, is_featured: false });
+      setVariants([]);
       setFiles([]);
     }
   }, [product, isOpen]);
+
+  const addVariant = () => {
+    if (!newVariant.color) {
+      toast.error('Color is required for variants');
+      return;
+    }
+    const v: Variant = {
+      size: newVariant.size,
+      color: newVariant.color,
+      price: parseFloat(newVariant.price) || parseFloat(form.price_usd) || 0,
+      stock: parseInt(newVariant.stock) || 0
+    };
+    setVariants([...variants, v]);
+    setNewVariant({ ...newVariant, color: '', stock: '' });
+  };
+
+  const removeVariant = (index: number) => {
+    setVariants(variants.filter((_, i) => i !== index));
+  };
 
   const handleSave = async () => {
     if (!form.name || !form.price_usd) {
@@ -54,31 +105,25 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
       return;
     }
     setSaving(true);
-    const supabase = createClient();
 
     const uploadedUrls: string[] = [];
     for (const file of files) {
       const formData = new FormData();
       formData.append('file', file);
-
       try {
-        const uploadRes = await fetch('/api/admin/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        
+        const uploadRes = await fetch('/api/admin/upload', { method: 'POST', body: formData });
         const uploadData = await uploadRes.json();
-        if (!uploadRes.ok || uploadData.error) {
-          throw new Error(uploadData.error || 'Upload failed');
-        }
-        
+        if (!uploadRes.ok || uploadData.error) throw new Error(uploadData.error || 'Upload failed');
         uploadedUrls.push(uploadData.url);
       } catch (err: any) {
         toast.error(`Failed to upload ${file.name}: ${err.message}`);
         setSaving(false);
-        return; // Stop the whole process if an image fails to ensure data integrity
+        return;
       }
     }
+
+    // Combine sizes from variants
+    const allSizes = Array.from(new Set(variants.map(v => v.size)));
 
     const payload = {
       name: form.name,
@@ -86,11 +131,12 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
       description: form.description || null,
       category: form.category || null,
       price_usd: parseFloat(form.price_usd),
-      sizes: form.sizes,
+      sizes: allSizes.length > 0 ? allSizes : form.sizes,
       stock_quantity: parseInt(form.stock_quantity) || 0,
       images: [...form.images, ...uploadedUrls],
       is_active: form.is_active,
       is_featured: form.is_featured,
+      variants: variants, // Send variants to API
       updated_at: new Date().toISOString(),
     };
 
@@ -110,6 +156,7 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
     } else {
       toast.success(product ? 'Product updated' : 'Product created');
       onSaved();
+      onClose();
     }
     setSaving(false);
   };
@@ -247,7 +294,7 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
 
                   {/* Sizes */}
                   <div className="sm:col-span-2">
-                    <label className="label-admin">Sizes</label>
+                    <label className="label-admin text-[#C5A021]">Base Sizes (Quick Toggle)</label>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {SIZES.map((size) => (
                         <button
@@ -263,6 +310,68 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                           {size}
                         </button>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Multi-Dimensional Variant Manager */}
+                  <div className="sm:col-span-2 mt-4 pt-6 border-t border-[#1a1a1a]">
+                    <div className="flex items-center justify-between mb-4">
+                      <label className="label-admin !mb-0">Defined Variants (Color + Size)</label>
+                      <span className="text-[10px] font-bold text-[#444] uppercase">Total: {variants.length}</span>
+                    </div>
+
+                    {/* Variant Add Form */}
+                    <div className="grid grid-cols-4 gap-2 mb-4 p-3 bg-[#0a0a0a] border border-[#1a1a1a] rounded-[6px]">
+                      <select 
+                        value={newVariant.size} 
+                        onChange={e => setNewVariant({...newVariant, size: e.target.value})}
+                        className="input-admin !py-2 text-xs"
+                      >
+                        {SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                        <option value="One Size">One Size</option>
+                      </select>
+                      <input 
+                        placeholder="Color (e.g. Black)" 
+                        value={newVariant.color}
+                        onChange={e => setNewVariant({...newVariant, color: e.target.value})}
+                        className="input-admin !py-2 text-xs"
+                      />
+                      <input 
+                        type="number"
+                        placeholder="Stock" 
+                        value={newVariant.stock}
+                        onChange={e => setNewVariant({...newVariant, stock: e.target.value})}
+                        className="input-admin !py-2 text-xs"
+                      />
+                      <button 
+                        onClick={addVariant}
+                        className="bg-white text-black text-[10px] font-black uppercase rounded-[4px] hover:bg-gray-200 transition-colors"
+                      >
+                        Add combo
+                      </button>
+                    </div>
+
+                    {/* Variant List */}
+                    <div className="space-y-2">
+                      {variants.map((v, i) => (
+                        <div key={i} className="flex items-center justify-between p-2.5 bg-[#111] border border-[#1a1a1a] rounded-[6px] group">
+                          <div className="flex items-center gap-3">
+                            <span className="bg-[#1a1a1a] text-white px-2 py-0.5 rounded text-[10px] font-bold">{v.size}</span>
+                            <span className="text-white text-xs font-medium">{v.color}</span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-[#444] text-[10px] font-mono">Stock: <span className={v.stock > 0 ? 'text-[#C5A021]' : 'text-red-500'}>{v.stock}</span></span>
+                            <button onClick={() => removeVariant(i)} className="text-red-500/20 hover:text-red-500 transition-colors">
+                              <X size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {variants.length === 0 && (
+                        <div className="py-8 text-center border border-dashed border-[#1a1a1a] rounded-[8px]">
+                          <p className="text-[#333] text-[10px] font-bold uppercase tracking-widest">No custom variants defined</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 

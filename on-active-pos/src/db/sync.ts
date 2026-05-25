@@ -163,9 +163,16 @@ export async function pullUpdates(storeId: string): Promise<void> {
         image_url: imageUrl,
         variants: (p.product_variants || []).map((v: any) => {
           const invKey = `${p.id}-${v.id}`;
+          let variantName = v.name;
+          if (v.size && v.color) {
+            variantName = `${v.size} / ${v.color}`;
+          } else if (v.size) {
+            variantName = v.size;
+          }
+
           return {
             id: v.id,
-            name: v.name || 'Standard',
+            name: variantName || 'Standard',
             sku: v.sku || p.sku || '',
             price: Number(v.price) || Number(p.price_usd) || 0,
             stock: invMap[invKey] !== undefined ? invMap[invKey] : (Number(p.stock_quantity) || 0),

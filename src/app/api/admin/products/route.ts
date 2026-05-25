@@ -23,10 +23,11 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = await req.json();
+    const { variants: incomingVariants, ...productData } = payload;
 
     const { data: result, error } = payload.id
-      ? await adminSupabase.from('products').update(payload).eq('id', payload.id).select().single()
-      : await adminSupabase.from('products').insert(payload).select().single();
+      ? await adminSupabase.from('products').update(productData).eq('id', payload.id).select().single()
+      : await adminSupabase.from('products').insert(productData).select().single();
 
     if (error) {
        console.error('Database error in products API:', error);
@@ -35,64 +36,102 @@ export async function POST(req: NextRequest) {
 
     if (result) {
       const productId = result.id;
-      const sizes = result.sizes || [];
       const defaultStoreId = '00000000-0000-0000-0000-000000000001';
 
-      // 1. Get existing variants
-      const { data: existingVariants } = await adminSupabase
-        .from('product_variants')
-        .select('id, name')
-        .eq('product_id', productId);
-
-      // 2. Determine which variants to add, update or remove
-      const existingNames = (existingVariants || []).map(v => v.name);
-      
-      // If no sizes, create a 'Standard' variant
-      const targetSizes = sizes.length > 0 ? sizes : ['Standard'];
-
-      // Add missing variants
-      for (const size of targetSizes) {
-        if (!existingNames.includes(size)) {
-          const { data: newVar } = await adminSupabase
+      // If explicit variants are provided (from the new UI)
+      if (incomingVariants && Array.isArray(incomingVariants)) {
+        for (const v of incomingVariants) {
+          // Check if variant already exists
+          const { data: existing } = await adminSupabase
             .from('product_variants')
-            .insert({
-              product_id: productId,
-              name: size,
-              price: result.price_usd,
-              created_at: new Date().toISOString()
-            })
-            .select()
-            .single();
+            .select('id')
+            .eq('product_id', productId)
+            .eq('size', v.size)
+            .eq('color', v.color)
+            .maybeSingle();
 
-          if (newVar) {
-            // Initialize inventory for this variant
-            await adminSupabase.from('store_inventory').insert({
-              store_id: defaultStoreId,
-              product_id: productId,
-              variant_id: newVar.id,
-              quantity: sizes.length > 0 ? 0 : (result.stock_quantity || 0)
-            });
+          let variantId = existing?.id;
+
+          if (!variantId) {
+            const { data: newV } = await adminSupabase
+              .from('product_variants')
+              .insert({
+                product_id: productId,
+                name: `${v.size} / ${v.color}`,
+                size: v.size,
+                color: v.color,
+                price: v.price || result.price_usd,
+                created_at: new Date().toISOString()
+              })
+              .select()
+              .single();
+            variantId = newV?.id;
+          } else {
+            // Update price if it changed
+            await adminSupabase
+              .from('product_variants')
+              .update({ price: v.price || result.price_usd })
+              .eq('id', variantId);
+          }
+
+          if (variantId) {
+            // Ensure inventory record exists
+            const { data: inv } = await adminSupabase
+              .from('store_inventory')
+              .select('id')
+              .eq('store_id', defaultStoreId)
+              .eq('product_id', productId)
+              .eq('variant_id', variantId)
+              .maybeSingle();
+
+            if (!inv) {
+              await adminSupabase.from('store_inventory').insert({
+                store_id: defaultStoreId,
+                product_id: productId,
+                variant_id: variantId,
+                quantity: v.stock || 0
+              });
+            } else if (v.stock !== undefined) {
+              // Update stock if provided
+              await adminSupabase.from('store_inventory').update({ quantity: v.stock }).eq('id', inv.id);
+            }
           }
         }
-      }
+      } else {
+        // LEGACY/FALLBACK: Auto-generate variants from the 'sizes' array if no explicit variants provided
+        const sizes = result.sizes || [];
+        const targetSizes = sizes.length > 0 ? sizes : ['Standard'];
 
-      // 3. Ensure global inventory is initialized if it's a new product with no variants
-      if (!payload.id && sizes.length === 0) {
-        const { data: existingInv } = await adminSupabase
-          .from('store_inventory')
-          .select('id')
-          .eq('store_id', defaultStoreId)
-          .eq('product_id', productId)
-          .is('variant_id', null)
-          .single();
+        for (const size of targetSizes) {
+          const { data: existing } = await adminSupabase
+            .from('product_variants')
+            .select('id')
+            .eq('product_id', productId)
+            .eq('size', size)
+            .maybeSingle();
 
-        if (!existingInv) {
-          await adminSupabase.from('store_inventory').insert({
-            store_id: defaultStoreId,
-            product_id: productId,
-            variant_id: null,
-            quantity: result.stock_quantity || 0
-          });
+          if (!existing) {
+            const { data: newVar } = await adminSupabase
+              .from('product_variants')
+              .insert({
+                product_id: productId,
+                name: size,
+                size: size,
+                price: result.price_usd,
+                created_at: new Date().toISOString()
+              })
+              .select()
+              .single();
+
+            if (newVar) {
+              await adminSupabase.from('store_inventory').insert({
+                store_id: defaultStoreId,
+                product_id: productId,
+                variant_id: newVar.id,
+                quantity: sizes.length > 0 ? 0 : (result.stock_quantity || 0)
+              });
+            }
+          }
         }
       }
     }

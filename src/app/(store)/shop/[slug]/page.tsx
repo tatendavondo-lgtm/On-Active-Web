@@ -28,24 +28,27 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     notFound();
   }
 
-  // Get real-time stock from the branch inventory
-  const { data: inventory } = await supabase
-    .from('store_inventory')
-    .select('quantity')
-    .eq('product_id', product.id)
-    .single();
-    
-  if (inventory) {
-    product.stock_quantity = inventory.quantity;
-  }
-  
+  // Fetch variants and their specific inventory
+  const { data: variants } = await supabase
+    .from('product_variants')
+    .select('*, store_inventory(quantity)')
+    .eq('product_id', product.id);
+
+  const productWithVariants = {
+    ...product,
+    variants: variants?.map(v => ({
+      ...v,
+      stock: v.store_inventory?.[0]?.quantity || 0
+    })) || []
+  };
+
   const settings = await getSettings();
 
   return (
     <main className="flex min-h-screen flex-col bg-[#0A0A0A]">
       <Navbar />
       <div className="flex-1 w-full mt-14 sm:mt-20">
-        <ProductView product={product} zigRate={settings.zig_rate} />
+        <ProductView product={productWithVariants} zigRate={settings.zig_rate} />
       </div>
       <Footer />
     </main>
