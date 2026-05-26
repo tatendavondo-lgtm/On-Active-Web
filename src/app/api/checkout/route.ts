@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
           customer_email: payload.customer_email || payload.email || '',
           items: newOrder.items || [],
           total: newOrder.total_usd || payload.total_usd || 0,
+          order_ref: newOrder.order_ref,
         });
       }
     }

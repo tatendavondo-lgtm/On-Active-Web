@@ -9,11 +9,11 @@ const CLIENT_ONLY_FIELDS = ['synced', 'synced_at', 'device_id', 'created_offline
 const TABLE_COLUMNS: Record<string, string[]> = {
   salesman_orders: ['id', 'store_id', 'salesman_id', 'salesman_name', 'customer_name', 'items', 'subtotal', 'item_count', 'notes', 'status', 'created_at'],
   shifts: ['id', 'store_id', 'employee_id', 'opened_at', 'closed_at', 'opening_cash', 'closing_cash', 'expected_cash', 'cash_difference', 'status', 'notes'],
-  pos_orders: ['id', 'order_number', 'store_id', 'employee_id', 'salesman_id', 'salesman_order_id', 'shift_id', 'customer_id', 'source', 'fulfillment', 'status', 'subtotal', 'total_discount', 'total', 'currency', 'exchange_rate_zig', 'exchange_rate_zar', 'created_at', 'completed_at'],
+  pos_orders: ['id', 'order_number', 'store_id', 'employee_id', 'salesman_id', 'salesman_order_id', 'shift_id', 'source', 'fulfillment', 'status', 'subtotal', 'total_discount', 'total', 'currency', 'exchange_rate_zig', 'exchange_rate_zar', 'created_at', 'completed_at'],
   pos_order_items: ['id', 'order_id', 'product_id', 'variant_id', 'product_name', 'variant_name', 'quantity', 'unit_price', 'line_total'],
   pos_payments: ['id', 'order_id', 'method', 'amount_usd', 'amount_local', 'local_currency', 'exchange_rate_used', 'reference', 'status', 'created_at'],
   customers: ['id', 'full_name', 'phone', 'email', 'address', 'notes', 'source', 'created_at'],
-  online_order_bridge: ['id', 'webstore_order_id', 'pos_order_id', 'store_id', 'fulfillment', 'status', 'assigned_at', 'accepted_at', 'ready_at', 'completed_at'],
+  online_order_bridge: ['id', 'webstore_order_id', 'pos_order_id', 'store_id', 'fulfillment', 'status', 'assigned_at', 'accepted_at', 'ready_at', 'completed_at', 'customer_name', 'customer_phone', 'customer_email', 'items', 'total', 'order_ref'],
   products: ['id', 'stock_quantity'], 
 };
 
@@ -50,13 +50,13 @@ export async function processSyncQueue(): Promise<{ synced: number; failed: numb
     }
 
     try {
-      if (item.table === 'store_inventory' || (item.table === 'products' && item.operation === 'update' && item.data.decrement)) {
+      if (item.table === 'products' && item.operation === 'update' && item.data.decrement) {
         const productId = item.data.product_id;
         const variantId = item.data.variant_id;
         const storeId = item.data.store_id;
         const decrement = item.data.decrement;
 
-        // 1. Update Global Products Table
+        // 1. Update Global Products Table (Total Stock)
         const { data: currentProd } = await supabase
           .from('products')
           .select('stock_quantity')
@@ -71,27 +71,58 @@ export async function processSyncQueue(): Promise<{ synced: number; failed: numb
             .eq('id', productId);
         }
 
-        // 2. Update Branch Store Inventory
+        // 2. Update Branch Store Inventory (Specific Variant Stock)
         if (storeId) {
-          let invQuery = supabase.from('store_inventory').select('quantity').eq('store_id', storeId).eq('product_id', productId);
-          if (variantId) invQuery = invQuery.eq('variant_id', variantId);
-          else invQuery = invQuery.is('variant_id', null);
+          // If we have a variantId, update that specific combo
+          if (variantId) {
+            const { data: currentInv } = await supabase
+              .from('store_inventory')
+              .select('quantity')
+              .eq('store_id', storeId)
+              .eq('variant_id', variantId)
+              .single();
 
-          const { data: currentInv } = await invQuery.single();
+            if (currentInv) {
+              const newInvQty = Math.max(0, (currentInv.quantity ?? 0) - decrement);
+              await supabase
+                .from('store_inventory')
+                .update({ quantity: newInvQty, updated_at: new Date().toISOString() })
+                .eq('store_id', storeId)
+                .eq('variant_id', variantId);
+            }
+          } else {
+            // Fallback for non-variant products
+            const { data: currentInv } = await supabase
+              .from('store_inventory')
+              .select('quantity')
+              .eq('store_id', storeId)
+              .eq('product_id', productId)
+              .is('variant_id', null)
+              .single();
 
-          if (currentInv) {
-            const newInvQty = Math.max(0, (currentInv.quantity ?? 0) - decrement);
-            let updateInvQuery = supabase.from('store_inventory').update({ quantity: newInvQty, updated_at: new Date().toISOString() }).eq('store_id', storeId).eq('product_id', productId);
-            if (variantId) updateInvQuery = updateInvQuery.eq('variant_id', variantId);
-            else updateInvQuery = updateInvQuery.is('variant_id', null);
-            await updateInvQuery;
+            if (currentInv) {
+              const newInvQty = Math.max(0, (currentInv.quantity ?? 0) - decrement);
+              await supabase
+                .from('store_inventory')
+                .update({ quantity: newInvQty, updated_at: new Date().toISOString() })
+                .eq('store_id', storeId)
+                .eq('product_id', productId)
+                .is('variant_id', null);
+            }
           }
         }
       } else if (item.operation === 'insert') {
         // Strip client-only fields that don't exist in Supabase tables
         const cleaned = sanitizeForRemote(item.table, item.data);
         const { error } = await supabase.from(item.table).insert(cleaned);
-        if (error) throw error;
+        if (error) {
+          // Treat duplicate key constraint error (23505) as success since it's already remotely saved
+          if (error.code === '23505') {
+            console.warn(`Unique constraint violation (already synced) for ${item.table}:`, item.data.id);
+          } else {
+            throw error;
+          }
+        }
       } else if (item.operation === 'update') {
         const cleaned = sanitizeForRemote(item.table, item.data);
         const { id, ...updates } = cleaned;
@@ -147,11 +178,7 @@ export async function pullUpdates(storeId: string): Promise<void> {
       
       // If it's a relative path starting with /, prepend the webstore URL
       if (imageUrl.startsWith('/') && webstoreUrl) {
-        // Encode only the path part to handle spaces correctly
-        const encodedPath = imageUrl.split('/').map(segment => encodeURIComponent(segment)).join('/');
-        // The split/map/join above will turn /images/products/TGIS 10.jpg into /images/products/TGIS%2010.jpg
-        // But we need to be careful with the leading slash being removed/re-added by join if not careful.
-        // Actually, just using a simple replace for space is often enough for filenames.
+        // Using a simple replace for space is enough for filenames.
         imageUrl = `${webstoreUrl}${imageUrl.replace(/ /g, '%20')}`;
       }
 
@@ -211,6 +238,7 @@ export async function pullUpdates(storeId: string): Promise<void> {
         await db.salesmanOrders.add({
           ...so,
           salesman_name: so.salesman_name || 'Unknown',
+          items: typeof so.items === 'string' ? JSON.parse(so.items) : (so.items || []),
           synced: true,
           device_id: '',
         });
@@ -266,7 +294,7 @@ export async function pullUpdates(storeId: string): Promise<void> {
     if (ooErr) throw ooErr;
 
     if (onlineOrders && onlineOrders.length > 0) {
-      // Fetch the actual webstore order details for each bridged order
+      // Fetch the actual webstore order details for each bridged order (as fallback only)
       const webOrderIds = onlineOrders.map(bo => bo.webstore_order_id).filter(Boolean);
       const { data: webOrders } = webOrderIds.length > 0
         ? await supabase
@@ -284,20 +312,33 @@ export async function pullUpdates(storeId: string): Promise<void> {
         const exists = await db.orders.get(bo.id);
         const webOrder = webOrderMap[bo.webstore_order_id];
 
-        // Build items from web order data
-        const items = (webOrder?.items ?? []).map((item: any) => ({
-          id: crypto.randomUUID(),
-          product_id: item.productId || item.product_id || '',
-          product_name: item.name || 'Unknown',
-          variant_name: item.size || '',
-          quantity: item.quantity || 1,
-          unit_price: item.price_usd || 0,
-          discount_amount: 0,
-          line_total: (item.price_usd || 0) * (item.quantity || 1),
-        }));
+        // Use bridged columns directly as first choice, fall back to webstore columns
+        const rawItems = bo.items || webOrder?.items || [];
+        const items = rawItems.map((item: any) => {
+          let variantDesc = '';
+          if (item.size && item.color) {
+            variantDesc = `${item.size} / ${item.color}`;
+          } else if (item.size) {
+            variantDesc = item.size;
+          } else if (item.variant_name) {
+            variantDesc = item.variant_name;
+          }
 
-        const total = webOrder?.total_usd ?? 0;
-        const orderRef = webOrder?.order_ref || (typeof bo.id === 'string' ? `ONLINE-${bo.id.slice(0, 8)}` : `ONLINE-${Math.random().toString(36).substring(7)}`);
+          return {
+            id: crypto.randomUUID(),
+            product_id: item.productId || item.product_id || '',
+            product_name: item.name || item.product_name || 'Unknown',
+            variant_name: variantDesc,
+            quantity: item.quantity || 1,
+            unit_price: Number(item.price) || Number(item.price_usd) || 0,
+            discount_amount: 0,
+            line_total: (Number(item.price) || Number(item.price_usd) || 0) * (item.quantity || 1),
+          };
+        });
+
+        const total = Number(bo.total) || Number(webOrder?.total_usd) || 0;
+        const orderRef = bo.order_ref || webOrder?.order_ref || (typeof bo.id === 'string' ? `ONLINE-${bo.id.slice(0, 8)}` : `ONLINE-${Math.random().toString(36).substring(7)}`);
+        const customerName = bo.customer_name || webOrder?.customer_name || 'Online Customer';
 
         if (!exists) {
           console.log(`Ingesting online order: ${orderRef}`);
@@ -329,9 +370,29 @@ export async function pullUpdates(storeId: string): Promise<void> {
             device_id: '',
           };
           await db.orders.add(o as any);
-        } else if (exists.status !== bo.status) {
-          // Update status if changed remotely
-          await db.orders.update(bo.id, { status: bo.status } as any);
+        } else {
+          // Update items, total, and status if they changed or were previously 0
+          const needsItemUpdate = !exists.items || exists.items.length === 0 || exists.total === 0;
+          const updates: any = {};
+          
+          if (exists.status !== bo.status) {
+            updates.status = bo.status;
+          }
+          if (needsItemUpdate && items.length > 0) {
+            updates.items = items;
+            updates.total = total;
+            updates.subtotal = total;
+            if (updates.payments && updates.payments[0]) {
+              updates.payments[0].amount_usd = total;
+            }
+          }
+          if (exists.order_number.startsWith('ONLINE-') && !orderRef.startsWith('ONLINE-')) {
+            updates.order_number = orderRef;
+          }
+
+          if (Object.keys(updates).length > 0) {
+            await db.orders.update(bo.id, updates);
+          }
         }
       }
     }

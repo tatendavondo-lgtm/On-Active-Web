@@ -59,16 +59,15 @@ export function useSync(): SyncState {
 
     const interval = setInterval(() => {
       if (isSyncingRef.current) return;
-      isSyncingRef.current = true;
-      setStatus('syncing');
-      processSyncQueue()
-        .then(() => checkPendingCount())
-        .catch(console.error)
-        .finally(() => {
-          setStatus('idle');
-          isSyncingRef.current = false;
-        });
-    }, 60000); // 60 seconds
+      
+      // Only auto-sync if we have internet and a store is loaded
+      if (isOnline && store) {
+        syncNow().catch(console.error);
+      } else {
+        // Just check count if offline
+        checkPendingCount().catch(console.error);
+      }
+    }, 30000); // Increased frequency to 30 seconds for better responsiveness
 
     return () => clearInterval(interval);
   }, [isOnline, store, checkPendingCount]);
@@ -89,6 +88,7 @@ export function useSync(): SyncState {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'store_inventory', filter: `store_id=eq.${store.id}` }, handleCatalogChange)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'salesman_orders', filter: `store_id=eq.${store.id}` }, handleCatalogChange)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'online_order_bridge', filter: `store_id=eq.${store.id}` }, handleCatalogChange)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'online_order_bridge', filter: `store_id=eq.${store.id}` }, handleCatalogChange)
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log(`Subscribed to ${channelName}`);

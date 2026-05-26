@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     // Verify the order exists and is confirmed
     const { data: order, error: orderError } = await adminSupabase
       .from('pending_orders')
-      .select('id, status')
+      .select('id, status, order_ref, items, total_usd')
       .eq('id', orderId)
       .single();
 
@@ -43,6 +43,10 @@ export async function POST(req: NextRequest) {
         store_id: storeId,
         fulfillment: fulfillment || 'collection',
         status: 'pending',
+        customer_name: 'Online Customer',
+        items: order.items || [],
+        total: order.total_usd || 0,
+        order_ref: order.order_ref,
         assigned_at: new Date().toISOString(),
       });
 
