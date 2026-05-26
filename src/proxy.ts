@@ -37,7 +37,17 @@ export async function proxy(request: NextRequest) {
   if (!user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = '/admin/login';
-    return NextResponse.redirect(loginUrl);
+    const redirectResponse = NextResponse.redirect(loginUrl);
+    
+    // Purge all Supabase auth cookies on redirect to login page
+    // to prevent client-side SDK background refresh errors
+    request.cookies.getAll().forEach((cookie) => {
+      if (cookie.name.startsWith('sb-')) {
+        redirectResponse.cookies.delete(cookie.name);
+      }
+    });
+
+    return redirectResponse;
   }
 
   // Verify admin role in profiles table via privileged admin client (bypass RLS)

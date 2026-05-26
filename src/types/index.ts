@@ -58,8 +58,10 @@ export interface StoreSettings {
 
 export interface CartItem {
   productId: string;
+  variantId?: string;
   name: string;
   size: string;
+  color?: string;
   price_usd: number;
   image: string;
   quantity: number;

@@ -12,33 +12,31 @@ export function CheckoutForm({ settings }: { settings: any }) {
   const router = useRouter();
   
   const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "ecocash" | "bank">("ecocash");
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
   const [errors, setErrors] = useState({ name: "", phone: "", address: "" });
 
-  const cartSubtotal = items.reduce((total, item) => total + item.price_usd * item.quantity, 0);
-  const deliveryFee = cartSubtotal >= settings.free_delivery_threshold_usd ? 0 : settings.delivery_fee_usd;
+  const cartSubtotal = items.reduce((sum, item) => sum + (item.price_usd * item.quantity), 0);
+  const deliveryFee = cartSubtotal > 50 || cartSubtotal === 0 ? 0 : 5;
   const cartTotal = cartSubtotal + deliveryFee;
-
-  useEffect(() => setMounted(true), []);
-
-  if (!mounted) return null;
-  
-  if (items.length === 0) {
-    if (typeof window !== "undefined") router.replace("/shop");
-    return null;
-  }
 
   const validate = () => {
     let valid = true;
     const newErrors = { name: "", phone: "", address: "" };
 
-    if (!form.name.trim()) { newErrors.name = "Name is required"; valid = false; }
-    if (!form.address.trim()) { newErrors.address = "Address is required"; valid = false; }
-    
-    const phoneClean = form.phone.replace(/\s+/g, '');
-    const isZimPhone = /^(07|\+2637)\d{7,8}$/.test(phoneClean);
-    if (!isZimPhone) { newErrors.phone = "Invalid Zim phone (e.g. 07... or +263...)"; valid = false; }
+    if (!form.name.trim()) {
+      newErrors.name = "Name is required";
+      valid = false;
+    }
+    if (!form.phone.trim()) {
+      newErrors.phone = "Phone number is required";
+      valid = false;
+    }
+    if (!form.address.trim()) {
+      newErrors.address = "Delivery address is required";
+      valid = false;
+    }
 
     setErrors(newErrors);
     return valid;
@@ -55,14 +53,17 @@ export function CheckoutForm({ settings }: { settings: any }) {
       order_ref: orderRef,
       items: items.map(i => ({
         productId: i.productId,
+        variantId: i.variantId,
         name: i.name,
         price: i.price_usd,
         size: i.size,
+        color: i.color,
         quantity: i.quantity,
         image: i.image
       })),
       total_usd: cartTotal,
-      delivery_fee_usd: deliveryFee
+      delivery_fee_usd: deliveryFee,
+      payment_method: paymentMethod
     };
 
     try {
@@ -74,8 +75,9 @@ export function CheckoutForm({ settings }: { settings: any }) {
       
       if (!res.ok) throw new Error("Failed to place order.");
       
-      // Open WhatsApp
-      const msg = `Hi On Active! 👋\n\nI want to place an order: ${orderRef}\n*Name*: ${form.name}\n*Total*: $${cartTotal.toFixed(2)}`;
+      // WhatsApp message based on method
+      let methodText = paymentMethod === 'ecocash' ? 'EcoCash' : paymentMethod === 'bank' ? 'Bank Transfer' : 'Card/Swipe';
+      const msg = `Hi On Active! 👋\n\nI want to place an order: ${orderRef}\n*Name*: ${form.name}\n*Method*: ${methodText}\n*Total*: $${cartTotal.toFixed(2)}`;
       const waUrl = `https://wa.me/${settings.whatsapp_number.replace(/\+/g, '')}?text=${encodeURIComponent(msg)}`;
       window.open(waUrl, '_blank');
       
@@ -84,11 +86,6 @@ export function CheckoutForm({ settings }: { settings: any }) {
     } catch (err: any) {
       toast.error("Something went wrong. Please try again.");
       console.error(err);
-      
-      // Fallback WA
-      const msg = `Hi On Active! 👋\n\nOrder ref: ${orderRef}\nName: ${form.name}\nTotal: $${cartTotal.toFixed(2)}`;
-      const waUrl = `https://wa.me/${settings.whatsapp_number}?text=${encodeURIComponent(msg)}`;
-      window.open(waUrl, '_blank');
     } finally {
       setLoading(false);
     }
@@ -102,45 +99,91 @@ export function CheckoutForm({ settings }: { settings: any }) {
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Form */}
-        <div>
+        <div className="space-y-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-white/50 mb-2">Full Name</label>
-              <input 
-                value={form.name}
-                onChange={e => setForm({...form, name: e.target.value})}
-                className={`w-full bg-[#111111] border p-4 text-white placeholder-white/30 outline-none transition-colors ${errors.name ? 'border-red-500' : 'border-white/10 focus:border-[#C5A021]'}`}
-                placeholder="YOUR NAME"
-              />
-              {errors.name && <p className="text-red-500 text-xs mt-1 font-bold">{errors.name}</p>}
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#C5A021]">1. Shipping Details</h3>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">Full Name</label>
+                <input 
+                  value={form.name}
+                  onChange={e => setForm({...form, name: e.target.value})}
+                  className={`w-full bg-[#111111] border p-4 text-white placeholder-white/30 outline-none transition-colors rounded-xl ${errors.name ? 'border-red-500' : 'border-white/5 focus:border-[#C5A021]'}`}
+                  placeholder="YOUR NAME"
+                />
+                {errors.name && <p className="text-red-500 text-xs mt-1 font-bold">{errors.name}</p>}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">Phone Number</label>
+                <input 
+                  value={form.phone}
+                  onChange={e => setForm({...form, phone: e.target.value})}
+                  className={`w-full bg-[#111111] border p-4 text-white placeholder-white/30 outline-none transition-colors rounded-xl ${errors.phone ? 'border-red-500' : 'border-white/5 focus:border-[#C5A021]'}`}
+                  placeholder="07XX XXX XXX"
+                />
+                {errors.phone && <p className="text-red-500 text-xs mt-1 font-bold">{errors.phone}</p>}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">Delivery Address</label>
+                <textarea 
+                  value={form.address}
+                  onChange={e => setForm({...form, address: e.target.value})}
+                  className={`w-full h-32 bg-[#111111] border p-4 text-white placeholder-white/30 outline-none transition-colors rounded-xl resize-none ${errors.address ? 'border-red-500' : 'border-white/5 focus:border-[#C5A021]'}`}
+                  placeholder="FULL ADDRESS"
+                />
+                {errors.address && <p className="text-red-500 text-xs mt-1 font-bold">{errors.address}</p>}
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-white/50 mb-2">Phone Number</label>
-              <input 
-                value={form.phone}
-                onChange={e => setForm({...form, phone: e.target.value})}
-                className={`w-full bg-[#111111] border p-4 text-white placeholder-white/30 outline-none transition-colors ${errors.phone ? 'border-red-500' : 'border-white/10 focus:border-[#C5A021]'}`}
-                placeholder="07XX XXX XXX"
-              />
-              {errors.phone && <p className="text-red-500 text-xs mt-1 font-bold">{errors.phone}</p>}
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#C5A021] pt-4">2. Payment Method</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'ecocash', label: 'EcoCash' },
+                { id: 'bank', label: 'Transfer' },
+                { id: 'card', label: 'Card' }
+              ].map((method) => (
+                <button
+                  key={method.id}
+                  type="button"
+                  onClick={() => setPaymentMethod(method.id as any)}
+                  className={`py-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                    paymentMethod === method.id 
+                      ? 'bg-[#C5A021] border-[#C5A021] text-black' 
+                      : 'bg-[#111] border-white/5 text-white/40 hover:border-white/20'
+                  }`}
+                >
+                  {method.label}
+                </button>
+              ))}
             </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-white/50 mb-2">Delivery Address</label>
-              <textarea 
-                value={form.address}
-                onChange={e => setForm({...form, address: e.target.value})}
-                className={`w-full h-32 bg-[#111111] border p-4 text-white placeholder-white/30 outline-none transition-colors resize-none ${errors.address ? 'border-red-500' : 'border-white/10 focus:border-[#C5A021]'}`}
-                placeholder="FULL ADDRESS"
-              />
-              {errors.address && <p className="text-red-500 text-xs mt-1 font-bold">{errors.address}</p>}
+            <div className="bg-[#111] p-6 rounded-xl border border-white/5">
+              {paymentMethod === 'ecocash' && (
+                <div className="space-y-2">
+                  <p className="text-xs font-black text-white uppercase tracking-widest">Dial: *151*1*1*0777123456*Amount#</p>
+                  <p className="text-[10px] text-white/40 font-medium">Reference: Use your Order Number.</p>
+                </div>
+              )}
+              {paymentMethod === 'bank' && (
+                <div className="space-y-2">
+                  <p className="text-xs font-black text-white uppercase tracking-widest">CABS: 1234567890 (On Active)</p>
+                  <p className="text-[10px] text-white/40 font-medium">Please send your POP to WhatsApp.</p>
+                </div>
+              )}
+              {paymentMethod === 'card' && (
+                <div className="space-y-2">
+                  <p className="text-xs font-black text-white uppercase tracking-widest">Swipe at Pickup</p>
+                  <p className="text-[10px] text-white/40 font-medium">Pay via swipe when you pick up your items.</p>
+                </div>
+              )}
             </div>
             
             <button
               disabled={loading}
               type="submit"
-              className="w-full flex items-center justify-center bg-white text-black py-5 text-sm font-black uppercase tracking-[0.3em] hover:bg-[#C5A021] hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center bg-white text-black py-6 text-sm font-black uppercase tracking-[0.3em] hover:bg-[#C5A021] hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded-xl mt-4"
             >
               {loading ? <Loader2 className="animate-spin h-5 w-5" /> : "COMPLETE ORDER"}
             </button>

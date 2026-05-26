@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { AdminTopBar } from '@/components/admin/AdminTopBar';
 import { NotificationSystem } from '@/components/admin/NotificationSystem';
@@ -62,28 +62,35 @@ function HubShell({
 
 export default function HubLayout({ children }: { children: React.ReactNode }) {
   const [profile, setProfileState] = useState<Profile | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
     async function loadProfile() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-          if (data) {
-            setProfileState(data as Profile);
-          }
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) {
+          await supabase.auth.signOut();
+          router.push('/admin/login');
+          return;
+        }
+        
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        if (data) {
+          setProfileState(data as Profile);
+        } else {
+          router.push('/admin/login');
         }
       } catch (err) {
         console.error('Failed to load admin profile client-side:', err);
       }
     }
     loadProfile();
-  }, []);
+  }, [router]);
 
   return <HubShell children={children} profile={profile} />;
 }
