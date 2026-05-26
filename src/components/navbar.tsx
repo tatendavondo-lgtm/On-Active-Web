@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/store/cart";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-hot-toast";
 
 export function Navbar() {
   const cartCount = useCart(state => state.getCartCount());
@@ -14,6 +15,22 @@ export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
+
+  const handleUserClick = () => {
+    toast("Accounts Coming Soon", {
+      icon: "🔒",
+      style: {
+        background: "#111111",
+        color: "#C5A021",
+        border: "1px solid rgba(197, 160, 33, 0.2)",
+        borderRadius: "8px",
+        fontSize: "12px",
+        fontWeight: "bold",
+        letterSpacing: "0.05em",
+        textTransform: "uppercase",
+      },
+    });
+  };
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
@@ -69,7 +86,9 @@ export function Navbar() {
               className="w-full bg-transparent text-[11px] font-bold tracking-widest text-white outline-none placeholder:text-white/30"
             />
           </div>
-          <User className="h-5 w-5 cursor-pointer hover:text-[#C5A021] transition-colors" />
+          <button onClick={handleUserClick} className="relative group focus:outline-none" title="Customer Accounts">
+            <User className="h-5 w-5 cursor-pointer hover:text-[#C5A021] transition-colors" />
+          </button>
           <button className="relative group" onClick={() => setIsCartOpen(true)}>
             <ShoppingCart className="h-5 w-5 cursor-pointer group-hover:text-[#C5A021] transition-colors" />
             {cartCount > 0 && (
