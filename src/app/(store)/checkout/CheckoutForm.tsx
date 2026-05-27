@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useCart } from "@/store/cart";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Navigation, Compass, MapPin } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 export function CheckoutForm({ settings }: { settings: any }) {
@@ -13,12 +13,20 @@ export function CheckoutForm({ settings }: { settings: any }) {
   
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "ecocash" | "bank">("ecocash");
+  const [deliveryOption, setDeliveryOption] = useState<"pickup" | "delivery">("delivery");
+  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [coordsLoading, setCoordsLoading] = useState(false);
+  const [coordsError, setCoordsError] = useState("");
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
   const [errors, setErrors] = useState({ name: "", phone: "", address: "" });
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const cartSubtotal = items.reduce((sum, item) => sum + (item.price_usd * item.quantity), 0);
-  const deliveryFee = cartSubtotal > 50 || cartSubtotal === 0 ? 0 : 5;
+  const deliveryFee = deliveryOption === "pickup" ? 0 : (cartSubtotal > 50 || cartSubtotal === 0 ? 0 : 5);
   const cartTotal = cartSubtotal + deliveryFee;
 
   const validate = () => {
@@ -33,13 +41,46 @@ export function CheckoutForm({ settings }: { settings: any }) {
       newErrors.phone = "Phone number is required";
       valid = false;
     }
-    if (!form.address.trim()) {
+    if (deliveryOption === "delivery" && !form.address.trim()) {
       newErrors.address = "Delivery address is required";
       valid = false;
     }
 
     setErrors(newErrors);
     return valid;
+  };
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      setCoordsError("Geolocation is not supported by your browser");
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setCoordsLoading(true);
+    setCoordsError("");
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setGpsCoords({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+        setCoordsLoading(false);
+        toast.success("GPS Location Pinned! ✓");
+      },
+      (error) => {
+        console.error(error);
+        setCoordsLoading(false);
+        let msg = "Failed to retrieve location. Please check your browser permissions.";
+        if (error.code === error.PERMISSION_DENIED) {
+          msg = "Location permission denied. Please enable it in browser settings.";
+        }
+        setCoordsError(msg);
+        toast.error(msg);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,7 +104,9 @@ export function CheckoutForm({ settings }: { settings: any }) {
       })),
       total_usd: cartTotal,
       delivery_fee_usd: deliveryFee,
-      payment_method: paymentMethod
+      payment_method: paymentMethod,
+      delivery_option: deliveryOption,
+      gps_coords: gpsCoords ? `${gpsCoords.lat},${gpsCoords.lng}` : null
     };
 
     try {
@@ -77,7 +120,18 @@ export function CheckoutForm({ settings }: { settings: any }) {
       
       // WhatsApp message based on method
       let methodText = paymentMethod === 'ecocash' ? 'EcoCash' : paymentMethod === 'bank' ? 'Bank Transfer' : 'Card/Swipe';
-      const msg = `Hi On Active! 👋\n\nI want to place an order: ${orderRef}\n*Name*: ${form.name}\n*Method*: ${methodText}\n*Total*: $${cartTotal.toFixed(2)}`;
+      let deliveryText = deliveryOption === 'pickup' ? 'Store Pickup (FREE)' : 'Delivery to Door';
+      
+      let msg = `Hi On Active! 👋\n\nI want to place an order: ${orderRef}\n*Name*: ${form.name}\n*Phone*: ${form.phone}\n*Method*: ${methodText}\n*Delivery Option*: ${deliveryText}`;
+      
+      if (deliveryOption === 'delivery') {
+        msg += `\n*Address*: ${form.address}`;
+        if (gpsCoords) {
+          msg += `\n*GPS Location*: https://maps.google.com/?q=${gpsCoords.lat},${gpsCoords.lng}`;
+        }
+      }
+      
+      msg += `\n*Total*: $${cartTotal.toFixed(2)}`;
       const waUrl = `https://wa.me/${settings.whatsapp_number.replace(/\+/g, '')}?text=${encodeURIComponent(msg)}`;
       window.open(waUrl, '_blank');
       
@@ -91,6 +145,8 @@ export function CheckoutForm({ settings }: { settings: any }) {
     }
   };
 
+  if (!mounted) return null;
+
   return (
     <div className="container mx-auto px-4 py-8 sm:py-16 sm:px-10 max-w-6xl">
       <h1 className="text-3xl font-[900] uppercase tracking-tighter text-white sm:text-5xl border-b border-white/10 pb-8 mb-8">
@@ -101,7 +157,36 @@ export function CheckoutForm({ settings }: { settings: any }) {
         {/* Form */}
         <div className="space-y-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#C5A021]">1. Shipping Details</h3>
+            
+            {/* Step 1: Delivery Option */}
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#C5A021]">1. Delivery Option</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setDeliveryOption("pickup")}
+                className={`py-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                  deliveryOption === "pickup" 
+                    ? 'bg-[#C5A021] border-[#C5A021] text-black' 
+                    : 'bg-[#111] border-white/5 text-white/40 hover:border-white/20'
+                }`}
+              >
+                Store Pickup (FREE)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeliveryOption("delivery")}
+                className={`py-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                  deliveryOption === "delivery" 
+                    ? 'bg-[#C5A021] border-[#C5A021] text-black' 
+                    : 'bg-[#111] border-white/5 text-white/40 hover:border-white/20'
+                }`}
+              >
+                Delivery to Door
+              </button>
+            </div>
+
+            {/* Step 2: Shipping Details */}
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#C5A021] pt-4">2. Shipping Details</h3>
             <div className="space-y-6">
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">Full Name</label>
@@ -125,19 +210,58 @@ export function CheckoutForm({ settings }: { settings: any }) {
                 {errors.phone && <p className="text-red-500 text-xs mt-1 font-bold">{errors.phone}</p>}
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">Delivery Address</label>
-                <textarea 
-                  value={form.address}
-                  onChange={e => setForm({...form, address: e.target.value})}
-                  className={`w-full h-32 bg-[#111111] border p-4 text-white placeholder-white/30 outline-none transition-colors rounded-xl resize-none ${errors.address ? 'border-red-500' : 'border-white/5 focus:border-[#C5A021]'}`}
-                  placeholder="FULL ADDRESS"
-                />
-                {errors.address && <p className="text-red-500 text-xs mt-1 font-bold">{errors.address}</p>}
-              </div>
+              {deliveryOption === "delivery" && (
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-white/30">Delivery Address</label>
+                      <button
+                        type="button"
+                        onClick={handleGetLocation}
+                        disabled={coordsLoading}
+                        className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-[#C5A021] bg-[#C5A021]/5 hover:bg-[#C5A021]/15 px-3 py-1.5 rounded-lg transition-all border border-[#C5A021]/20"
+                      >
+                        {coordsLoading ? (
+                          <>
+                            <Loader2 size={10} className="animate-spin" />
+                            GETTING GPS...
+                          </>
+                        ) : (
+                          <>
+                            <Navigation size={10} />
+                            PIN GPS LOCATION
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <textarea 
+                      value={form.address}
+                      onChange={e => setForm({...form, address: e.target.value})}
+                      className={`w-full h-24 bg-[#111111] border p-4 text-white placeholder-white/30 outline-none transition-colors rounded-xl resize-none ${errors.address ? 'border-red-500' : 'border-white/5 focus:border-[#C5A021]'}`}
+                      placeholder="FULL PHYSICAL ADDRESS OR DIRECTIONS"
+                    />
+                    {errors.address && <p className="text-red-500 text-xs mt-1 font-bold">{errors.address}</p>}
+                  </div>
+
+                  {gpsCoords && (
+                    <div className="flex items-center gap-3 bg-[#C5A021]/10 border border-[#C5A021]/20 p-4 rounded-xl">
+                      <MapPin className="text-[#C5A021] flex-shrink-0" size={18} />
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[#C5A021]">GPS Location Pinned ✓</p>
+                        <p className="text-[11px] font-bold text-white/60 font-mono mt-0.5">{gpsCoords.lat.toFixed(5)}, {gpsCoords.lng.toFixed(5)}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {coordsError && (
+                    <p className="text-[10px] font-bold uppercase text-red-400 tracking-wide">{coordsError}</p>
+                  )}
+                </div>
+              )}
             </div>
 
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#C5A021] pt-4">2. Payment Method</h3>
+            {/* Step 3: Payment Method */}
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#C5A021] pt-4">3. Payment Method</h3>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'ecocash', label: 'EcoCash' },
