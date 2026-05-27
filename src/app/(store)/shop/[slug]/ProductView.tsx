@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { useCart } from "@/store/cart";
 import { toast } from "react-hot-toast";
-import { motion } from "framer-motion";
-import { ShoppingCart, Check } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShoppingCart, Check, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function ProductView({ product, zigRate }: { product: any; zigRate: number }) {
@@ -13,6 +13,9 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [justAdded, setJustAdded] = useState(false);
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const [activeGuideTab, setActiveGuideTab] = useState<"women" | "men">("women");
+  
   const addItem = useCart((state) => state.addItem);
 
   // Sync prop changes to state
@@ -235,7 +238,10 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
                   <span className="text-[10px] font-black uppercase tracking-widest text-white/50">
                     1. Choose Size {selectedSize && <span className="text-[#C5A021]"> — {selectedSize}</span>}
                   </span>
-                  <button className="text-[10px] font-black uppercase tracking-widest text-[#C5A021] underline underline-offset-2 opacity-70 hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => setIsSizeGuideOpen(true)}
+                    className="text-[10px] font-black uppercase tracking-widest text-[#C5A021] underline underline-offset-2 opacity-70 hover:opacity-100 transition-opacity"
+                  >
                     Size Guide
                   </button>
                 </div>
@@ -329,6 +335,171 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
           </ul>
         </div>
       </div>
+
+      {/* ── Size Guide Modal Overlay ── */}
+      <AnimatePresence>
+        {isSizeGuideOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-end">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSizeGuideOpen(false)}
+              className="absolute inset-0 bg-black"
+            />
+            
+            {/* Drawer Drawer */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="relative z-10 h-full w-full max-w-md bg-[#0D0D0D] border-l border-white/10 p-8 shadow-2xl flex flex-col justify-between overflow-y-auto text-white"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#C5A021]">ON ACTIVE</span>
+                    <h2 className="text-3xl font-[900] uppercase tracking-tighter">SIZE GUIDE</h2>
+                  </div>
+                  <button 
+                    onClick={() => setIsSizeGuideOpen(false)}
+                    className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Tab Selector */}
+                <div className="flex border-b border-white/10 mb-8">
+                  <button
+                    onClick={() => setActiveGuideTab("women")}
+                    className={`flex-1 pb-4 text-xs font-black uppercase tracking-widest transition-all ${
+                      activeGuideTab === "women" ? "text-[#C5A021] border-b-2 border-[#C5A021]" : "text-white/40 hover:text-white"
+                    }`}
+                  >
+                    WOMEN
+                  </button>
+                  <button
+                    onClick={() => setActiveGuideTab("men")}
+                    className={`flex-1 pb-4 text-xs font-black uppercase tracking-widest transition-all ${
+                      activeGuideTab === "men" ? "text-[#C5A021] border-b-2 border-[#C5A021]" : "text-white/40 hover:text-white"
+                    }`}
+                  >
+                    MEN
+                  </button>
+                </div>
+
+                {/* Size Charts */}
+                <div className="space-y-8">
+                  {activeGuideTab === "women" ? (
+                    <>
+                      {/* Women Tops/Sports Bras */}
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-[#C5A021]">TOPS & SPORTS BRAS</h3>
+                        <div className="overflow-hidden rounded-xl border border-white/5 bg-[#121212]">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="border-b border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest text-white/40">
+                                <th className="p-3">SIZE</th>
+                                <th className="p-3">CHEST (IN)</th>
+                                <th className="p-3">BUST (CM)</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5 font-medium text-white/70">
+                              <tr><td className="p-3 font-black text-white">XS</td><td className="p-3">30 - 32</td><td className="p-3">76 - 81</td></tr>
+                              <tr><td className="p-3 font-black text-white">S</td><td className="p-3">32 - 34</td><td className="p-3">81 - 86</td></tr>
+                              <tr><td className="p-3 font-black text-white">M</td><td className="p-3">34 - 36</td><td className="p-3">86 - 91</td></tr>
+                              <tr><td className="p-3 font-black text-white">L</td><td className="p-3">36 - 38</td><td className="p-3">91 - 96</td></tr>
+                              <tr><td className="p-3 font-black text-white">XL</td><td className="p-3">38 - 40</td><td className="p-3">96 - 101</td></tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Women Bottoms/Leggings */}
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-[#C5A021]">LEGGINGS & BOTTOMS</h3>
+                        <div className="overflow-hidden rounded-xl border border-white/5 bg-[#121212]">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="border-b border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest text-white/40">
+                                <th className="p-3">SIZE</th>
+                                <th className="p-3">WAIST (IN)</th>
+                                <th className="p-3">HIPS (IN)</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5 font-medium text-white/70">
+                              <tr><td className="p-3 font-black text-white">XS</td><td className="p-3">24 - 26</td><td className="p-3">34 - 36</td></tr>
+                              <tr><td className="p-3 font-black text-white">S</td><td className="p-3">26 - 28</td><td className="p-3">36 - 38</td></tr>
+                              <tr><td className="p-3 font-black text-white">M</td><td className="p-3">28 - 30</td><td className="p-3">38 - 40</td></tr>
+                              <tr><td className="p-3 font-black text-white">L</td><td className="p-3">30 - 32</td><td className="p-3">40 - 42</td></tr>
+                              <tr><td className="p-3 font-black text-white">XL</td><td className="p-3">32 - 35</td><td className="p-3">42 - 45</td></tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Men Tops */}
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-[#C5A021]">TOPS & JACKETS</h3>
+                        <div className="overflow-hidden rounded-xl border border-white/5 bg-[#121212]">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="border-b border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest text-white/40">
+                                <th className="p-3">SIZE</th>
+                                <th className="p-3">CHEST (IN)</th>
+                                <th className="p-3">CHEST (CM)</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5 font-medium text-white/70">
+                              <tr><td className="p-3 font-black text-white">S</td><td className="p-3">35 - 37</td><td className="p-3">89 - 94</td></tr>
+                              <tr><td className="p-3 font-black text-white">M</td><td className="p-3">38 - 40</td><td className="p-3">96 - 102</td></tr>
+                              <tr><td className="p-3 font-black text-white">L</td><td className="p-3">41 - 43</td><td className="p-3">104 - 109</td></tr>
+                              <tr><td className="p-3 font-black text-white">XL</td><td className="p-3">44 - 46</td><td className="p-3">112 - 117</td></tr>
+                              <tr><td className="p-3 font-black text-white">XXL</td><td className="p-3">47 - 49</td><td className="p-3">119 - 124</td></tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Men Bottoms */}
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-[#C5A021]">SHORTS & JOGGERS</h3>
+                        <div className="overflow-hidden rounded-xl border border-white/5 bg-[#121212]">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="border-b border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest text-white/40">
+                                <th className="p-3">SIZE</th>
+                                <th className="p-3">WAIST (IN)</th>
+                                <th className="p-3">WAIST (CM)</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5 font-medium text-white/70">
+                              <tr><td className="p-3 font-black text-white">S</td><td className="p-3">29 - 31</td><td className="p-3">74 - 79</td></tr>
+                              <tr><td className="p-3 font-black text-white">M</td><td className="p-3">32 - 34</td><td className="p-3">81 - 86</td></tr>
+                              <tr><td className="p-3 font-black text-white">L</td><td className="p-3">35 - 37</td><td className="p-3">89 - 94</td></tr>
+                              <tr><td className="p-3 font-black text-white">XL</td><td className="p-3">38 - 40</td><td className="p-3">96 - 102</td></tr>
+                              <tr><td className="p-3 font-black text-white">XXL</td><td className="p-3">41 - 43</td><td className="p-3">104 - 109</td></tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-12 text-center text-[10px] uppercase font-bold tracking-[0.2em] text-white/30 border-t border-white/5 pt-6">
+                * Fit may vary depending on style and fabric cut.
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
