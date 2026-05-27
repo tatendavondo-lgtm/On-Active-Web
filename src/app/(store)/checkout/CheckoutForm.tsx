@@ -4,8 +4,26 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useCart } from "@/store/cart";
 import { useRouter } from "next/navigation";
-import { Loader2, Navigation, Compass, MapPin } from "lucide-react";
+import { Loader2, Navigation, Compass, MapPin, Info } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { createClient } from "@/lib/supabase/client";
+
+// Harare fallback coordinates if stores table is empty or query fails
+const FALLBACK_STORE_LAT = -17.825167;
+const FALLBACK_STORE_LNG = 31.053139;
+
+// Haversine formula to compute great-circle distance between two points in km
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c; // Distance in km
+}
 
 export function CheckoutForm({ settings }: { settings: any }) {
   const { items, clearCart } = useCart();
@@ -20,13 +38,67 @@ export function CheckoutForm({ settings }: { settings: any }) {
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
   const [errors, setErrors] = useState({ name: "", phone: "", address: "" });
+  
+  // Single active store branch details from DB
+  const [storeInfo, setStoreInfo] = useState<{ name: string; latitude: number; longitude: number } | null>(null);
 
   useEffect(() => {
     setMounted(true);
+
+    // Fetch active store branch on mount
+    async function fetchStoreCoords() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("stores")
+          .select("name, latitude, longitude")
+          .eq("is_active", true)
+          .limit(1);
+
+        if (!error && data && data.length > 0) {
+          setStoreInfo(data[0]);
+        } else {
+          // Default fallback store info
+          setStoreInfo({
+            name: "Harare Main Branch",
+            latitude: FALLBACK_STORE_LAT,
+            longitude: FALLBACK_STORE_LNG
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch store coords:", err);
+        setStoreInfo({
+          name: "Harare Main Branch",
+          latitude: FALLBACK_STORE_LAT,
+          longitude: FALLBACK_STORE_LNG
+        });
+      }
+    }
+
+    fetchStoreCoords();
   }, []);
 
+  const storeLat = storeInfo?.latitude ?? FALLBACK_STORE_LAT;
+  const storeLng = storeInfo?.longitude ?? FALLBACK_STORE_LNG;
+
+  // Calculate distance if GPS pinned
+  const distanceKm = gpsCoords 
+    ? calculateDistance(gpsCoords.lat, gpsCoords.lng, storeLat, storeLng) 
+    : null;
+
+  // Pricing: Pickup is FREE.
+  // Delivery with GPS: $2 base (up to 3km) + $0.80 per extra km
+  // Delivery without GPS: flat $5 fallback fee
   const cartSubtotal = items.reduce((sum, item) => sum + (item.price_usd * item.quantity), 0);
-  const deliveryFee = deliveryOption === "pickup" ? 0 : (cartSubtotal > 50 || cartSubtotal === 0 ? 0 : 5);
+  let deliveryFee = 0;
+  if (deliveryOption === "delivery") {
+    if (distanceKm !== null) {
+      deliveryFee = distanceKm <= 3 ? 2.00 : 2.00 + (distanceKm - 3) * 0.80;
+    } else {
+      deliveryFee = 5.00; // flat fallback
+    }
+  }
+
   const cartTotal = cartSubtotal + deliveryFee;
 
   const validate = () => {
@@ -67,7 +139,7 @@ export function CheckoutForm({ settings }: { settings: any }) {
           lng: position.coords.longitude
         });
         setCoordsLoading(false);
-        toast.success("GPS Location Pinned! ✓");
+        toast.success("GPS Location Pinned! Custom delivery fee calculated.");
       },
       (error) => {
         console.error(error);
@@ -118,7 +190,7 @@ export function CheckoutForm({ settings }: { settings: any }) {
       
       if (!res.ok) throw new Error("Failed to place order.");
       
-      // WhatsApp message based on method
+      // WhatsApp message formatting
       let methodText = paymentMethod === 'ecocash' ? 'EcoCash' : paymentMethod === 'bank' ? 'Bank Transfer' : 'Card/Swipe';
       let deliveryText = deliveryOption === 'pickup' ? 'Store Pickup (FREE)' : 'Delivery to Door';
       
@@ -126,12 +198,15 @@ export function CheckoutForm({ settings }: { settings: any }) {
       
       if (deliveryOption === 'delivery') {
         msg += `\n*Address*: ${form.address}`;
-        if (gpsCoords) {
+        if (gpsCoords && distanceKm !== null) {
+          msg += `\n*Distance*: ${distanceKm.toFixed(1)} km`;
           msg += `\n*GPS Location*: https://maps.google.com/?q=${gpsCoords.lat},${gpsCoords.lng}`;
         }
       }
       
+      msg += `\n*Delivery Fee*: $${deliveryFee.toFixed(2)}`;
       msg += `\n*Total*: $${cartTotal.toFixed(2)}`;
+      
       const waUrl = `https://wa.me/${settings.whatsapp_number.replace(/\+/g, '')}?text=${encodeURIComponent(msg)}`;
       window.open(waUrl, '_blank');
       
@@ -243,13 +318,37 @@ export function CheckoutForm({ settings }: { settings: any }) {
                     {errors.address && <p className="text-red-500 text-xs mt-1 font-bold">{errors.address}</p>}
                   </div>
 
+                  {!gpsCoords && (
+                    <div className="flex items-start gap-3 bg-[#111] border border-white/5 p-4 rounded-xl">
+                      <Info className="text-white/40 flex-shrink-0 mt-0.5" size={14} />
+                      <p className="text-[10px] font-bold text-white/40 leading-relaxed uppercase tracking-wide">
+                        Pin your GPS location above to calculate a custom delivery fee based on your distance from our warehouse! (Fallback flat rate: $5.00)
+                      </p>
+                    </div>
+                  )}
+
                   {gpsCoords && (
-                    <div className="flex items-center gap-3 bg-[#C5A021]/10 border border-[#C5A021]/20 p-4 rounded-xl">
-                      <MapPin className="text-[#C5A021] flex-shrink-0" size={18} />
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[#C5A021]">GPS Location Pinned ✓</p>
-                        <p className="text-[11px] font-bold text-white/60 font-mono mt-0.5">{gpsCoords.lat.toFixed(5)}, {gpsCoords.lng.toFixed(5)}</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3 bg-[#C5A021]/10 border border-[#C5A021]/20 p-4 rounded-xl">
+                        <MapPin className="text-[#C5A021] flex-shrink-0" size={18} />
+                        <div className="flex-1">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-[#C5A021]">GPS Location Pinned ✓</p>
+                          <p className="text-[11px] font-bold text-white/60 font-mono mt-0.5">{gpsCoords.lat.toFixed(5)}, {gpsCoords.lng.toFixed(5)}</p>
+                        </div>
+                        {distanceKm !== null && (
+                          <div className="text-right border-l border-white/10 pl-4">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-white/40">DISTANCE</p>
+                            <p className="text-lg font-black italic text-white leading-none mt-1">{distanceKm.toFixed(1)} km</p>
+                          </div>
+                        )}
                       </div>
+                      
+                      {distanceKm !== null && (
+                        <div className="bg-[#111] border border-white/5 p-3 rounded-xl flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-white/40">
+                          <span>Delivery Base rate (Up to 3km):</span>
+                          <span className="text-white">$2.00</span>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -339,7 +438,14 @@ export function CheckoutForm({ settings }: { settings: any }) {
             </div>
             <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-white/50">
               <span>Delivery</span>
-              <span>{deliveryFee === 0 ? 'FREE' : `$${deliveryFee.toFixed(2)}`}</span>
+              <span>
+                {deliveryFee === 0 ? 'FREE' : `$${deliveryFee.toFixed(2)}`}
+                {distanceKm !== null && deliveryOption === "delivery" && (
+                  <span className="text-[10px] text-white/30 lowercase font-medium tracking-normal ml-1">
+                    ({distanceKm.toFixed(1)}km distance)
+                  </span>
+                )}
+              </span>
             </div>
             
             <div className="pt-4 border-t border-white/10 flex flex-col items-end">
