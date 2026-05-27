@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CartItem } from '@/types';
 
@@ -31,13 +31,11 @@ export const useCart = create<CartState>()(
                 ? { ...item, quantity: item.quantity + 1 }
                 : item
             ),
-            isCartOpen: true
           };
         }
 
         return {
           items: [...state.items, { ...newItem, quantity: 1 }],
-          isCartOpen: true
         };
       }),
 
