@@ -6,26 +6,92 @@ import { useCart } from "@/store/cart";
 import { toast } from "react-hot-toast";
 import { motion } from "framer-motion";
 import { ShoppingCart, Check } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export function ProductView({ product, zigRate }: { product: any; zigRate: number }) {
+  const [liveProduct, setLiveProduct] = useState(product);
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [justAdded, setJustAdded] = useState(false);
   const addItem = useCart((state) => state.addItem);
 
+  // Sync prop changes to state
+  useEffect(() => {
+    setLiveProduct(product);
+  }, [product]);
+
+  // Live polling every 5 seconds from Supabase
+  useEffect(() => {
+    if (!product?.id) return;
+    const supabase = createClient();
+
+    async function syncData() {
+      try {
+        // 1. Fetch live product details
+        const { data: freshProduct, error: prodErr } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', product.id)
+          .single();
+
+        if (prodErr || !freshProduct) return;
+
+        // 2. Fetch live variants and inventory
+        const { data: rawVariants } = await supabase
+          .from('product_variants')
+          .select(`
+            *,
+            store_inventory (
+              quantity
+            )
+          `)
+          .eq('product_id', product.id);
+
+        const mappedVariants = (rawVariants || []).map((v: any) => {
+          const inventory = v.store_inventory;
+          let stock = 0;
+          if (Array.isArray(inventory)) {
+            stock = inventory[0]?.quantity || 0;
+          } else if (inventory && typeof inventory === 'object') {
+            stock = (inventory as any).quantity || 0;
+          }
+          return {
+            ...v,
+            stock: Number(stock) || 0,
+            price: Number(v.price || freshProduct.price_usd || 0)
+          };
+        });
+
+        setLiveProduct({
+          ...freshProduct,
+          variants: mappedVariants
+        });
+      } catch (err) {
+        console.error("Error syncing product details:", err);
+      }
+    }
+
+    const interval = setInterval(syncData, 5000);
+    return () => clearInterval(interval);
+  }, [product?.id]);
+
   // 1. Data Safety & Fallbacks
-  const name = product?.name || "Premium Performance Wear";
-  const basePrice = Number(product?.price_usd || 0);
-  const variants = useMemo(() => Array.isArray(product?.variants) ? product.variants : [], [product]);
+  const name = liveProduct?.name || "Premium Performance Wear";
+  const basePrice = Number(liveProduct?.price_usd || 0);
+  const variants = useMemo(() => Array.isArray(liveProduct?.variants) ? liveProduct.variants : [], [liveProduct]);
   const hasVariants = variants.length > 0;
 
   const images = useMemo(() => {
-    const raw = product?.images;
+    const raw = liveProduct?.images;
     if (Array.isArray(raw) && raw.length > 0) return raw.filter((i: any) => typeof i === 'string') as string[];
     return ["/images/placeholder.jpg"];
-  }, [product]);
+  }, [liveProduct]);
 
   const [activeImage, setActiveImage] = useState<string>(images[0]);
+
+  useEffect(() => {
+    if (images[0]) setActiveImage(images[0]);
+  }, [liveProduct?.id, images]);
 
   // 2. Computed Selections
   const variantSizes = useMemo(() => {
@@ -45,8 +111,8 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
 
   const simpleSizes = useMemo(() => {
     if (hasVariants) return [];
-    return Array.isArray(product?.sizes) ? product.sizes.filter(Boolean) : [];
-  }, [product, hasVariants]);
+    return Array.isArray(liveProduct?.sizes) ? liveProduct.sizes.filter(Boolean) : [];
+  }, [liveProduct, hasVariants]);
 
   const selectedVariant = useMemo(() => {
     if (!hasVariants) return null;
@@ -58,17 +124,12 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
     if (hasVariants) {
       return variants.every((v: any) => (Number(v?.stock) || 0) <= 0);
     }
-    return (Number(product?.stock_quantity) || 0) <= 0;
-  }, [variants, hasVariants, product]);
+    return (Number(liveProduct?.stock_quantity) || 0) <= 0;
+  }, [variants, hasVariants, liveProduct]);
 
   const displayPrice = Number(selectedVariant?.price ?? basePrice);
 
-  // 4. Effects
-  useEffect(() => {
-    if (images[0]) setActiveImage(images[0]);
-  }, [product?.id, images]);
-
-  if (!product) return null;
+  if (!liveProduct) return null;
 
   const handleAddToCart = () => {
     try {
@@ -93,7 +154,7 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
       }
 
       addItem({
-        productId: product.id,
+        productId: liveProduct.id,
         variantId: selectedVariant?.id,
         name: name,
         price_usd: displayPrice,
@@ -153,7 +214,7 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
         <div className="flex flex-col space-y-8">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#C5A021] mb-3">
-              {product.category || "ON ACTIVE"}
+              {liveProduct.category || "ON ACTIVE"}
             </p>
             <h1 className="text-4xl sm:text-6xl font-[900] uppercase tracking-tighter text-white leading-none">
               {name}
@@ -182,7 +243,7 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
                   {(hasVariants ? variantSizes : simpleSizes as string[]).map((size: string) => {
                     const totalSizeStock = hasVariants 
                       ? variants.filter((v: any) => v?.size === size).reduce((sum: number, v: any) => sum + (Number(v?.stock) || 0), 0)
-                      : (Number(product.stock_quantity) || 0);
+                      : (Number(liveProduct.stock_quantity) || 0);
                     
                     return (
                       <button
@@ -247,7 +308,7 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
           </div>
 
           <p className="text-sm leading-relaxed text-white/60 font-medium">
-            {product.description || "Premium fitness apparel engineered for performance."}
+            {liveProduct.description || "Premium fitness apparel engineered for performance."}
           </p>
 
           <motion.button

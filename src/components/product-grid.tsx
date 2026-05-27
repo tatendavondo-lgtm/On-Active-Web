@@ -13,9 +13,10 @@ export function ProductGrid() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const supabase = createClient();
+
     async function fetchProducts() {
       try {
-        const supabase = createClient();
         const { data, error } = await supabase
           .from('products')
           .select('*')
@@ -26,6 +27,7 @@ export function ProductGrid() {
         const dbMapped = (data || []).map(p => ({
           id: p.id,
           name: p.name,
+          slug: p.slug,
           price: p.price_usd,
           category: p.category?.toLowerCase() || 'uncategorized',
           image: p.images?.[0] || null
@@ -34,18 +36,33 @@ export function ProductGrid() {
         setProducts(dbMapped);
       } catch (err) {
         console.error("Fetch error:", err);
-        setProducts([]);
       } finally {
         setLoading(false);
       }
     }
 
     fetchProducts();
+    const interval = setInterval(fetchProducts, 5000);
+    return () => clearInterval(interval);
   }, []);
 
-  const filteredProducts = products.filter(p => 
-    activeCategory === "ALL" || p.category.toUpperCase() === activeCategory
-  );
+  const filteredProducts = products.filter(p => {
+    if (activeCategory === "ALL") return true;
+    
+    const cat = p.category.toLowerCase();
+    
+    if (activeCategory === "UPPER") {
+      return ['tops', 'top', 'outerwear', 'sports bras', 'bras'].includes(cat);
+    }
+    if (activeCategory === "LOWER") {
+      return ['bottoms', 'bottom', 'leggings', 'shorts'].includes(cat);
+    }
+    if (activeCategory === "ACCESSORIES") {
+      return ['accessories', 'accessory'].includes(cat);
+    }
+    
+    return cat === activeCategory.toLowerCase();
+  });
 
   return (
     <section id="trending-now" className="bg-[#0A0A0A] py-24 text-white sm:py-32">
@@ -90,31 +107,32 @@ export function ProductGrid() {
           >
             <AnimatePresence>
               {filteredProducts.slice(0, 6).map((product) => (
-                <motion.div
-                  key={product.id}
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  whileHover={{ scale: 1.02 }}
-                  className="group relative flex flex-col bg-[#111] border border-white/5 rounded-2xl overflow-hidden transition-all duration-300"
-                >
-                  <div className="relative aspect-[3/4] w-full bg-[#1A1A1A]">
-                    {product.image ? (
-                      <img src={product.image} alt={product.name} className="h-full w-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0 group-hover:scale-110" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center opacity-10">
-                        <span className="text-4xl font-black italic tracking-tighter">ON ACTIVE.</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-6 space-y-2">
-                    <div className="flex justify-between items-start">
-                      <h3 className="text-xl font-black uppercase tracking-tight text-white leading-tight">{product.name}</h3>
-                      <p className="text-xl font-black italic text-[#C5A021]">${product.price}</p>
+                <Link key={product.id} href={`/shop/${product.slug}`}>
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    whileHover={{ scale: 1.02 }}
+                    className="group relative flex flex-col bg-[#111] border border-white/5 rounded-2xl overflow-hidden transition-all duration-300"
+                  >
+                    <div className="relative aspect-[3/4] w-full bg-[#1A1A1A]">
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} className="h-full w-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0 group-hover:scale-110" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center opacity-10">
+                          <span className="text-4xl font-black italic tracking-tighter">ON ACTIVE.</span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </motion.div>
+                    <div className="p-6 space-y-2">
+                      <div className="flex justify-between items-start">
+                        <h3 className="text-xl font-black uppercase tracking-tight text-white leading-tight">{product.name}</h3>
+                        <p className="text-xl font-black italic text-[#C5A021]">${product.price}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                </Link>
               ))}
             </AnimatePresence>
           </motion.div>
