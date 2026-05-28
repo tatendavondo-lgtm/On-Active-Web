@@ -80,7 +80,8 @@ export const useCartStore = create<CartState>()(
           (i) => i.product_id === item.product_id && i.variant_id === item.variant_id
         );
         if (existing) {
-          existing.quantity += item.quantity;
+          const newQty = existing.quantity + item.quantity;
+          existing.quantity = existing.max_stock !== undefined ? Math.min(existing.max_stock, newQty) : newQty;
           existing.line_total = existing.quantity * existing.unit_price;
         } else {
           state.items.push({
@@ -106,8 +107,8 @@ export const useCartStore = create<CartState>()(
           if (quantity <= 0) {
             state.items = state.items.filter((i) => i.id !== itemId);
           } else {
-            item.quantity = quantity;
-            item.line_total = quantity * item.unit_price;
+            item.quantity = item.max_stock !== undefined ? Math.min(item.max_stock, quantity) : quantity;
+            item.line_total = item.quantity * item.unit_price;
           }
         }
         recalculate(state);
@@ -143,7 +144,18 @@ export const useCartStore = create<CartState>()(
     // Load items from a salesman order into the cart (for till operator)
     loadFromSalesmanOrder: (items) =>
       set((state) => {
-        state.items = items.map((item) => ({
+        let parsedItems = items;
+        if (typeof items === 'string') {
+          try {
+            parsedItems = JSON.parse(items);
+          } catch (e) {
+            parsedItems = [];
+          }
+        }
+        if (!Array.isArray(parsedItems)) {
+          parsedItems = [];
+        }
+        state.items = parsedItems.map((item) => ({
           ...item,
           id: item.id || crypto.randomUUID(),
           // Ensure line_total is computed from unit_price

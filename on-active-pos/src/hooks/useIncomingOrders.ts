@@ -7,7 +7,7 @@
  * Returns: pending orders array + accept/cancel functions
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../config/supabase';
 import { db } from '../db/dexie';
 import { useSessionStore } from '../stores/sessionStore';
@@ -21,6 +21,10 @@ export function useIncomingOrders() {
   const store = useSessionStore((s) => s.store);
   const isOnline = useOnlineStatus();
   const addNotification = useNotificationStore(s => s.addNotification);
+  const clearIncomingOrders = useNotificationStore(s => s.clearIncomingOrders);
+
+  const isInitialMount = useRef(true);
+  const notifiedIds = useRef<Set<string>>(new Set());
 
   // Fetch from IndexedDB
   const loadLocal = useCallback(async () => {
@@ -29,8 +33,36 @@ export function useIncomingOrders() {
       .where('store_id').equals(store.id)
       .and((o) => o.status === 'pending' || o.status === 'accepted')
       .sortBy('created_at');
+
+    const pending = local.filter(o => o.status === 'pending');
+
+    if (isInitialMount.current) {
+      // Just populate initial set without triggering sound
+      notifiedIds.current = new Set(pending.map(o => o.id));
+      isInitialMount.current = false;
+    } else {
+      let newlyAdded = false;
+
+      pending.forEach(order => {
+        if (!notifiedIds.current.has(order.id)) {
+          notifiedIds.current.add(order.id);
+          newlyAdded = true;
+          addNotification({
+            type: 'incoming_order',
+            title: 'New Salesman Order',
+            message: `From ${order.salesman_name || 'Unknown'} — ${order.item_count || 0} items`,
+            action: { label: 'View Queue', route: '/till' }
+          });
+        }
+      });
+
+      if (newlyAdded) {
+        playNotificationSound.newIncomingOrder();
+      }
+    }
+
     setOrders(local.reverse());
-  }, [store]);
+  }, [store, addNotification]);
 
   useEffect(() => {
     loadLocal();
@@ -57,7 +89,7 @@ export function useIncomingOrders() {
               await db.salesmanOrders.add({
                 ...newOrder,
                 salesman_name: newOrder.salesman_name || 'Unknown',
-                items: newOrder.items || [],
+                items: typeof newOrder.items === 'string' ? JSON.parse(newOrder.items) : (newOrder.items || []),
                 subtotal: newOrder.subtotal || 0,
                 item_count: newOrder.item_count || 0,
                 synced: true,
@@ -67,15 +99,6 @@ export function useIncomingOrders() {
           } catch (e) {
             console.warn('Failed to write incoming order to local DB:', e);
           }
-          
-          // Fire notification + sound
-          addNotification({
-            type: 'incoming_order',
-            title: 'New Salesman Order',
-            message: `From ${newOrder.salesman_name || 'Unknown'} — ${(newOrder.items || []).length} items`,
-            action: { label: 'View Queue', route: '/till' }
-          });
-          playNotificationSound.newIncomingOrder();
 
           // Refresh the local list
           loadLocal();
@@ -97,9 +120,10 @@ export function useIncomingOrders() {
     }
 
     return () => clearInterval(interval);
-  }, [store, isOnline, loadLocal, addNotification]);
+  }, [store, isOnline, loadLocal]);
 
   async function acceptOrder(orderId: string) {
+    clearIncomingOrders();
     await db.salesmanOrders.update(orderId, {
       status: 'accepted',
     });
@@ -115,6 +139,7 @@ export function useIncomingOrders() {
   }
 
   async function cancelOrder(orderId: string) {
+    clearIncomingOrders();
     await db.salesmanOrders.update(orderId, { status: 'cancelled' });
     await db.syncQueue.add({
       table: 'salesman_orders',
@@ -127,6 +152,7 @@ export function useIncomingOrders() {
   }
 
   async function completeOrder(orderId: string) {
+    clearIncomingOrders();
     await db.salesmanOrders.update(orderId, {
       status: 'completed',
     });

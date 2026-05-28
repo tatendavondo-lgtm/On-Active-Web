@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2 } from 'lucide-react';
 import { useCartStore } from '../../stores/cartStore';
 import { QuantityControl } from '../salesman/QuantityControl';
@@ -9,13 +10,13 @@ import { formatUSD } from '../../lib/currency';
 import { useSessionStore } from '../../stores/sessionStore';
 import { useExchangeRates } from '../../hooks/useExchangeRates';
 import { processOrder } from '../../lib/orderProcessing';
+import { logPosAction } from '../../lib/audit';
 import { transformOrderToReceipt } from '../../lib/receipt';
 import { ReceiptPreview } from '../receipt/ReceiptPreview';
-import { Button } from '../shared/Button';
 
 export function CartPanel() {
   const { items, subtotal, total, autoDiscount, manualDiscountAmount, manualDiscountType, totalDiscount, taxAmount, applyManualDiscount, removeItem, updateQuantity, clearCart } = useCartStore();
-  const { employee, store, deviceId } = useSessionStore();
+  const { employee, store, shiftId, deviceId } = useSessionStore();
   const { rates } = useExchangeRates();
   const [showPayment, setShowPayment] = useState(false);
   const [showDiscount, setShowDiscount] = useState(false);
@@ -60,6 +61,17 @@ export function CartPanel() {
       const receiptData = transformOrderToReceipt(order as any, store, employee.full_name);
       setCompletedReceipt(receiptData);
       
+      logPosAction({
+        userId: employee.id,
+        userName: employee.full_name,
+        userRole: employee.role,
+        action: 'complete_sale',
+        targetType: 'order',
+        targetId: order.id,
+        details: { total: order.total, items: order.items.length },
+        storeId: store.id
+      });
+
       setShowPayment(false);
       clearCart();
     } catch (err) {
@@ -69,10 +81,10 @@ export function CartPanel() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0d0d0d] border-l border-white/5 relative">
-      <div className="p-4 border-b border-white/5 bg-[#111111]/80 flex justify-between items-center backdrop-blur-md flex-shrink-0">
+    <div className="flex flex-col h-full bg-black/40 backdrop-blur-[40px] border-l border-white/10 relative shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
+      <div className="p-4 border-b border-white/10 bg-white/5 flex justify-between items-center backdrop-blur-md flex-shrink-0">
         <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white">Walk-in Order</h2>
-        <span className="text-[9px] font-black uppercase tracking-widest bg-[var(--pos-accent)]/10 text-[var(--pos-accent)] py-1 px-2.5 rounded-full border border-[var(--pos-accent)]/20">
+        <span className="text-[9px] font-black uppercase tracking-widest bg-[var(--pos-accent)]/10 text-[var(--pos-accent)] py-1 px-2.5 rounded-full border border-[var(--pos-accent)]/20 shadow-[0_0_10px_rgba(197,160,33,0.1)]">
           Live Terminal
         </span>
       </div>
@@ -87,9 +99,18 @@ export function CartPanel() {
           </div>
         ) : (
           <div className="space-y-3">
-            {items.map(item => (
-              <div key={item.id} className="flex flex-col gap-3 p-4 bg-[#111111]/80 rounded-[var(--pos-radius-lg)] border border-white/5 hover:border-[var(--pos-accent)]/30 transition-all duration-300">
-                <div className="flex justify-between items-start">
+            <AnimatePresence mode="popLayout">
+              {items.map(item => (
+                <motion.div 
+                  layout
+                  initial={{ opacity: 0, scale: 0.9, y: -20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, x: -50 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  key={item.id} 
+                  className="flex flex-col gap-3 p-4 bg-white/5 backdrop-blur-sm rounded-[var(--pos-radius-lg)] border border-white/10 hover:border-[var(--pos-accent)]/40 transition-colors shadow-lg"
+                >
+                  <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span className="font-black text-xs uppercase tracking-wide text-white leading-tight">{item.product_name}</span>
                     {item.variant_name && <span className="text-[10px] font-black uppercase tracking-widest text-[var(--pos-text-muted)] mt-1">{item.variant_name}</span>}
@@ -106,18 +127,20 @@ export function CartPanel() {
                     quantity={item.quantity} 
                     onChange={(q) => updateQuantity(item.id, q)} 
                     min={1} 
+                    max={item.max_stock}
                   />
                   <span className="font-mono text-xs text-[var(--pos-accent)] font-black">
                     {formatUSD(item.line_total)}
                   </span>
                 </div>
-              </div>
-            ))}
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
 
-      <div className="p-4 border-t border-white/5 bg-[#111111]/90 flex-shrink-0 flex flex-col gap-4">
+      <div className="p-4 border-t border-white/10 bg-white/5 backdrop-blur-md flex-shrink-0 flex flex-col gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
         {autoDiscount.applied && <AutoDiscountBanner autoDiscount={autoDiscount} />}
         
         <div className="space-y-2.5 text-xs font-black uppercase tracking-wider text-[var(--pos-text-secondary)]">
@@ -142,30 +165,30 @@ export function CartPanel() {
         </div>
 
         <div className="grid grid-cols-4 gap-3 mt-2">
-          <Button 
-            variant="ghost" 
+          <motion.button 
+            whileTap={{ scale: 0.95 }}
             onClick={clearCart} 
             disabled={items.length === 0} 
-            className="col-span-1 p-0 text-[10px] font-black uppercase tracking-widest border border-white/5 hover:border-[var(--pos-error)] hover:text-[var(--pos-error)] transition-colors h-11"
+            className="col-span-1 p-0 text-[10px] font-black uppercase tracking-widest border border-white/10 bg-white/5 hover:bg-white/10 hover:border-[var(--pos-error)] hover:text-[var(--pos-error)] transition-colors h-11 rounded-[var(--pos-radius)] disabled:opacity-50"
           >
             Clear
-          </Button>
-          <Button 
-            variant="secondary" 
+          </motion.button>
+          <motion.button 
+            whileTap={{ scale: 0.95 }}
             onClick={() => setShowDiscount(true)} 
             disabled={items.length === 0} 
-            className="col-span-1 px-0 text-[10px] font-black uppercase tracking-widest border border-white/5 hover:border-[var(--pos-accent)] hover:text-white transition-colors h-11"
+            className="col-span-1 px-0 text-[10px] font-black uppercase tracking-widest border border-white/10 bg-white/5 hover:bg-white/10 hover:border-[var(--pos-accent)] hover:text-white transition-colors h-11 rounded-[var(--pos-radius)] disabled:opacity-50"
           >
             Disc
-          </Button>
-          <Button 
-            variant="primary" 
+          </motion.button>
+          <motion.button 
+            whileTap={{ scale: 0.97 }}
             onClick={() => setShowPayment(true)} 
             disabled={items.length === 0} 
-            className="col-span-2 text-xs font-black uppercase tracking-widest bg-[var(--pos-accent)] text-black hover:scale-[1.02] shadow-[0_0_25px_rgba(197,160,33,0.18)] transition-all h-11 cursor-pointer flex items-center justify-center"
+            className="col-span-2 text-xs font-black uppercase tracking-widest bg-[var(--pos-accent)] text-black shadow-[0_0_25px_rgba(197,160,33,0.2)] transition-all h-11 cursor-pointer flex items-center justify-center rounded-[var(--pos-radius)] disabled:opacity-50 disabled:shadow-none"
           >
             Pay
-          </Button>
+          </motion.button>
         </div>
       </div>
 

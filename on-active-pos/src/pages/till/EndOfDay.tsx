@@ -98,9 +98,9 @@ export default function EndOfDay() {
     // 1. Update local shift record
     await db.shifts.update(shiftId, closingData);
     
-    // 2. Add to sync queue
+    // 2. Add to sync queue (Fix: table name changed to 'shifts' to match remote Supabase schema)
     await db.syncQueue.add({
-      table: 'pos_shifts',
+      table: 'shifts',
       operation: 'update',
       data: {
         id: shiftId,

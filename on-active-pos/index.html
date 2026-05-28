@@ -9,6 +9,27 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        #pos-receipt-print, #pos-receipt-print * {
+          visibility: visible;
+        }
+        #pos-receipt-print {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          background: white !important;
+          color: black !important;
+        }
+        button, aside, nav, .no-print {
+          display: none !important;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

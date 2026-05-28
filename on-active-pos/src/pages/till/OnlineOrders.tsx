@@ -6,7 +6,7 @@ import { Button } from '../../components/shared/Button';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function OnlineOrders() {
-  const { grouped, stats, moveToStatus } = useOnlineOrders();
+  const { grouped, moveToStatus } = useOnlineOrders();
   const [searchQuery, setSearchQuery] = useState('');
 
   const columns = [

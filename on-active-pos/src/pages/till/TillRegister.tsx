@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useIncomingOrders } from '../../hooks/useIncomingOrders';
 import { IncomingQueue } from '../../components/till/IncomingQueue';
 import { WalkInRegister } from '../../components/till/WalkInRegister';
@@ -6,15 +6,22 @@ import { VerifyOrder } from '../../components/till/VerifyOrder';
 import type { SalesmanOrder } from '../../types/order';
 import { db } from '../../db/dexie';
 import toast from 'react-hot-toast';
+import { useCartStore } from '../../stores/cartStore';
+import { useNotificationStore } from '../../stores/notificationStore';
 
 export default function TillRegister() {
   const { orders, acceptOrder, cancelOrder, completeOrder } = useIncomingOrders();
   const [activeTab, setActiveTab] = useState<'incoming' | 'walkin'>('incoming');
   const [selectedOrder, setSelectedOrder] = useState<SalesmanOrder | null>(null);
+  const clearIncomingOrders = useNotificationStore(s => s.clearIncomingOrders);
 
-  // Restore any active accepted order from local DB on mount/update
+  // Track whether we're currently restoring to avoid blocking accept
+  const restoringRef = useRef(false);
+
+  // Restore any active accepted order from local DB on mount only (not on every orders update)
   useEffect(() => {
     async function restoreAcceptedOrder() {
+      restoringRef.current = true;
       try {
         const accepted = await db.salesmanOrders
           .where('status')
@@ -25,10 +32,19 @@ export default function TillRegister() {
         }
       } catch (err) {
         console.error('Failed to restore accepted order:', err);
+      } finally {
+        restoringRef.current = false;
       }
     }
     restoreAcceptedOrder();
-  }, [orders]);
+  }, []); // Mount only — orders list changes shouldn't re-trigger restore
+
+  // Auto-clear incoming order notifications when on the incoming tab
+  useEffect(() => {
+    if (activeTab === 'incoming') {
+      clearIncomingOrders();
+    }
+  }, [activeTab, clearIncomingOrders]);
 
   const pendingOrders = orders.filter(o => o.status === 'pending');
 
@@ -58,8 +74,15 @@ export default function TillRegister() {
       console.warn('Check accepted order DB query failed:', err);
     }
 
-    await acceptOrder(order.id);
-    setSelectedOrder({ ...order, status: 'accepted' });
+    try {
+      await acceptOrder(order.id);
+      setSelectedOrder({ ...order, status: 'accepted' });
+    } catch (err: any) {
+      console.error('Failed to accept order:', err);
+      toast.error('Failed to accept order: ' + (err.message || err));
+      // Force loading the order UI locally even if remote sync failed
+      setSelectedOrder({ ...order, status: 'accepted' });
+    }
   };
 
   return (
@@ -107,12 +130,24 @@ export default function TillRegister() {
               {selectedOrder ? (
                 <VerifyOrder 
                   order={selectedOrder} 
-                  onCancel={() => {
-                    cancelOrder(selectedOrder.id);
+                  onCancel={async () => {
+                    try {
+                      await cancelOrder(selectedOrder.id);
+                    } catch (err) {
+                      console.error('Failed to cancel order:', err);
+                      toast.error('Sync queue error, but order cleared locally.');
+                    }
+                    useCartStore.getState().clearCart();
                     setSelectedOrder(null);
                   }}
-                  onPay={() => {
-                    completeOrder(selectedOrder.id);
+                  onPay={async () => {
+                    try {
+                      await completeOrder(selectedOrder.id);
+                    } catch (err) {
+                      console.error('Failed to complete order:', err);
+                      toast.error('Sync queue error, but order marked complete locally.');
+                    }
+                    useCartStore.getState().clearCart();
                     setSelectedOrder(null);
                   }}
                 />

@@ -27,8 +27,10 @@ export function ReceiptPreview({ data, onNewSale }: ReceiptPreviewProps) {
     <div className="flex flex-col items-center gap-6 p-6 animate-in fade-in zoom-in duration-300">
       <div className="w-full max-w-sm bg-white text-black p-8 shadow-2xl rounded-sm font-mono text-sm">
         <div className="text-center mb-6">
+          <img src="/logo.jpg" alt="On Active Logo" className="w-16 h-16 object-contain rounded-md mx-auto mb-3" />
           <h2 className="text-xl font-bold uppercase tracking-tighter">On Active Wear</h2>
-          <p className="text-[10px] opacity-70">{data.storeAddress}</p>
+          <p className="text-[8px] font-black tracking-widest text-emerald-600 mb-1">"OWN IT, WEAR IT, FEEL IT"</p>
+          <p className="text-[10px] opacity-70">{data.storeAddress.replace(/CBD,\s*Harare/i, 'Harare').replace(/Harare\s*CBD/i, 'Harare')}</p>
           <p className="text-[10px] opacity-70">Tel: {data.storePhone}</p>
         </div>
 

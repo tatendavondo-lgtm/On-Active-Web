@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Trash2, UserPlus, Users, Store, Shield, Wallet, Briefcase, UserCircle, Eye, EyeOff, Edit2, X, Phone, Mail } from 'lucide-react';
+import { Loader2, Trash2, UserPlus, Users, Store, Shield, Wallet, Briefcase, UserCircle, Edit2, X, Phone, Mail } from 'lucide-react';
 import { addStaffMember, updateStaffMember, deactivateStaffMember } from '@/app/admin/(hub)/staff/actions';
 import { ConfirmModal } from '../ConfirmModal';
 import { EmptyState } from '../ui/EmptyState';
@@ -39,7 +39,6 @@ const ROLES = [
 export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagementProps) {
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees.filter(e => e.is_active));
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [showPins, setShowPins] = useState<Record<string, boolean>>({});
   
   const [form, setForm] = useState({
     fullName: '',
@@ -53,9 +52,7 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
   const [submitting, setSubmitting] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<Employee | null>(null);
 
-  const togglePin = (id: string) => {
-    setShowPins(prev => ({ ...prev, [id]: !prev[id] }));
-  };
+
 
   const resetForm = () => {
     setForm({
@@ -257,11 +254,8 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
                       <span className="text-[#222] text-[10px]">•</span>
                       <div className="flex items-center gap-1.5">
                         <span className="text-[#C5A021] text-[10px] font-mono font-bold tracking-widest">
-                          PIN: {showPins[emp.id] ? emp.pin : '••••'}
+                          PIN: ••••
                         </span>
-                        <button onClick={() => togglePin(emp.id)} className="text-[#333] hover:text-[#555] transition-colors">
-                          {showPins[emp.id] ? <EyeOff size={10} /> : <Eye size={10} />}
-                        </button>
                       </div>
                     </div>
                   </div>

@@ -23,7 +23,16 @@ export function ShopPageContent({ category, title, searchQuery }: ShopPageConten
         let query = supabase.from('products').select('*').eq('is_active', true);
         
         if (category && category !== 'collections') {
-          query = query.ilike('category', category);
+          const cat = category.toLowerCase();
+          if (cat === 'upper') {
+            query = query.in('category', ['Tops', 'top', 'Outerwear', 'Sports Bras', 'bras']);
+          } else if (cat === 'lower') {
+            query = query.in('category', ['Bottoms', 'bottom', 'Leggings', 'Shorts']);
+          } else if (cat === 'accessories') {
+            query = query.in('category', ['Accessories', 'accessory']);
+          } else {
+            query = query.ilike('category', category);
+          }
         }
 
         if (searchQuery) {
@@ -36,6 +45,7 @@ export function ShopPageContent({ category, title, searchQuery }: ShopPageConten
         const dbMapped = (data || []).map(p => ({
           id: p.id,
           name: p.name,
+          slug: p.slug,
           price: p.price_usd,
           category: p.category?.toLowerCase() || 'uncategorized',
           image: p.images?.[0] || null
@@ -80,39 +90,40 @@ export function ShopPageContent({ category, title, searchQuery }: ShopPageConten
         >
           <AnimatePresence>
             {products.map((product) => (
-              <motion.div
-                key={product.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                whileHover={{ scale: 1.02 }}
-                className="group flex flex-col bg-[#111] border border-white/5 rounded-2xl overflow-hidden transition-all duration-300"
-              >
-                <div className="relative aspect-[3/4] w-full bg-[#1A1A1A]">
-                  {product.image ? (
-                    <img 
-                      src={product.image} 
-                      alt={product.name} 
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center opacity-10">
-                      <span className="text-4xl font-black italic tracking-tighter">ON ACTIVE.</span>
-                    </div>
-                  )}
-                </div>
-                <div className="p-6 space-y-2">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#C5A021] opacity-70">
-                    {product.category}
-                  </span>
-                  <h3 className="text-xl font-black uppercase tracking-tight text-white leading-tight">
-                    {product.name}
-                  </h3>
-                  <p className="text-2xl font-black italic text-[#C5A021]">
-                    ${product.price}
-                  </p>
-                </div>
-              </motion.div>
+              <Link key={product.id} href={`/shop/${product.slug}`}>
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ scale: 1.02 }}
+                  className="group flex flex-col bg-[#111] border border-white/5 rounded-2xl overflow-hidden transition-all duration-300"
+                >
+                  <div className="relative aspect-[3/4] w-full bg-[#1A1A1A]">
+                    {product.image ? (
+                      <img 
+                        src={product.image} 
+                        alt={product.name} 
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center opacity-10">
+                        <span className="text-4xl font-black italic tracking-tighter">ON ACTIVE.</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-6 space-y-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#C5A021] opacity-70">
+                      {product.category}
+                    </span>
+                    <h3 className="text-xl font-black uppercase tracking-tight text-white leading-tight">
+                      {product.name}
+                    </h3>
+                    <p className="text-2xl font-black italic text-[#C5A021]">
+                      ${product.price}
+                    </p>
+                  </div>
+                </motion.div>
+              </Link>
             ))}
           </AnimatePresence>
         </motion.div>

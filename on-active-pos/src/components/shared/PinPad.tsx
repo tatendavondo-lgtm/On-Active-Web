@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { playNotificationSound } from '../../lib/notification';
 
 interface PinPadProps {
   onSubmit: (pin: string) => void;
@@ -9,10 +11,14 @@ export function PinPad({ onSubmit, loading }: PinPadProps) {
   const [pin, setPin] = useState('');
 
   const handlePress = (num: string) => {
+    playNotificationSound.tap();
     if (pin.length < 6) setPin(p => p + num);
   };
 
-  const handleDelete = () => setPin(p => p.slice(0, -1));
+  const handleDelete = () => {
+    playNotificationSound.tap();
+    setPin(p => p.slice(0, -1));
+  };
 
   const handleSubmit = () => {
     if (pin.length >= 4) {
@@ -20,6 +26,26 @@ export function PinPad({ onSubmit, loading }: PinPadProps) {
       setPin('');
     }
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (loading) return;
+      
+      // Let standard browser behaviors function if they aren't numbers/enter/backspace
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        handlePress(e.key);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleDelete();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSubmit();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pin, loading]);
 
   return (
     <div className="flex flex-col items-center gap-6 max-w-sm mx-auto">
@@ -38,36 +64,40 @@ export function PinPad({ onSubmit, loading }: PinPadProps) {
 
       <div className="grid grid-cols-3 gap-4 w-full">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
-          <button
+          <motion.button
             key={num}
+            whileTap={{ scale: 0.92 }}
             onClick={() => handlePress(num)}
             disabled={loading}
-            className="h-20 text-3xl font-mono bg-[var(--pos-surface-elevated)] hover:bg-[var(--pos-surface-hover)] rounded-[var(--pos-radius)] active:scale-95 transition-all"
+            className="h-20 text-3xl font-mono bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 rounded-[var(--pos-radius-lg)] transition-colors shadow-lg"
           >
             {num}
-          </button>
+          </motion.button>
         ))}
-        <button
+        <motion.button
+          whileTap={{ scale: 0.92 }}
           onClick={handleDelete}
           disabled={loading}
-          className="h-20 text-xl font-medium bg-[var(--pos-surface-elevated)] hover:bg-[var(--pos-surface-hover)] rounded-[var(--pos-radius)] active:scale-95 transition-all text-[var(--pos-text-secondary)]"
+          className="h-20 text-xl font-medium bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 rounded-[var(--pos-radius-lg)] transition-colors text-[var(--pos-text-secondary)] shadow-lg"
         >
           CLR
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.92 }}
           onClick={() => handlePress('0')}
           disabled={loading}
-          className="h-20 text-3xl font-mono bg-[var(--pos-surface-elevated)] hover:bg-[var(--pos-surface-hover)] rounded-[var(--pos-radius)] active:scale-95 transition-all"
+          className="h-20 text-3xl font-mono bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 rounded-[var(--pos-radius-lg)] transition-colors shadow-lg"
         >
           0
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.92 }}
           onClick={handleSubmit}
           disabled={loading || pin.length < 4}
-          className="h-20 text-2xl bg-[var(--pos-accent)] text-black hover:opacity-90 rounded-[var(--pos-radius)] active:scale-95 transition-all disabled:opacity-50"
+          className="h-20 text-2xl bg-[var(--pos-accent)] text-black hover:opacity-90 rounded-[var(--pos-radius-lg)] disabled:opacity-50 shadow-[0_0_20px_rgba(197,160,33,0.3)] transition-all"
         >
           {loading ? '...' : '⏎'}
-        </button>
+        </motion.button>
       </div>
     </div>
   );

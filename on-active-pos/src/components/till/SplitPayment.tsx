@@ -119,6 +119,12 @@ export function SplitPayment({ payments, onAddPayment, onRemovePayment, remainin
                 type="number"
                 value={amountInput}
                 onChange={e => setAmountInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAdd();
+                  }
+                }}
                 placeholder="0.00"
                 className="flex-1 bg-[var(--pos-bg)] border border-[var(--pos-border)] rounded-[var(--pos-radius)] px-3 font-mono focus:border-[var(--pos-accent)] focus:outline-none"
               />

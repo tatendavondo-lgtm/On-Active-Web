@@ -27,6 +27,7 @@ export function VariantSelector({ isOpen, onClose, product }: VariantSelectorPro
       variant_name: selectedVariant.name !== 'base' ? selectedVariant.name : undefined,
       sku: selectedVariant.sku || product.sku,
       quantity: 1,
+      max_stock: selectedVariant.stock,
       unit_price: Number(selectedVariant.price) || Number((product as any).price_usd) || 0
     });
     

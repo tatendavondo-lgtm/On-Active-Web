@@ -1,4 +1,4 @@
-﻿import { createServerClient } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 export async function createClient() {
@@ -22,6 +22,9 @@ export async function createClient() {
             // Middleware handles session refresh.
           }
         },
+      },
+      global: {
+        fetch: (url, options) => fetch(url, { ...options, cache: 'no-store' }),
       },
     }
   );

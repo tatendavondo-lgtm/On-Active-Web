@@ -6,6 +6,8 @@ import { useGeofence } from '../hooks/useGeofence';
 import { PinPad } from '../components/shared/PinPad';
 import { isSalesmanRole, type Employee } from '../types/employee';
 import { pullUpdates } from '../db/sync';
+import { logPosAction } from '../lib/audit';
+import { playNotificationSound } from '../lib/notification';
 
 // Employee data is now fetched from Supabase via PIN verification
 
@@ -31,13 +33,40 @@ export default function Login() {
   const handleLogin = async (pin: string) => {
     setError('');
     
-    // 1. Verify PIN via secure RPC
-    const { data: employeeData, error: authError } = await supabase
-      .rpc('verify_employee_pin', { p_pin: pin })
-      .single();
+    // 1. Verify PIN via secure RPC or Local Cache
+    let employeeData = null;
+    let authError = null;
+
+    try {
+      if (navigator.onLine) {
+        const res = await supabase.rpc('verify_employee_pin', { p_pin: pin }).single();
+        employeeData = res.data;
+        authError = res.error;
+
+        if (employeeData && !authError) {
+          // Cache for offline login
+          localStorage.setItem(`cached_employee_${pin}`, JSON.stringify(employeeData));
+        }
+      }
+    } catch (e) {
+      console.warn("Network error during login, falling back to local cache", e);
+    }
+
+    // Fallback to local storage if offline or network error
+    if (!employeeData) {
+      const cached = localStorage.getItem(`cached_employee_${pin}`);
+      if (cached) {
+        try {
+          employeeData = JSON.parse(cached);
+          authError = null;
+        } catch (e) {
+          console.error("Failed to parse cached employee", e);
+        }
+      }
+    }
 
     if (authError || !employeeData) {
-      setError('Invalid PIN or inactive account');
+      setError('Invalid PIN or inactive account (or device is offline and no cache exists)');
       return;
     }
 
@@ -50,11 +79,9 @@ export default function Login() {
     }
     const geo = await checkGeofence(selectedStore);
     if (!geo.allowed && geo.error) {
-      // For testing, we might want to bypass or show a warning.
-      // In production, require supervisor override.
-      console.warn('Geofence warning:', geo.error);
-      // setError(geo.error);
-      // return;
+      console.warn('Geofence verification failed:', geo.error);
+      setError(geo.error);
+      return;
     }
 
     // 3. Pull Initial Data (clear stale cache first) & Check Shift Session Recovery
@@ -102,6 +129,20 @@ export default function Login() {
 
     // 4. Login & Redirect
     login(employee, selectedStore, shiftId);
+
+    logPosAction({
+      userId: employee.id,
+      userName: employee.full_name,
+      userRole: employee.role,
+      action: 'login',
+      targetType: 'terminal',
+      targetId: selectedStore.id,
+      storeId: selectedStore.id
+    });
+
+    // Initialize audio context on first user interaction (login)
+    playNotificationSound.init().catch(console.warn);
+
     if (isSalesmanRole(employee.role)) {
       navigate('/sales');
     } else {
@@ -115,7 +156,7 @@ export default function Login() {
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-[var(--pos-accent)] opacity-[0.03] blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[400px] h-[400px] rounded-full bg-white opacity-[0.01] blur-3xl pointer-events-none" />
 
-      <div className="max-w-md w-full space-y-8 text-center z-10">
+      <div className="max-w-md w-full space-y-4 sm:space-y-8 text-center z-10">
         <div className="flex flex-col items-center">
           <div className="relative h-24 w-24 overflow-hidden rounded-full border-2 border-[var(--pos-accent)] shadow-[0_0_30px_rgba(197,160,33,0.15)] mb-4 bg-black flex items-center justify-center">
             <img 
@@ -136,10 +177,10 @@ export default function Login() {
           </p>
         </div>
 
-        <div className="bg-[#111111] p-8 rounded-[var(--pos-radius-lg)] border border-[var(--pos-border)] shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden backdrop-blur-xl">
+        <div className="bg-[#111111] p-6 sm:p-8 rounded-[var(--pos-radius-lg)] border border-[var(--pos-border)] shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden backdrop-blur-xl">
           <div className="absolute -right-16 -top-16 h-32 w-32 rounded-full bg-[var(--pos-accent)] opacity-10 blur-3xl pointer-events-none" />
           
-          <div className="mb-8">
+          <div className="mb-4 sm:mb-8">
             {stores.length > 1 ? (
               <select 
                 className="bg-transparent text-xl font-black uppercase tracking-wider mb-2 text-center w-full focus:outline-none cursor-pointer text-white border-b border-[var(--pos-border)] pb-2 transition-colors hover:border-[var(--pos-accent)]"
@@ -164,7 +205,7 @@ export default function Login() {
           )}
         </div>
         
-        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--pos-text-muted)] bg-white/5 py-2 px-4 rounded-full border border-white/5 inline-block">
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--pos-text-muted)] bg-white/5 py-1.5 px-4 rounded-full border border-white/5 inline-block">
           Demo: 1234 (Sales) &nbsp;|&nbsp; 5678 (Till)
         </div>
       </div>

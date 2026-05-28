@@ -16,7 +16,7 @@ export default async function ManagerDashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/admin/login');
 
-  const { data: profile } = await supabase
+  const { data: profile } = await adminSupabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)

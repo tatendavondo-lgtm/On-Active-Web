@@ -64,6 +64,7 @@ export function VerifyOrder({ order, onCancel, onPay }: VerifyOrderProps) {
       variant_name: variant.name !== 'Standard' ? variant.name : undefined,
       sku: variant.sku || product.sku,
       quantity: 1,
+      max_stock: variant.stock,
       unit_price: Number(variant.price) || Number((product as any).price_usd) || 0,
     });
     setAddItemOpen(false);
@@ -196,6 +197,7 @@ export function VerifyOrder({ order, onCancel, onPay }: VerifyOrderProps) {
                       setVerifiedItems(next);
                     }} 
                     min={1} 
+                    max={item.max_stock}
                   />
                   <span className="font-mono text-[var(--pos-accent)] font-medium">
                     {formatUSD(item.line_total)}
@@ -290,6 +292,33 @@ export function VerifyOrder({ order, onCancel, onPay }: VerifyOrderProps) {
                 placeholder="Search products..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    // Try to find exact SKU match first
+                    const exact = filteredProducts.find(p => 
+                      p.sku?.toLowerCase() === searchTerm.toLowerCase() ||
+                      p.variants.some(v => v.sku?.toLowerCase() === searchTerm.toLowerCase())
+                    );
+                    if (exact) {
+                      const v = exact.variants.find(v => v.sku?.toLowerCase() === searchTerm.toLowerCase()) || exact.variants[0];
+                      if (v.stock > 0) {
+                        handleAddProduct(exact, v);
+                        return;
+                      }
+                    }
+                    
+                    // Fallback to single product if only one is filtered
+                    if (filteredProducts.length === 1) {
+                      const p = filteredProducts[0];
+                      if (p.variants.length === 1) {
+                        const v = p.variants[0];
+                        if (v.stock > 0) {
+                          handleAddProduct(p, v);
+                        }
+                      }
+                    }
+                  }
+                }}
                 className="flex-1 bg-transparent text-white placeholder-[var(--pos-text-muted)] focus:outline-none"
               />
               <button onClick={() => setAddItemOpen(false)} className="text-[var(--pos-text-muted)] hover:text-white">

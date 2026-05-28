@@ -16,6 +16,8 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   const cartTotal = items.reduce((total, item) => total + item.price_usd * item.quantity, 0);
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
 
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "ecocash" | "bank">("ecocash");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStep("processing");
@@ -30,14 +32,17 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
           order_ref: orderRef,
           items: items.map(item => ({
             productId: item.productId,
+            variantId: item.variantId,
             name: item.name,
             price_usd: item.price_usd,
             size: item.size,
+            color: item.color,
             quantity: item.quantity,
             image: item.image
           })),
           total_usd: cartTotal,
-          delivery_fee_usd: 0
+          delivery_fee_usd: 0,
+          payment_method: paymentMethod
         })
       });
 
@@ -48,6 +53,12 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
         setStep("form");
         return;
       }
+
+      // WhatsApp redirect for manual fulfillment tracking
+      const methodText = paymentMethod === 'ecocash' ? 'EcoCash' : paymentMethod === 'bank' ? 'Bank Transfer' : 'Card/Swipe';
+      const msg = `Hi On Active! 👋\n\nOrder: ${orderRef}\nMethod: ${methodText}\nTotal: $${cartTotal.toFixed(2)}`;
+      const waUrl = `https://wa.me/263777123456?text=${encodeURIComponent(msg)}`;
+      window.open(waUrl, '_blank');
 
       setStep("success");
       clearCart();
@@ -80,7 +91,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 z-[90] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 bg-[#111111] text-white p-6 md:p-10 shadow-2xl border border-white/5 rounded-2xl"
+            className="fixed left-1/2 top-1/2 z-[90] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 bg-[#111111] text-white p-6 md:p-10 shadow-2xl border border-white/5 rounded-2xl max-h-[90vh] overflow-y-auto custom-scrollbar"
           >
             {step === "form" && (
               <motion.div
@@ -89,39 +100,78 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                 exit={{ opacity: 0, x: 20 }}
               >
                 <div className="mb-8 flex items-center justify-between">
-                  <h2 className="text-2xl font-[900] uppercase tracking-tighter">Guest Checkout</h2>
+                  <h2 className="text-2xl font-[900] uppercase tracking-tighter italic">Checkout</h2>
                   <button onClick={handleClose}>
                     <X className="h-6 w-6 transition-transform hover:scale-110 opacity-50 hover:opacity-100" />
                   </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-8">
+                  {/* Shipping */}
                   <div className="space-y-4">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#C5A021]">Shipping Details</h3>
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#C5A021]">1. Shipping Details</h3>
                     <div className="grid grid-cols-2 gap-4">
-                      <input required type="text" placeholder="First Name" className="bg-[#1A1A1A] border border-white/5 p-4 rounded-xl text-sm outline-none focus:border-white transition-colors placeholder:text-white/20" />
-                      <input required type="text" placeholder="Last Name" className="bg-[#1A1A1A] border border-white/5 p-4 rounded-xl text-sm outline-none focus:border-white transition-colors placeholder:text-white/20" />
+                      <input required type="text" placeholder="Full Name" className="col-span-2 bg-[#1A1A1A] border border-white/5 p-4 rounded-xl text-sm outline-none focus:border-white transition-colors placeholder:text-white/10" />
                     </div>
-                    <input required type="email" placeholder="Email Address" className="w-full bg-[#1A1A1A] border border-white/5 p-4 rounded-xl text-sm outline-none focus:border-white transition-colors placeholder:text-white/20" />
-                    <input required type="text" placeholder="Shipping Address" className="w-full bg-[#1A1A1A] border border-white/5 p-4 rounded-xl text-sm outline-none focus:border-white transition-colors placeholder:text-white/20" />
+                    <input required type="email" placeholder="Email Address" className="w-full bg-[#1A1A1A] border border-white/5 p-4 rounded-xl text-sm outline-none focus:border-white transition-colors placeholder:text-white/10" />
+                    <input required type="text" placeholder="Phone Number (e.g. 0777 123 456)" className="w-full bg-[#1A1A1A] border border-white/5 p-4 rounded-xl text-sm outline-none focus:border-white transition-colors placeholder:text-white/10" />
+                    <textarea required placeholder="Delivery Address" className="w-full bg-[#1A1A1A] border border-white/5 p-4 rounded-xl text-sm outline-none focus:border-white transition-colors placeholder:text-white/10 h-24 resize-none" />
                   </div>
 
+                  {/* Payment Method */}
                   <div className="space-y-4">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#C5A021]">Payment (Mock)</h3>
-                    <input required type="text" placeholder="Card Number (e.g. 4242 4242)" className="w-full bg-[#1A1A1A] border border-white/5 p-4 rounded-xl text-sm outline-none focus:border-white transition-colors placeholder:text-white/20" />
-                    <div className="grid grid-cols-2 gap-4">
-                      <input required type="text" placeholder="MM/YY" className="bg-[#1A1A1A] border border-white/5 p-4 rounded-xl text-sm outline-none focus:border-white transition-colors placeholder:text-white/20" />
-                      <input required type="text" placeholder="CVC" className="bg-[#1A1A1A] border border-white/5 p-4 rounded-xl text-sm outline-none focus:border-white transition-colors placeholder:text-white/20" />
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#C5A021]">2. Payment Method</h3>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'ecocash', label: 'EcoCash' },
+                        { id: 'bank', label: 'Transfer' },
+                        { id: 'card', label: 'Card' }
+                      ].map((method) => (
+                        <button
+                          key={method.id}
+                          type="button"
+                          onClick={() => setPaymentMethod(method.id as any)}
+                          className={`py-3 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-all ${
+                            paymentMethod === method.id 
+                              ? 'bg-[#C5A021] border-[#C5A021] text-black' 
+                              : 'bg-transparent border-white/10 text-white/40 hover:border-white/30'
+                          }`}
+                        >
+                          {method.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Method Specific Instructions */}
+                    <div className="bg-black/40 p-4 rounded-xl border border-white/5 animate-in fade-in duration-300">
+                      {paymentMethod === 'ecocash' && (
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-bold text-white/90 uppercase">Dial: *151*1*1*0777123456*Amount#</p>
+                          <p className="text-[10px] text-white/40 italic">Reference: Your Name / Phone</p>
+                        </div>
+                      )}
+                      {paymentMethod === 'bank' && (
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-bold text-white/90 uppercase">CABS: 1234567890 (On Active)</p>
+                          <p className="text-[10px] text-white/40 italic">Send POP to WhatsApp after checkout.</p>
+                        </div>
+                      )}
+                      {paymentMethod === 'card' && (
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-bold text-white/90 uppercase">Swipe at Pickup / In-Store</p>
+                          <p className="text-[10px] text-white/40 italic">Online card processing coming soon.</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="border-t border-white/10 pt-6 mt-6 flex justify-between items-center text-xl font-black italic">
+                  <div className="border-t border-white/10 pt-6 flex justify-between items-center text-xl font-black italic">
                     <span className="text-white/50">Total</span>
                     <span>${cartTotal.toFixed(2)}</span>
                   </div>
 
                   <button type="submit" className="w-full group relative overflow-hidden bg-white py-5 text-sm font-black uppercase tracking-[0.3em] text-[#0A0A0A] rounded-xl flex items-center justify-center gap-2 transition-transform hover:scale-[1.02]">
-                    <span className="relative z-10">Pay Now</span>
+                    <span className="relative z-10">Place Order</span>
                     <ArrowRight className="h-4 w-4 relative z-10 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </form>

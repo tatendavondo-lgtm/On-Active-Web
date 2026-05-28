@@ -6,6 +6,7 @@ export interface CartItem {
   variant_name?: string;
   sku?: string;
   quantity: number;
+  max_stock?: number;
   unit_price: number;
   discount_amount: number;
   line_total: number;

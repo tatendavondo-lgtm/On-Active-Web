@@ -3,9 +3,9 @@
 :root {
   /* Neutrals — dark-mode only */
   --pos-bg: #0A0A0A;
-  --pos-surface: #141414;
-  --pos-surface-elevated: #1E1E1E;
-  --pos-surface-hover: #262626;
+  --pos-surface: rgba(20, 20, 20, 0.65);
+  --pos-surface-elevated: rgba(30, 30, 30, 0.85);
+  --pos-surface-hover: rgba(38, 38, 38, 0.75);
   --pos-border: #2A2A2A;
   --pos-border-subtle: #1F1F1F;
 
@@ -110,4 +110,99 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Screen receipt preview styles to guarantee high-contrast black text on white background in dark mode */
+#pos-receipt-print {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+#pos-receipt-print,
+#pos-receipt-print * {
+  color: #000000 !important;
+}
+
+/* Print styles for 58mm thermal printer (Windows cable connection) */
+@media print {
+  /* Prevent default browser headers/footers; auto height = receipt content only */
+  @page {
+    size: 58mm auto;
+    margin: 0 !important;
+  }
+
+  /* Override body's overflow:hidden and 100vh so no blank space appears after receipt */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 58mm !important;
+    height: fit-content !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Isolate and style the receipt block */
+  #pos-receipt-print,
+  #pos-receipt-print * {
+    visibility: visible !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    opacity: 1 !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  #pos-receipt-print {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 58mm !important;
+    max-width: 58mm !important;
+    height: fit-content !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 4mm 3mm !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  /* Make sure light text, opacities, and muted labels print as solid high-contrast black */
+  #pos-receipt-print .opacity-70,
+  #pos-receipt-print .opacity-60,
+  #pos-receipt-print .opacity-50,
+  #pos-receipt-print span,
+  #pos-receipt-print p,
+  #pos-receipt-print div {
+    color: #000000 !important;
+    opacity: 1 !important;
+    font-weight: 600 !important; /* Bold up body text slightly so the thermal head burns it clearly */
+  }
+
+  /* Emphasize actual headers and totals */
+  #pos-receipt-print h2,
+  #pos-receipt-print .font-bold,
+  #pos-receipt-print .text-lg,
+  #pos-receipt-print .text-xl {
+    font-weight: 900 !important;
+  }
+
+  #pos-receipt-print .border-t {
+    border-top: 1px dashed #000000 !important;
+    margin: 6px 0 !important;
+    height: 1px !important;
+  }
 }

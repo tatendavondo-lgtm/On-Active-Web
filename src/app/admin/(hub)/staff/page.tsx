@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { TeamManagement } from '@/components/admin/settings/TeamManagement';
 import { EmployeeManagement } from '@/components/admin/settings/EmployeeManagement';
@@ -7,11 +8,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function StaffPage() {
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) redirect('/admin/login');
 
-  const { data: profile } = await supabase
+  const { data: profile } = await adminSupabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
@@ -30,9 +32,9 @@ export default async function StaffPage() {
      redirect('/admin/dashboard?error=insufficient_role');
   }
 
-  const { data: managers } = await supabase.from('profiles').select('*').order('created_at');
-  const { data: stores } = await supabase.from('stores').select('id, name').eq('is_active', true);
-  const { data: employees } = await supabase.from('employees').select('*').order('created_at');
+  const { data: managers } = await adminSupabase.from('profiles').select('*').order('created_at');
+  const { data: stores } = await adminSupabase.from('stores').select('id, name').eq('is_active', true);
+  const { data: employees } = await adminSupabase.from('employees').select('*').order('created_at');
 
   return (
     <div className="space-y-8 max-w-4xl">

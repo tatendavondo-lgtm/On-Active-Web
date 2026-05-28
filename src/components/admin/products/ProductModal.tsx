@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,17 +26,23 @@ interface ProductModalProps {
   onSaved: () => void;
 }
 
+interface HierarchicalSize {
+  size: string;
+  quantity: number;
+  colors: { color: string; quantity: number }[];
+}
+
 export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModalProps) {
   const [form, setForm] = useState({
     name: '', slug: '', description: '', category: '',
     price_usd: '', sizes: [] as string[], stock_quantity: '',
     images: [] as string[], is_active: true, is_featured: false,
   });
-  const [variants, setVariants] = useState<Variant[]>([]);
-  const [newVariant, setNewVariant] = useState({ size: 'M', color: '', price: '', stock: '' });
+  const [hierarchicalSizes, setHierarchicalSizes] = useState<HierarchicalSize[]>([]);
   
   const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
+  const [activeSizeTab, setActiveSizeTab] = useState<string | null>(null);
 
   useEffect(() => {
     if (product && isOpen) {
@@ -53,7 +59,6 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
         is_featured: product.is_featured ?? false,
       });
       
-      // Load variants if they exist
       const fetchVariants = async () => {
         const supabase = createClient();
         const { data: vars } = await supabase
@@ -62,48 +67,77 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
           .eq('product_id', product.id);
         
         if (vars) {
-          setVariants(vars.map(v => ({
+          const mappedVariants = vars.map(v => ({
             id: v.id,
             size: v.size || '',
             color: v.color || '',
             price: v.price || product.price_usd,
             stock: v.store_inventory?.[0]?.quantity || 0
-          })));
+          }));
+
+          const h: HierarchicalSize[] = [];
+          mappedVariants.forEach(v => {
+            let sizeEntry = h.find(s => s.size === v.size);
+            if (!sizeEntry) {
+              sizeEntry = { size: v.size, quantity: 0, colors: [] };
+              h.push(sizeEntry);
+            }
+            sizeEntry.quantity += v.stock;
+            if (v.color) {
+              sizeEntry.colors.push({ color: v.color, quantity: v.stock });
+            }
+          });
+          setHierarchicalSizes(h);
         }
       };
       fetchVariants();
       setFiles([]);
     } else if (!product && isOpen) {
       setForm({ name: '', slug: '', description: '', category: '', price_usd: '', sizes: [], stock_quantity: '', images: [], is_active: true, is_featured: false });
-      setVariants([]);
+      setHierarchicalSizes([]);
       setFiles([]);
+      setActiveSizeTab(null);
     }
   }, [product, isOpen]);
 
-  const addVariant = () => {
-    if (!newVariant.color) {
-      toast.error('Color is required for variants');
-      return;
+  const derivedVariants: Variant[] = [];
+  hierarchicalSizes.forEach(s => {
+    if (s.colors.length > 0) {
+      s.colors.forEach(c => {
+        derivedVariants.push({
+          size: s.size,
+          color: c.color,
+          price: parseFloat(form.price_usd) || 0,
+          stock: c.quantity
+        });
+      });
+    } else if (s.quantity > 0) {
+      derivedVariants.push({
+        size: s.size,
+        color: '',
+        price: parseFloat(form.price_usd) || 0,
+        stock: s.quantity
+      });
     }
-    const v: Variant = {
-      size: newVariant.size,
-      color: newVariant.color,
-      price: parseFloat(newVariant.price) || parseFloat(form.price_usd) || 0,
-      stock: parseInt(newVariant.stock) || 0
-    };
-    setVariants([...variants, v]);
-    setNewVariant({ ...newVariant, color: '', stock: '' });
-  };
+  });
 
-  const removeVariant = (index: number) => {
-    setVariants(variants.filter((_, i) => i !== index));
-  };
+  const totalAllocatedToSizes = hierarchicalSizes.reduce((sum, s) => sum + s.quantity, 0);
+  const remainingForSizes = (parseInt(form.stock_quantity) || 0) - totalAllocatedToSizes;
 
   const handleSave = async () => {
     if (!form.name || !form.price_usd) {
       toast.error('Name and price are required');
       return;
     }
+
+    const totalAllocated = derivedVariants.reduce((sum, v) => sum + v.stock, 0);
+    const totalStock = parseInt(form.stock_quantity) || 0;
+    
+    if (totalAllocated !== totalStock) {
+      toast.error(`Total allocated (${totalAllocated}) must match total stock (${totalStock})`);
+      return;
+    }
+
     setSaving(true);
 
     const uploadedUrls: string[] = [];
@@ -122,21 +156,18 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
       }
     }
 
-    // Combine sizes from variants
-    const allSizes = Array.from(new Set(variants.map(v => v.size)));
-
     const payload = {
       name: form.name,
       slug: form.slug || generateSlug(form.name),
       description: form.description || null,
       category: form.category || null,
       price_usd: parseFloat(form.price_usd),
-      sizes: allSizes.length > 0 ? allSizes : form.sizes,
-      stock_quantity: parseInt(form.stock_quantity) || 0,
+      sizes: Array.from(new Set(derivedVariants.map(v => v.size))),
+      stock_quantity: totalStock,
       images: [...form.images, ...uploadedUrls],
       is_active: form.is_active,
       is_featured: form.is_featured,
-      variants: variants, // Send variants to API
+      variants: derivedVariants,
       updated_at: new Date().toISOString(),
     };
 
@@ -161,13 +192,6 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
     setSaving(false);
   };
 
-  const toggleSize = (size: string) => {
-    setForm((f) => ({
-      ...f,
-      sizes: f.sizes.includes(size) ? f.sizes.filter((s) => s !== size) : [...f.sizes, size],
-    }));
-  };
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -185,10 +209,9 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 40 }}
               transition={{ duration: 0.25 }}
-              className="bg-[#0d0d0d] border border-[#1f1f1f] rounded-t-[12px] sm:rounded-[8px] w-full sm:max-w-2xl max-h-[90vh] flex flex-col"
+              className="bg-[#0d0d0d] border border-[#1f1f1f] rounded-t-[12px] sm:rounded-[8px] w-full sm:max-w-3xl max-h-[95vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f1f1f] flex-shrink-0">
                 <h2 className="text-white font-bold text-base">
                   {product ? 'Edit Product' : 'Add Product'}
@@ -198,30 +221,25 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                 </button>
               </div>
 
-              {/* Body */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  {/* Name */}
-                  <div>
+                  <div className="sm:col-span-1">
                     <label className="label-admin">Name *</label>
                     <input
                       value={form.name}
                       onChange={(e) => setForm((f) => ({ ...f, name: e.target.value, slug: generateSlug(e.target.value) }))}
                       className="input-admin"
-                      placeholder="Black Performance Leggings"
+                      placeholder="Product Name"
                     />
                   </div>
-                  {/* Slug */}
-                  <div>
+                  <div className="sm:col-span-1">
                     <label className="label-admin">Slug</label>
                     <input
                       value={form.slug}
                       onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
-                      className="input-admin font-mono"
-                      placeholder="black-performance-leggings"
+                      className="input-admin font-mono text-xs"
                     />
                   </div>
-                  {/* Category */}
                   <div>
                     <label className="label-admin">Category</label>
                     <select
@@ -233,258 +251,222 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                       {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
-                  {/* Price */}
                   <div>
-                    <label className="label-admin">Price (USD) *</label>
+                    <label className="label-admin">Base Price (USD) *</label>
                     <input
                       type="number"
                       step="0.01"
                       value={form.price_usd}
                       onChange={(e) => setForm((f) => ({ ...f, price_usd: e.target.value }))}
                       className="input-admin"
-                      placeholder="29.99"
                     />
                   </div>
-                  {/* Stock */}
-                  <div>
-                    <label className="label-admin">Stock Quantity</label>
+                  <div className="sm:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <label className="label-admin !mb-1">Total Product Inventory *</label>
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${remainingForSizes === 0 ? 'text-green-500' : remainingForSizes < 0 ? 'text-red-500' : 'text-[#C5A021]'}`}>
+                        {remainingForSizes === 0 ? 'Fully Allocated' : remainingForSizes > 0 ? `${remainingForSizes} Remaining` : `${Math.abs(remainingForSizes)} Over-allocated`}
+                      </span>
+                    </div>
                     <input
                       type="number"
                       value={form.stock_quantity}
                       onChange={(e) => setForm((f) => ({ ...f, stock_quantity: e.target.value }))}
-                      className="input-admin"
-                      placeholder="100"
+                      className="input-admin !text-xl font-black text-[#C5A021]"
                     />
                   </div>
 
-                  {/* Status Toggle */}
-                  <div className="flex items-center gap-3 pt-5">
-                    <button
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, is_active: !f.is_active }))}
-                      className={`relative w-10 h-5 rounded-full transition-colors ${form.is_active ? 'bg-[#C5A021]' : 'bg-[#2a2a2a]'}`}
-                    >
-                      <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-black rounded-full transition-transform ${form.is_active ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </button>
-                    <span className="text-white text-sm">{form.is_active ? 'Active (visible on store)' : 'Hidden'}</span>
+                  <div className="flex items-center gap-6 sm:col-span-2 pt-2 pb-4">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, is_active: !f.is_active }))}
+                        className={`relative w-10 h-5 rounded-full transition-colors ${form.is_active ? 'bg-[#C5A021]' : 'bg-[#2a2a2a]'}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-black rounded-full transition-transform ${form.is_active ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                      <span className="text-white text-[10px] font-bold uppercase tracking-widest">{form.is_active ? 'Visible' : 'Hidden'}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, is_featured: !f.is_featured }))}
+                        className={`relative w-10 h-5 rounded-full transition-colors ${form.is_featured ? 'bg-[#C5A021]' : 'bg-[#2a2a2a]'}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-black rounded-full transition-transform ${form.is_featured ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                      <span className="text-white text-[10px] font-bold uppercase tracking-widest">{form.is_featured ? 'Featured' : 'Standard'}</span>
+                    </div>
                   </div>
 
-                  {/* Featured Toggle */}
-                  <div className="flex items-center gap-3 pt-5">
-                    <button
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, is_featured: !f.is_featured }))}
-                      className={`relative w-10 h-5 rounded-full transition-colors ${form.is_featured ? 'bg-[#C5A021]' : 'bg-[#2a2a2a]'}`}
-                    >
-                      <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-black rounded-full transition-transform ${form.is_featured ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </button>
-                    <span className="text-white text-sm">{form.is_featured ? 'Featured (Large Display)' : 'Standard Size'}</span>
+                  <div className="sm:col-span-2 mt-2 p-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-[10px]">
+                    <h3 className="text-white text-[10px] font-black uppercase tracking-[0.2em] mb-4 text-[#C5A021]">1. Allocate to Sizes</h3>
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      {SIZES.map((size) => {
+                        const existing = hierarchicalSizes.find(s => s.size === size);
+                        return (
+                          <button
+                            key={size}
+                            type="button"
+                            disabled={!form.stock_quantity || (remainingForSizes <= 0 && !existing)}
+                            onClick={() => {
+                              if (existing) {
+                                setHierarchicalSizes(hierarchicalSizes.filter(s => s.size !== size));
+                                if (activeSizeTab === size) setActiveSizeTab(null);
+                              } else {
+                                setHierarchicalSizes([...hierarchicalSizes, { size, quantity: 0, colors: [] }]);
+                                setActiveSizeTab(size);
+                              }
+                            }}
+                            className={`px-4 py-2 text-xs font-black rounded-[6px] border transition-all disabled:opacity-20 ${
+                              existing ? 'bg-[#C5A021] text-black border-[#C5A021]' : 'bg-[#111] border-[#1f1f1f] text-[#444] hover:text-white'
+                            }`}
+                          >
+                            {size} {existing && existing.quantity > 0 && `(${existing.quantity})`}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {hierarchicalSizes.length > 0 && (
+                      <div className="space-y-4">
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide border-b border-[#1a1a1a]">
+                          {hierarchicalSizes.map((s) => (
+                            <button
+                              key={s.size}
+                              onClick={() => setActiveSizeTab(s.size)}
+                              className={`flex-shrink-0 px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-t-[6px] transition-all ${
+                                activeSizeTab === s.size ? 'bg-[#1a1a1a] text-[#C5A021] border-x border-t border-[#1a1a1a]' : 'text-[#444] hover:text-white'
+                              }`}
+                            >
+                              {s.size}
+                            </button>
+                          ))}
+                        </div>
+
+                        {activeSizeTab && (
+                          <motion.div key={activeSizeTab} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-6 pt-2">
+                            <div>
+                              <label className="label-admin">Total for {activeSizeTab}</label>
+                              <input
+                                type="number"
+                                value={hierarchicalSizes.find(s => s.size === activeSizeTab)?.quantity || ''}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  setHierarchicalSizes(hierarchicalSizes.map(s => s.size === activeSizeTab ? { ...s, quantity: val } : s));
+                                }}
+                                className="input-admin"
+                                placeholder="Qty"
+                              />
+                            </div>
+
+                            <div className="bg-[#111] p-4 rounded-[8px] border border-[#1a1a1a]">
+                              <div className="flex items-center justify-between mb-4">
+                                <h4 className="text-white text-[10px] font-black uppercase tracking-widest">2. Allocate {activeSizeTab} Colours</h4>
+                                <span className="text-[9px] font-bold text-[#444] uppercase tracking-widest">
+                                  {(() => {
+                                    const sizeData = hierarchicalSizes.find(s => s.size === activeSizeTab);
+                                    const allocated = sizeData?.colors.reduce((sum, c) => sum + c.quantity, 0) || 0;
+                                    const rem = (sizeData?.quantity || 0) - allocated;
+                                    return rem === 0 ? 'Allocated' : rem > 0 ? `${rem} left` : `${Math.abs(rem)} over`;
+                                  })()}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2 mb-4">
+                                <input id={`color-name-${activeSizeTab}`} placeholder="Color" className="input-admin !py-2 text-xs" />
+                                <input id={`color-qty-${activeSizeTab}`} type="number" placeholder="Qty" className="input-admin !py-2 text-xs" />
+                                <button 
+                                  onClick={() => {
+                                    const nameEl = document.getElementById(`color-name-${activeSizeTab}`) as HTMLInputElement;
+                                    const qtyEl = document.getElementById(`color-qty-${activeSizeTab}`) as HTMLInputElement;
+                                    if (!nameEl.value || !qtyEl.value) return;
+                                    setHierarchicalSizes(hierarchicalSizes.map(s => {
+                                      if (s.size === activeSizeTab) return { ...s, colors: [...s.colors, { color: nameEl.value, quantity: parseInt(qtyEl.value) }] };
+                                      return s;
+                                    }));
+                                    nameEl.value = ''; qtyEl.value = '';
+                                  }}
+                                  className="bg-white text-black text-[9px] font-black uppercase rounded-[4px]"
+                                >
+                                  Add
+                                </button>
+                              </div>
+
+                              <div className="space-y-2">
+                                {hierarchicalSizes.find(s => s.size === activeSizeTab)?.colors.map((c, idx) => (
+                                  <div key={idx} className="flex items-center justify-between p-2 bg-[#0a0a0a] border border-[#1a1a1a] rounded-[4px]">
+                                    <span className="text-xs font-bold text-white uppercase tracking-widest">{c.color}</span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-[10px] font-black text-[#C5A021]">{c.quantity} QTY</span>
+                                      <button onClick={() => {
+                                        setHierarchicalSizes(hierarchicalSizes.map(s => {
+                                          if (s.size === activeSizeTab) return { ...s, colors: s.colors.filter((_, i) => i !== idx) };
+                                          return s;
+                                        }));
+                                      }} className="text-red-500/40 hover:text-red-500"><X size={12} /></button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Description */}
                   <div className="sm:col-span-2">
                     <label className="label-admin">Description</label>
                     <textarea
                       value={form.description}
                       onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                      className="input-admin h-24 resize-none"
-                      placeholder="Premium breathable fabric, ergonomic fit..."
+                      className="input-admin h-24 resize-none text-xs"
                     />
                   </div>
 
-                  {/* Sizes */}
                   <div className="sm:col-span-2">
-                    <label className="label-admin text-[#C5A021]">Base Sizes (Quick Toggle)</label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {SIZES.map((size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          onClick={() => toggleSize(size)}
-                          className={`px-3 py-1.5 text-xs font-bold rounded-[4px] border transition-all ${
-                            form.sizes.includes(size)
-                              ? 'bg-[#C5A021]/15 border-[#C5A021]/40 text-[#C5A021]'
-                              : 'bg-[#111] border-[#1f1f1f] text-[#444] hover:text-white hover:border-[#2a2a2a]'
-                          }`}
-                        >
-                          {size}
-                        </button>
-                      ))}
+                    <label className="label-admin">Media Assets</label>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => e.target.files && setFiles(Array.from(e.target.files))}
+                      className="input-admin cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-[#C5A021] file:text-black hover:file:bg-[#A6861C]"
+                    />
+                    <div className="flex gap-2 mt-3 flex-wrap">
+                      {files.map((f, i) => <img key={i} src={URL.createObjectURL(f)} className="h-24 w-24 object-cover rounded-[8px] border border-[#1f1f1f]" />)}
+                      {!files.length && form.images.map((img, i) => <img key={i} src={img} className="h-24 w-24 object-cover rounded-[8px] border border-[#1f1f1f]" />)}
                     </div>
-                  </div>
-
-                  {/* Multi-Dimensional Variant Manager */}
-                  <div className="sm:col-span-2 mt-4 pt-6 border-t border-[#1a1a1a]">
-                    <div className="flex items-center justify-between mb-4">
-                      <label className="label-admin !mb-0">Defined Variants (Color + Size)</label>
-                      <span className="text-[10px] font-bold text-[#444] uppercase">Total: {variants.length}</span>
-                    </div>
-
-                    {/* Variant Add Form */}
-                    <div className="grid grid-cols-4 gap-2 mb-4 p-3 bg-[#0a0a0a] border border-[#1a1a1a] rounded-[6px]">
-                      <select 
-                        value={newVariant.size} 
-                        onChange={e => setNewVariant({...newVariant, size: e.target.value})}
-                        className="input-admin !py-2 text-xs"
-                      >
-                        {SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-                        <option value="One Size">One Size</option>
-                      </select>
-                      <input 
-                        placeholder="Color (e.g. Black)" 
-                        value={newVariant.color}
-                        onChange={e => setNewVariant({...newVariant, color: e.target.value})}
-                        className="input-admin !py-2 text-xs"
-                      />
-                      <input 
-                        type="number"
-                        placeholder="Stock" 
-                        value={newVariant.stock}
-                        onChange={e => setNewVariant({...newVariant, stock: e.target.value})}
-                        className="input-admin !py-2 text-xs"
-                      />
-                      <button 
-                        onClick={addVariant}
-                        className="bg-white text-black text-[10px] font-black uppercase rounded-[4px] hover:bg-gray-200 transition-colors"
-                      >
-                        Add combo
-                      </button>
-                    </div>
-
-                    {/* Variant List */}
-                    <div className="space-y-2">
-                      {variants.map((v, i) => (
-                        <div key={i} className="flex items-center justify-between p-2.5 bg-[#111] border border-[#1a1a1a] rounded-[6px] group">
-                          <div className="flex items-center gap-3">
-                            <span className="bg-[#1a1a1a] text-white px-2 py-0.5 rounded text-[10px] font-bold">{v.size}</span>
-                            <span className="text-white text-xs font-medium">{v.color}</span>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <span className="text-[#444] text-[10px] font-mono">Stock: <span className={v.stock > 0 ? 'text-[#C5A021]' : 'text-red-500'}>{v.stock}</span></span>
-                            <button onClick={() => removeVariant(i)} className="text-red-500/20 hover:text-red-500 transition-colors">
-                              <X size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                      {variants.length === 0 && (
-                        <div className="py-8 text-center border border-dashed border-[#1a1a1a] rounded-[8px]">
-                          <p className="text-[#333] text-[10px] font-bold uppercase tracking-widest">No custom variants defined</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Image Upload */}
-                  <div className="sm:col-span-2">
-                    <label className="label-admin">Product Images</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={(e) => {
-                          if (e.target.files) {
-                            setFiles(Array.from(e.target.files));
-                          }
-                        }}
-                        className="input-admin flex-1 cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#C5A021] file:text-black hover:file:bg-[#A6861C] transition-colors"
-                      />
-                    </div>
-                    
-                    {files.length > 0 && (
-                      <div className="flex gap-2 mt-3 flex-wrap">
-                        {files.map((f, i) => (
-                           <img
-                             key={i}
-                             src={URL.createObjectURL(f)}
-                             alt="preview"
-                             className="h-24 w-24 object-cover rounded-[4px] border border-[#1f1f1f]"
-                           />
-                        ))}
-                      </div>
-                    )}
-                    
-                    {files.length === 0 && form.images[0] && (
-                      <img
-                        src={form.images[0]}
-                        alt="preview"
-                        className="mt-3 h-24 w-24 object-cover rounded-[4px] border border-[#1f1f1f]"
-                      />
-                    )}
-
-                    {/* Live preview */}
-                    {(form.name || form.price_usd) && (
-                      <div className="mt-4 p-4 bg-[#0a0a0a] border border-[#1f1f1f] rounded-[6px]">
-                        <p className="text-[#444] text-[11px] uppercase tracking-widest mb-3">Preview</p>
-                        <div className="flex items-center gap-4">
-                          {files.length > 0 ? (
-                            <img src={URL.createObjectURL(files[0])} alt="" className="w-16 h-16 object-cover rounded-[4px]" />
-                          ) : form.images[0] ? (
-                            <img src={form.images[0]} alt="" className="w-16 h-16 object-cover rounded-[4px]" />
-                          ) : (
-                            <div className="w-16 h-16 bg-[#1a1a1a] rounded-[4px] flex items-center justify-center">
-                              <Upload size={18} className="text-[#333]" />
-                            </div>
-                          )}
-                          <div>
-                            <p className="text-white text-sm font-bold">{form.name || 'Product Name'}</p>
-                            <p className="text-[#555] text-xs">{form.category || 'Category'}</p>
-                            <p className="text-[#C5A021] text-sm font-bold mt-1">
-                              {form.price_usd ? formatUSD(parseFloat(form.price_usd)) : '$0.00'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Footer */}
-              <div className="px-6 py-4 border-t border-[#1f1f1f] flex items-center justify-end gap-3 flex-shrink-0">
-                <button onClick={onClose} className="px-4 py-2 text-sm text-[#555] hover:text-white hover:bg-[#1a1a1a] rounded-[6px] transition-colors">
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex items-center gap-2 px-5 py-2 bg-[#C5A021] text-black text-sm font-bold rounded-[6px] hover:bg-[#A6861C] disabled:opacity-50 transition-colors"
-                >
-                  {saving && <Loader2 size={14} className="animate-spin" />}
-                  {product ? 'Save Changes' : 'Create Product'}
-                </button>
+              <div className="px-6 py-4 border-t border-[#1f1f1f] flex items-center justify-between gap-3 flex-shrink-0">
+                <div className="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]">
+                  {derivedVariants.length} Combinations Defined
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={onClose} className="px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#555] hover:text-white rounded-[6px]">Discard</button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving || remainingForSizes !== 0}
+                    className="px-8 py-2.5 bg-[#C5A021] text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-[6px] hover:bg-[#A6861C] disabled:opacity-30 transition-all"
+                  >
+                    {saving && <Loader2 size={12} className="animate-spin mr-2" />}
+                    {product ? 'Sync Changes' : 'Launch Product'}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
 
           <style jsx global>{`
-            .label-admin {
-              display: block;
-              color: #555;
-              font-size: 11px;
-              font-weight: 700;
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-              margin-bottom: 6px;
-            }
-            .input-admin {
-              width: 100%;
-              background: #111;
-              border: 1px solid #1f1f1f;
-              border-radius: 6px;
-              padding: 10px 14px;
-              color: white;
-              font-size: 14px;
-              outline: none;
-              transition: border-color 0.15s;
-            }
-            .input-admin:focus {
-              border-color: #2a2a2a;
-            }
-            .input-admin option {
-              background: #111;
-            }
+            .label-admin { display: block; color: #444; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 8px; }
+            .input-admin { width: 100%; background: #111; border: 1px solid #1f1f1f; border-radius: 8px; padding: 12px 16px; color: white; font-size: 13px; font-weight: 500; outline: none; }
+            .input-admin:focus { border-color: #C5A021; }
+            .scrollbar-hide::-webkit-scrollbar { display: none; }
+            .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
           `}</style>
         </>
       )}

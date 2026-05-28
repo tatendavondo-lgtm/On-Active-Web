@@ -1,4 +1,4 @@
-﻿import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -8,7 +8,13 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: profile } = await supabase
+  // Use service role client to verify caller and send the invite
+  const adminClient = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { data: profile } = await adminClient
     .from('profiles')
     .select('role')
     .eq('id', user.id)
@@ -21,19 +27,29 @@ export async function POST(request: NextRequest) {
   const { email, fullName, role } = await request.json();
   if (!email) return Response.json({ error: 'Email required' }, { status: 400 });
 
-  // Use service role client to send the invite
-  const adminClient = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const tempPassword = 'OnActive123!';
 
-  const { error } = await adminClient.auth.admin.inviteUserByEmail(email, {
-    data: {
+  // Direct user creation to bypass SMTP email limits and redirect URL mismatches in local dev
+  const { data: createdUser, error } = await adminClient.auth.admin.createUser({
+    email,
+    password: tempPassword,
+    email_confirm: true,
+    user_metadata: {
       full_name: fullName || 'New Manager',
       role: role || 'manager',
     }
   });
-  if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  return Response.json({ success: true });
+  if (error) {
+    if (error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('already exists')) {
+      return Response.json({ error: 'A user with this email already exists.' }, { status: 400 });
+    }
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  return Response.json({ 
+    success: true, 
+    directCreated: true, 
+    tempPassword 
+  });
 }

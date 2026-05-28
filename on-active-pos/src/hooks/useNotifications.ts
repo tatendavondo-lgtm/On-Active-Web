@@ -8,6 +8,7 @@ import { isSalesmanRole } from '../types/employee';
 export function useNotificationListener() {
   const { employee, store } = useSessionStore();
   const addNotification = useNotificationStore(s => s.addNotification);
+  const notifications = useNotificationStore(s => s.notifications);
 
   // Monitor salesman orders (for till operator)
   useLiveQuery(async () => {
@@ -24,7 +25,13 @@ export function useNotificationListener() {
       const order = latest[0];
       const lastNotified = localStorage.getItem('last_notified_salesman_order');
       
-      if (order.id !== lastNotified && order.status === 'pending') {
+      // Check both localStorage key AND existing notifications to prevent duplicates
+      const alreadyExists = notifications.some(
+        n => n.type === 'incoming_order' && n.message.includes(order.salesman_name || '')
+          && new Date(n.timestamp).getTime() > Date.now() - 10000 // within last 10s
+      );
+      
+      if (order.id !== lastNotified && order.status === 'pending' && !alreadyExists) {
         localStorage.setItem('last_notified_salesman_order', order.id);
         
         addNotification({
@@ -36,7 +43,7 @@ export function useNotificationListener() {
         playNotificationSound.newIncomingOrder();
       }
     }
-  }, [employee, store]);
+  }, [employee, store, notifications]);
 
   // Monitor online orders
   useLiveQuery(async () => {

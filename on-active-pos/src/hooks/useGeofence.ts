@@ -9,10 +9,13 @@ export function useGeofence() {
     setChecking(true);
     try {
       const position = await getCurrentPosition();
+      const targetLat = store.latitude ?? -17.864004;
+      const targetLng = store.longitude ?? 30.862077;
+      
       const result = isWithinGeofence(
         position.coords.latitude, position.coords.longitude,
-        store.latitude, store.longitude,
-        store.geofence_radius_meters
+        targetLat, targetLng,
+        store.geofence_radius_meters || 50 // Default to 50m radius if null
       );
       return result.allowed
         ? { allowed: true, distance: result.distance }

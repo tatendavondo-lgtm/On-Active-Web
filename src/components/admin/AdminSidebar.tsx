@@ -14,6 +14,7 @@ import {
   ChevronRight,
   LogOut,
   Users,
+  FileText,
 } from 'lucide-react';
 import { useAdmin } from '@/store/admin';
 import { createClient } from '@/lib/supabase/client';
@@ -25,6 +26,7 @@ const OWNER_ITEMS = [
   { href: '/admin/products', icon: Shirt, label: 'Products' },
   { href: '/admin/inventory', icon: Box, label: 'Inventory' },
   { href: '/admin/staff', icon: Users, label: 'Staff' },
+  { href: '/admin/logs', icon: FileText, label: 'Audit Logs' },
   { href: '/admin/ai', icon: Sparkles, label: 'AI Assistant' },
   { href: '/admin/settings', icon: Settings, label: 'Settings' },
 ];

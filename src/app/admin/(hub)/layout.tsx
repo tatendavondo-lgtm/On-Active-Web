@@ -65,28 +65,24 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const supabase = createClient();
     async function loadProfile() {
       try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
+        const res = await fetch('/api/admin/verify-role');
+        if (!res.ok) {
+          const supabase = createClient();
           await supabase.auth.signOut();
           router.push('/admin/login');
           return;
         }
-        
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        if (data) {
-          setProfileState(data as Profile);
+        const profileData = await res.ok ? await res.json() : null;
+        if (profileData) {
+          setProfileState(profileData as Profile);
         } else {
           router.push('/admin/login');
         }
       } catch (err) {
         console.error('Failed to load admin profile client-side:', err);
+        router.push('/admin/login');
       }
     }
     loadProfile();

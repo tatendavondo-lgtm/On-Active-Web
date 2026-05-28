@@ -27,6 +27,51 @@ export function useOnlineOrders() {
       created_at: now,
       attempts: 0
     });
+
+    // Deduct stock quantity when completed in the POS
+    if (newStatus === 'completed') {
+      const order = await db.orders.get(orderId);
+      if (order && order.items) {
+        for (const item of order.items) {
+          if (item.product_id) {
+            // A. Local stock deduction for immediate UI updates
+            try {
+              const product = await db.products.get(item.product_id);
+              if (product) {
+                if (item.variant_id) {
+                  const vIndex = product.variants.findIndex(v => v.id === item.variant_id);
+                  if (vIndex !== -1) {
+                    product.variants[vIndex].stock = Math.max(0, product.variants[vIndex].stock - (item.quantity || 1));
+                  }
+                } else {
+                  if (product.variants.length > 0) {
+                    product.variants[0].stock = Math.max(0, product.variants[0].stock - (item.quantity || 1));
+                  }
+                }
+                await db.products.put(product);
+              }
+            } catch (err) {
+              console.warn('Failed to update local inventory for online order item', item.product_id, err);
+            }
+
+            // B. Queue for remote sync
+            await db.syncQueue.add({
+              table: 'products',
+              operation: 'update',
+              data: {
+                id: item.product_id,
+                product_id: item.product_id,
+                variant_id: item.variant_id || null,
+                store_id: order.store_id,
+                decrement: item.quantity || 1,
+              },
+              created_at: now,
+              attempts: 0
+            });
+          }
+        }
+      }
+    }
   };
 
   const grouped = {

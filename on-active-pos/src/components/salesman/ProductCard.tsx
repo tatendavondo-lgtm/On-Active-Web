@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useCartStore } from '../../stores/cartStore';
 import { VariantSelector } from './VariantSelector';
 import { formatUSD } from '../../lib/currency';
+import { motion } from 'framer-motion';
+import { playNotificationSound } from '../../lib/notification';
 import type { LocalProduct } from '../../db/dexie';
 
 interface ProductCardProps {
@@ -16,9 +18,11 @@ export function ProductCard({ product }: ProductCardProps) {
   const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
 
   const handleClick = () => {
+    playNotificationSound.tap();
     if (product.variants.length > 1) {
       setShowVariants(true);
     } else if (product.variants.length === 1) {
+      playNotificationSound.addToCart();
       const v = product.variants[0];
       addItem({
         product_id: product.id,
@@ -27,6 +31,7 @@ export function ProductCard({ product }: ProductCardProps) {
         variant_name: v.name !== 'base' ? v.name : undefined,
         sku: v.sku || product.sku,
         quantity: 1,
+        max_stock: v.stock,
         unit_price: Number(v.price) || Number((product as any).price_usd) || 0
       });
     }
@@ -34,11 +39,13 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <>
-      <button 
+      <motion.button 
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
         onClick={handleClick}
-        className="group relative flex flex-col bg-[#111111] border border-white/5 rounded-[var(--pos-radius-lg)] overflow-hidden hover:border-[var(--pos-accent)] hover:shadow-[0_0_20px_rgba(197,160,33,0.12)] transition-all duration-300 text-left"
+        className="group relative flex flex-col bg-white/5 backdrop-blur-md border border-white/10 rounded-[var(--pos-radius-lg)] overflow-hidden hover:bg-white/10 hover:border-[var(--pos-accent)] hover:shadow-[0_0_20px_rgba(197,160,33,0.15)] transition-colors duration-300 text-left shadow-lg"
       >
-        <div className="aspect-square bg-[#1a1a1a] w-full overflow-hidden relative">
+        <div className="aspect-square bg-black/40 w-full overflow-hidden relative">
           {product.image_url ? (
             <img src={product.image_url} alt={product.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700" />
           ) : (
@@ -61,7 +68,7 @@ export function ProductCard({ product }: ProductCardProps) {
             </span>
           </div>
         </div>
-      </button>
+      </motion.button>
 
       <VariantSelector 
         isOpen={showVariants} 

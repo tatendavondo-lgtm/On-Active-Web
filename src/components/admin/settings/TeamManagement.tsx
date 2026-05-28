@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { Loader2, Trash2, UserPlus, Users } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { removeTeamMember } from '@/app/admin/(hub)/staff/actions';
 import { ConfirmModal } from '../ConfirmModal';
 import { EmptyState } from '../ui/EmptyState';
 import { formatDate } from '@/lib/admin/utils';
@@ -38,11 +38,15 @@ export function TeamManagement({ managers: initialManagers }: TeamManagementProp
         }),
       });
       const data = await res.json();
-      if (!res.ok) toast.error(data.error ?? 'Failed to send invite');
+      if (!res.ok) toast.error(data.error ?? 'Failed to create manager account');
       else {
-        toast.success(`Invite sent to ${inviteName}`);
+        toast.success(`Account created for ${inviteName}! Password: ${data.tempPassword}`, { duration: 10000 });
         setInviteEmail('');
         setInviteName('');
+        // Reload page to fetch the newly created manager profile
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
       }
     } catch {
       toast.error('Network error — please try again');
@@ -52,13 +56,13 @@ export function TeamManagement({ managers: initialManagers }: TeamManagementProp
   };
 
   const handleRemove = async (managerId: string) => {
-    const supabase = createClient();
-    const { error } = await supabase.from('profiles').delete().eq('id', managerId);
-    if (error) toast.error('Failed to remove manager');
-    else {
+    try {
+      await removeTeamMember(managerId);
       toast.success('Manager removed');
       setManagers((prev) => prev.filter((m) => m.id !== managerId));
       setRemoveTarget(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove manager');
     }
   };
 

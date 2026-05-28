@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, Send } from 'lucide-react';
 import { useCartStore } from '../../stores/cartStore';
 import { QuantityControl } from './QuantityControl';
@@ -14,15 +15,15 @@ export function OrderBuilder() {
 
   return (
     <>
-      <div className="flex flex-col h-full bg-[var(--pos-surface-elevated)] border-l border-[var(--pos-border)] relative">
-        <div className="p-4 border-b border-[var(--pos-border)] flex-shrink-0">
-          <h2 className="text-lg font-semibold mb-3">Current Order</h2>
+      <div className="flex flex-col h-full bg-black/40 backdrop-blur-[40px] border-l border-white/10 relative shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
+        <div className="p-4 border-b border-white/10 bg-white/5 backdrop-blur-md flex-shrink-0">
+          <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white mb-3">Current Order</h2>
           <input
             type="text"
             placeholder="Customer Name (optional)"
             value={customerName}
             onChange={e => setCustomerName(e.target.value)}
-            className="w-full h-10 px-3 bg-[var(--pos-surface)] border border-[var(--pos-border)] rounded-[var(--pos-radius)] text-sm placeholder-[var(--pos-text-muted)] focus:border-[var(--pos-accent)] focus:outline-none transition-colors"
+            className="w-full h-10 px-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-[var(--pos-radius-lg)] text-xs font-bold tracking-widest uppercase placeholder-white/30 text-white focus:border-[var(--pos-accent)] focus:outline-none transition-colors shadow-inner"
           />
         </div>
 
@@ -32,70 +33,80 @@ export function OrderBuilder() {
               <div className="w-16 h-16 rounded-full bg-[var(--pos-surface)] flex items-center justify-center border border-[var(--pos-border)]">
                 <span className="text-2xl">🛍️</span>
               </div>
-              <p>Order is empty</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Order is empty</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {items.map(item => (
-                <div key={item.id} className="flex flex-col gap-2 p-3 bg-[var(--pos-surface)] rounded-[var(--pos-radius)] border border-[var(--pos-border)]">
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col">
-                      <span className="font-medium text-sm text-white line-clamp-1">{item.product_name}</span>
-                      {item.variant_name && <span className="text-xs text-[var(--pos-text-muted)]">{item.variant_name}</span>}
+            <div className="space-y-3">
+              <AnimatePresence mode="popLayout">
+                {items.map(item => (
+                  <motion.div 
+                    layout
+                    initial={{ opacity: 0, scale: 0.9, y: -20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, x: -50 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    key={item.id} 
+                    className="flex flex-col gap-3 p-4 bg-white/5 backdrop-blur-sm rounded-[var(--pos-radius-lg)] border border-white/10 hover:border-[var(--pos-accent)]/40 transition-colors shadow-lg"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex flex-col">
+                        <span className="font-black text-xs uppercase tracking-wide text-white leading-tight line-clamp-1">{item.product_name}</span>
+                      {item.variant_name && <span className="text-[10px] font-black uppercase tracking-widest text-[var(--pos-text-muted)] mt-1">{item.variant_name}</span>}
                     </div>
                     <button 
                       onClick={() => removeItem(item.id)}
                       className="text-[var(--pos-text-muted)] hover:text-[var(--pos-error)] transition-colors p-1"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <div className="flex justify-between items-center mt-2">
+                  <div className="flex justify-between items-center mt-1 pt-2 border-t border-white/5">
                     <QuantityControl 
                       quantity={item.quantity} 
                       onChange={(q) => updateQuantity(item.id, q)} 
                       min={1} 
                     />
-                    <span className="font-mono text-[var(--pos-accent)] font-medium">
-                      {formatUSD(item.line_total)}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                      <span className="font-mono text-xs text-[var(--pos-accent)] font-black">
+                        {formatUSD(item.line_total)}
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t border-[var(--pos-border)] bg-[var(--pos-surface)] flex-shrink-0 flex flex-col gap-4">
-          <div className="flex justify-between items-center text-lg font-semibold">
+        <div className="p-4 border-t border-white/10 bg-white/5 backdrop-blur-md flex-shrink-0 flex flex-col gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+          <div className="flex justify-between items-center text-xs font-black uppercase tracking-wider text-[var(--pos-text-secondary)]">
             <span>Subtotal</span>
-            <span className="font-mono">{formatUSD(subtotal)}</span>
+            <span className="font-mono text-white">{formatUSD(subtotal)}</span>
           </div>
 
           <textarea
             placeholder="Add notes for till (optional)..."
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            className="w-full h-16 p-3 text-sm bg-[var(--pos-bg)] border border-[var(--pos-border)] rounded-[var(--pos-radius)] resize-none placeholder-[var(--pos-text-muted)] focus:border-[var(--pos-accent)] focus:outline-none transition-colors custom-scrollbar"
+            className="w-full h-16 p-3 text-[10px] font-black uppercase tracking-widest bg-black/40 border border-white/10 rounded-[var(--pos-radius-lg)] resize-none placeholder-white/30 text-white focus:border-[var(--pos-accent)] focus:outline-none transition-colors custom-scrollbar shadow-inner"
           />
 
           <div className="grid grid-cols-3 gap-3">
-            <Button 
-              variant="secondary" 
+            <motion.button 
+              whileTap={{ scale: 0.95 }}
               onClick={clearCart} 
               disabled={items.length === 0}
-              className="col-span-1"
+              className="col-span-1 p-0 text-[10px] font-black uppercase tracking-widest border border-white/10 bg-white/5 hover:bg-white/10 hover:border-[var(--pos-error)] hover:text-[var(--pos-error)] transition-colors h-11 rounded-[var(--pos-radius)] disabled:opacity-50"
             >
               Clear
-            </Button>
-            <Button 
-              variant="primary" 
+            </motion.button>
+            <motion.button 
+              whileTap={{ scale: 0.97 }}
               onClick={() => setShowSendModal(true)} 
               disabled={items.length === 0}
-              className="col-span-2 text-lg font-bold shadow-lg shadow-[var(--pos-accent)]/10"
+              className="col-span-2 text-xs font-black uppercase tracking-widest bg-[var(--pos-accent)] text-black shadow-[0_0_25px_rgba(197,160,33,0.2)] transition-all h-11 flex items-center justify-center rounded-[var(--pos-radius)] disabled:opacity-50 disabled:shadow-none"
             >
-              Send to Till <Send className="w-5 h-5 ml-2" />
-            </Button>
+              Send to Till <Send className="w-4 h-4 ml-2" />
+            </motion.button>
           </div>
         </div>
       </div>

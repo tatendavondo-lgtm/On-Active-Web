@@ -1,4 +1,4 @@
-﻿import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * A privileged Supabase client that bypasses Row Level Security (RLS).
@@ -16,6 +16,9 @@ export function createAdminClient() {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
+    },
+    global: {
+      fetch: (url, options) => fetch(url, { ...options, cache: 'no-store' }),
     },
   });
 }

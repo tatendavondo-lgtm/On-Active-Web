@@ -47,10 +47,17 @@ export function ProductsManager({ userRole }: ProductsManagerProps) {
   };
 
   const handleDelete = async (productId: string) => {
-    const supabase = createClient();
-    const { error } = await supabase.from('products').delete().eq('id', productId);
-    if (error) toast.error('Delete failed');
-    else { toast.success('Product deleted'); setDeleteTarget(null); fetchProducts(); }
+    try {
+      const res = await fetch(`/api/admin/products?id=${productId}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
+      
+      toast.success('Product deleted');
+      setDeleteTarget(null);
+      fetchProducts();
+    } catch (err: any) {
+      toast.error(`Delete failed: ${err.message}`);
+    }
   };
 
   const stockColor = (qty: number) =>
@@ -128,8 +135,8 @@ export function ProductsManager({ userRole }: ProductsManagerProps) {
                       <span className="text-white text-sm font-semibold">{formatUSD(product.price_usd)}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`font-bold text-sm font-mono ${stockColor(product.stock_quantity)}`}>
-                        {product.stock_quantity}
+                      <span className={`font-black text-xs font-mono tracking-tighter ${stockColor(product.stock_quantity)}`}>
+                        {product.stock_quantity} units
                       </span>
                     </td>
                     <td className="px-4 py-3">

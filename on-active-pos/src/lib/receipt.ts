@@ -90,6 +90,6 @@ export function transformOrderToReceipt(order: Order, storeInfo: any, cashierNam
       ZIG: order.exchange_rate_zig || 26.5,
       ZAR: order.exchange_rate_zar || 18.2
     },
-    footer: 'Thank you for shopping at On Active!💪\nReturns within 7 days with this receipt.'
+    footer: 'Thank you for shopping at On Active!💪'
   };
 }

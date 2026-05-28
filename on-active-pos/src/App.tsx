@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Component, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useSessionStore } from './stores/sessionStore';
 import { isSalesmanRole } from './types/employee';
@@ -7,6 +7,8 @@ import { TillShell } from './components/layout/TillShell';
 import Login from './pages/Login';
 import { ToastContainer } from './components/shared/Toast';
 import { useNotificationListener } from './hooks/useNotifications';
+import { AnimatedRoutes } from './components/shared/AnimatedRoutes';
+import { PageTransition } from './components/shared/PageTransition';
 
 // Salesman pages
 import SalesFloor from './pages/salesman/SalesFloor';
@@ -41,11 +43,11 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SalesmanShell>
-                <Routes>
-                  <Route path="/" element={<SalesFloor />} />
-                  <Route path="/my-orders" element={<MyOrders />} />
-                  <Route path="/customers" element={<Customers />} />
-                </Routes>
+                <AnimatedRoutes>
+                  <Route path="/" element={<PageTransition><SalesFloor /></PageTransition>} />
+                  <Route path="/my-orders" element={<PageTransition><MyOrders /></PageTransition>} />
+                  <Route path="/customers" element={<PageTransition><Customers /></PageTransition>} />
+                </AnimatedRoutes>
               </SalesmanShell>
             </ProtectedRoute>
           }
@@ -57,14 +59,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <TillShell>
-                <Routes>
-                  <Route path="/" element={<TillRegister />} />
-                  <Route path="/orders" element={<Orders />} />
-                  <Route path="/online-orders" element={<OnlineOrders />} />
-                  <Route path="/customers" element={<Customers />} />
-                  <Route path="/end-of-day" element={<EndOfDay />} />
-                  <Route path="/settings" element={<Settings />} />
-                </Routes>
+                <AnimatedRoutes>
+                  <Route path="/" element={<PageTransition><TillRegister /></PageTransition>} />
+                  <Route path="/orders" element={<PageTransition><Orders /></PageTransition>} />
+                  <Route path="/online-orders" element={<PageTransition><OnlineOrders /></PageTransition>} />
+                  <Route path="/customers" element={<PageTransition><Customers /></PageTransition>} />
+                  <Route path="/end-of-day" element={<PageTransition><EndOfDay /></PageTransition>} />
+                  <Route path="/settings" element={<PageTransition><Settings /></PageTransition>} />
+                </AnimatedRoutes>
               </TillShell>
             </ProtectedRoute>
           }

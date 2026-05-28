@@ -1,4 +1,4 @@
-﻿import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const adminSupabase = createAdminClient();
     const { data: profile, error: profileError } = await adminSupabase
       .from('profiles')
-      .select('role')
+      .select('*')
       .eq('id', user.id)
       .single();
 
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ role: profile.role });
+    return NextResponse.json(profile);
   } catch (error) {
     console.error('Role verification error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

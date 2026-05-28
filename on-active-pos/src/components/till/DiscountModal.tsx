@@ -64,6 +64,12 @@ export function DiscountModal({ isOpen, onClose, subtotal, autoDiscount, onApply
                 type="password"
                 value={supervisorPin}
                 onChange={e => setSupervisorPin(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleApply();
+                  }
+                }}
                 className="w-full bg-[var(--pos-surface)] border border-[var(--pos-border)] rounded-[var(--pos-radius)] h-12 px-4 text-center text-2xl tracking-widest focus:border-[var(--pos-accent)] focus:outline-none"
                 autoFocus
               />
@@ -95,6 +101,12 @@ export function DiscountModal({ isOpen, onClose, subtotal, autoDiscount, onApply
                 type="number"
                 value={value}
                 onChange={e => setValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && numValue > 0 && finalTotal >= 0) {
+                    e.preventDefault();
+                    handleApply();
+                  }
+                }}
                 placeholder={type === 'percentage' ? '0%' : '$0.00'}
                 className="w-full bg-[var(--pos-surface)] border border-[var(--pos-border)] rounded-[var(--pos-radius)] h-16 px-4 text-center text-3xl font-mono focus:border-[var(--pos-accent)] focus:outline-none"
                 autoFocus

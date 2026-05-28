@@ -147,7 +147,7 @@ export default function Customers() {
   );
 }
 
-function AddCustomerModal({ isOpen, onClose, storeId }: { isOpen: boolean; onClose: () => void; storeId: string }) {
+function AddCustomerModal({ isOpen, onClose, storeId: _storeId }: { isOpen: boolean; onClose: () => void; storeId: string }) {
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',

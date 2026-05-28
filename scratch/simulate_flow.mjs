@@ -35,13 +35,15 @@ async function simulateFlow() {
     fulfillment: 'collection',
     status: 'pending',
     customer_name: 'Test Customer',
-    total: 150.00
+    total: 150.00,
+    items: webOrder.items || [],
+    order_ref: webOrder.order_ref,
   }).select().single();
 
   if (bridgeErr) {
     console.error('FAIL: Bridge creation failed -', bridgeErr.message);
   } else {
-    console.log(`SUCCESS: Bridge record created with ID ${bridgeOrder.id}`);
+    console.log(`SUCCESS: Bridge record created with ID ${bridgeOrder.id} and Order Ref ${bridgeOrder.order_ref}`);
   }
 
   // 3. Verify Admin Hub see it

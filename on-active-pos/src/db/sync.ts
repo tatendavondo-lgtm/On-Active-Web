@@ -71,43 +71,38 @@ export async function processSyncQueue(): Promise<{ synced: number; failed: numb
             .eq('id', productId);
         }
 
-        // 2. Update Branch Store Inventory (Specific Variant Stock)
+        // 2. Update Branch Store Inventory safely without RPC
         if (storeId) {
-          // If we have a variantId, update that specific combo
           if (variantId) {
             const { data: currentInv } = await supabase
               .from('store_inventory')
-              .select('quantity')
+              .select('quantity, id')
               .eq('store_id', storeId)
               .eq('variant_id', variantId)
-              .single();
+              .maybeSingle();
 
             if (currentInv) {
               const newInvQty = Math.max(0, (currentInv.quantity ?? 0) - decrement);
               await supabase
                 .from('store_inventory')
-                .update({ quantity: newInvQty, updated_at: new Date().toISOString() })
-                .eq('store_id', storeId)
-                .eq('variant_id', variantId);
+                .update({ quantity: newInvQty, last_updated: new Date().toISOString() })
+                .eq('id', currentInv.id);
             }
           } else {
-            // Fallback for non-variant products
             const { data: currentInv } = await supabase
               .from('store_inventory')
-              .select('quantity')
+              .select('quantity, id')
               .eq('store_id', storeId)
               .eq('product_id', productId)
               .is('variant_id', null)
-              .single();
+              .maybeSingle();
 
             if (currentInv) {
               const newInvQty = Math.max(0, (currentInv.quantity ?? 0) - decrement);
               await supabase
                 .from('store_inventory')
-                .update({ quantity: newInvQty, updated_at: new Date().toISOString() })
-                .eq('store_id', storeId)
-                .eq('product_id', productId)
-                .is('variant_id', null);
+                .update({ quantity: newInvQty, last_updated: new Date().toISOString() })
+                .eq('id', currentInv.id);
             }
           }
         }
@@ -327,6 +322,7 @@ export async function pullUpdates(storeId: string): Promise<void> {
           return {
             id: crypto.randomUUID(),
             product_id: item.productId || item.product_id || '',
+            variant_id: item.variantId || item.variant_id || null,
             product_name: item.name || item.product_name || 'Unknown',
             variant_name: variantDesc,
             quantity: item.quantity || 1,
@@ -338,7 +334,7 @@ export async function pullUpdates(storeId: string): Promise<void> {
 
         const total = Number(bo.total) || Number(webOrder?.total_usd) || 0;
         const orderRef = bo.order_ref || webOrder?.order_ref || (typeof bo.id === 'string' ? `ONLINE-${bo.id.slice(0, 8)}` : `ONLINE-${Math.random().toString(36).substring(7)}`);
-        const customerName = bo.customer_name || webOrder?.customer_name || 'Online Customer';
+        // customer_name is used directly from bo/webOrder where needed in the order object
 
         if (!exists) {
           console.log(`Ingesting online order: ${orderRef}`);

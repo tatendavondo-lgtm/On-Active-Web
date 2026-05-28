@@ -23,18 +23,18 @@ function Toast({ notification }: { notification: Notification }) {
   useEffect(() => {
     const timer = setTimeout(() => setVisible(true), 10);
     
-    // Auto-dismiss after 5s for common notifications
-    let dismissTimer: any;
-    if (notification.type !== 'incoming_order' && notification.type !== 'online_order') {
-      dismissTimer = setTimeout(() => {
-        setVisible(false);
-        setTimeout(() => markRead(notification.id), 300);
-      }, 5000);
-    }
+    // Auto-dismiss common notifications after 4s, order notifications after 5s
+    const isOrderNotif = notification.type === 'incoming_order' || notification.type === 'online_order';
+    const duration = isOrderNotif ? 5000 : 4000;
+    
+    const dismissTimer = setTimeout(() => {
+      setVisible(false);
+      setTimeout(() => markRead(notification.id), 300);
+    }, duration);
 
     return () => {
       clearTimeout(timer);
-      if (dismissTimer) clearTimeout(dismissTimer);
+      clearTimeout(dismissTimer);
     };
   }, [notification, markRead]);
 

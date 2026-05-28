@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { logAuditAction } from '@/lib/admin/audit';
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,6 +36,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (result) {
+      // Log the action
+      await logAuditAction({
+        action: payload.id ? 'update_product' : 'create_product',
+        targetType: 'product',
+        targetId: result.id,
+        details: { name: result.name, stock: result.stock_quantity }
+      });
+
       const productId = result.id;
       const defaultStoreId = '00000000-0000-0000-0000-000000000001';
 
@@ -140,5 +149,54 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     console.error('Server error in products API:', err);
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const adminSupabase = createAdminClient();
+    const { data: profile } = await adminSupabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile || !['owner', 'manager'].includes(profile.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'Missing product ID' }, { status: 400 });
+    }
+
+    // Associated variants and inventory will be deleted via ON DELETE CASCADE if configured in DB,
+    // otherwise we handle it manually here to be safe.
+    await adminSupabase.from('store_inventory').delete().eq('product_id', id);
+    await adminSupabase.from('product_variants').delete().eq('product_id', id);
+    const { error } = await adminSupabase.from('products').delete().eq('id', id);
+
+    if (error) throw error;
+
+    await logAuditAction({
+      action: 'delete_product',
+      targetType: 'product',
+      targetId: id,
+      details: { id }
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error('Delete error:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

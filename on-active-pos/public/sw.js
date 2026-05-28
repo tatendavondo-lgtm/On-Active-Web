@@ -1,4 +1,4 @@
-const CACHE_NAME = 'oa-pos-v1';
+const CACHE_NAME = 'oa-pos-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -52,11 +52,16 @@ self.addEventListener('fetch', (event) => {
   // Static/Navigation: cache first
   event.respondWith(
     caches.match(request).then((cached) => {
-      return cached || fetch(request).catch(() => {
-        if (request.mode === 'navigate') {
-          return caches.match('/offline.html');
-        }
-      });
+      if (cached) return cached;
+      
+      // For SPA navigation requests, always serve index.html so React can boot
+      if (request.mode === 'navigate') {
+        return caches.match('/index.html').then(indexCache => {
+          return indexCache || fetch(request).catch(() => caches.match('/offline.html'));
+        });
+      }
+      
+      return fetch(request);
     })
   );
 });

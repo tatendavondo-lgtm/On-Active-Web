@@ -19,12 +19,12 @@ export function OpenShiftModal({ isOpen, onOpen }: OpenShiftModalProps) {
 
   return (
     <Modal isOpen={isOpen} title="Open New Shift">
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div className="text-center">
-          <p className="text-[var(--pos-text-secondary)] text-sm mb-4">
+          <p className="text-[var(--pos-text-secondary)] text-sm mb-2 sm:mb-4">
             Enter the starting cash float in the drawer (USD)
           </p>
-          <div className="text-4xl font-mono font-bold bg-[var(--pos-surface)] p-4 rounded border border-[var(--pos-border)] mb-6">
+          <div className="text-3xl sm:text-4xl font-mono font-bold bg-[var(--pos-surface)] p-3 sm:p-4 rounded border border-[var(--pos-border)] mb-4 sm:mb-6">
             ${openingCash || '0.00'}
           </div>
         </div>
@@ -35,7 +35,7 @@ export function OpenShiftModal({ isOpen, onOpen }: OpenShiftModalProps) {
           />
         </div>
 
-        <div className="flex gap-4 mt-8">
+        <div className="flex gap-4 mt-4 sm:mt-8">
           <Button 
             variant="primary" 
             className="flex-1 h-14 text-lg" 

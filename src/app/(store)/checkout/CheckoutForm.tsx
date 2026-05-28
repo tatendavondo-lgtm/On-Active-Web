@@ -39,47 +39,72 @@ export function CheckoutForm({ settings }: { settings: any }) {
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
   const [errors, setErrors] = useState({ name: "", phone: "", address: "" });
   
-  // Single active store branch details from DB
-  const [storeInfo, setStoreInfo] = useState<{ name: string; latitude: number; longitude: number } | null>(null);
+  // Active store branches from DB
+  const [storesList, setStoresList] = useState<{ name: string; latitude: number; longitude: number }[]>([]);
 
   useEffect(() => {
     setMounted(true);
 
-    // Fetch active store branch on mount
-    async function fetchStoreCoords() {
+    // Fetch active store branches on mount
+    async function fetchStores() {
       try {
         const supabase = createClient();
         const { data, error } = await supabase
           .from("stores")
           .select("name, latitude, longitude")
-          .eq("is_active", true)
-          .limit(1);
+          .eq("is_active", true);
 
         if (!error && data && data.length > 0) {
-          setStoreInfo(data[0]);
+          setStoresList(data);
         } else {
           // Default fallback store info
-          setStoreInfo({
+          setStoresList([{
             name: "Harare Main Branch",
             latitude: FALLBACK_STORE_LAT,
             longitude: FALLBACK_STORE_LNG
-          });
+          }]);
         }
       } catch (err) {
-        console.error("Failed to fetch store coords:", err);
-        setStoreInfo({
+        console.error("Failed to fetch stores coords:", err);
+        setStoresList([{
           name: "Harare Main Branch",
           latitude: FALLBACK_STORE_LAT,
           longitude: FALLBACK_STORE_LNG
-        });
+        }]);
       }
     }
 
-    fetchStoreCoords();
+    fetchStores();
   }, []);
 
-  const storeLat = storeInfo?.latitude ?? FALLBACK_STORE_LAT;
-  const storeLng = storeInfo?.longitude ?? FALLBACK_STORE_LNG;
+  // Compute the closest branch based on user GPS coords
+  const closestStoreInfo = useState(() => {
+    if (storesList.length === 0) return { name: "Harare Main Branch", latitude: FALLBACK_STORE_LAT, longitude: FALLBACK_STORE_LNG };
+    return storesList[0];
+  })[0];
+
+  // We use useMemo to find the closest active store to the user
+  const closestStore = typeof window !== 'undefined' ? (() => {
+    if (storesList.length === 0) {
+      return { name: "Harare Main Branch", latitude: FALLBACK_STORE_LAT, longitude: FALLBACK_STORE_LNG };
+    }
+    if (!gpsCoords) return storesList[0];
+    
+    let closest = storesList[0];
+    let minDistance = calculateDistance(gpsCoords.lat, gpsCoords.lng, closest.latitude, closest.longitude);
+    
+    for (let i = 1; i < storesList.length; i++) {
+      const dist = calculateDistance(gpsCoords.lat, gpsCoords.lng, storesList[i].latitude, storesList[i].longitude);
+      if (dist < minDistance) {
+        minDistance = dist;
+        closest = storesList[i];
+      }
+    }
+    return closest;
+  })() : { name: "Harare Main Branch", latitude: FALLBACK_STORE_LAT, longitude: FALLBACK_STORE_LNG };
+
+  const storeLat = closestStore?.latitude ?? FALLBACK_STORE_LAT;
+  const storeLng = closestStore?.longitude ?? FALLBACK_STORE_LNG;
 
   // Calculate distance if GPS pinned
   const distanceKm = gpsCoords 
@@ -322,7 +347,7 @@ export function CheckoutForm({ settings }: { settings: any }) {
                     <div className="flex items-start gap-3 bg-[#111] border border-white/5 p-4 rounded-xl">
                       <Info className="text-white/40 flex-shrink-0 mt-0.5" size={14} />
                       <p className="text-[10px] font-bold text-white/40 leading-relaxed uppercase tracking-wide">
-                        Pin your GPS location above to calculate a custom delivery fee based on your distance from our warehouse! (Fallback flat rate: $5.00)
+                        Pin your GPS location above to calculate a custom delivery fee based on your distance from our nearest branch! (Fallback flat rate: $5.00)
                       </p>
                     </div>
                   )}
@@ -333,6 +358,7 @@ export function CheckoutForm({ settings }: { settings: any }) {
                         <MapPin className="text-[#C5A021] flex-shrink-0" size={18} />
                         <div className="flex-1">
                           <p className="text-[10px] font-black uppercase tracking-widest text-[#C5A021]">GPS Location Pinned ✓</p>
+                          <p className="text-[9px] font-bold text-[#C5A021]/80 uppercase tracking-widest mt-0.5 font-sans">Branch: {closestStore?.name}</p>
                           <p className="text-[11px] font-bold text-white/60 font-mono mt-0.5">{gpsCoords.lat.toFixed(5)}, {gpsCoords.lng.toFixed(5)}</p>
                         </div>
                         {distanceKm !== null && (
