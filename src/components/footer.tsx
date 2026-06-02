@@ -142,8 +142,8 @@ export function Footer() {
         <div className="mt-16 flex flex-col justify-between border-t border-white/5 pt-8 text-[10px] font-bold uppercase tracking-[0.2em] sm:flex-row opacity-40">
           <span>&copy; 2026 ON ACTIVE WEAR. ALL RIGHTS RESERVED.</span>
           <div className="mt-4 flex gap-6 sm:mt-0">
-            <Link href="#" className="hover:text-white transition-colors">TERMS</Link>
-            <Link href="#" className="hover:text-white transition-colors">PRIVACY</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">TERMS</Link>
+            <Link href="/privacy" className="hover:text-white transition-colors">PRIVACY</Link>
             <Link href="#" className="hover:text-white transition-colors">COOKIES</Link>
           </div>
         </div>
