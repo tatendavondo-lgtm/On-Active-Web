@@ -31,15 +31,15 @@ export default function Orders() {
       if (filters.status !== 'all' && o.status !== filters.status) return false;
       // Source
       if (filters.source !== 'all' && o.source !== filters.source) return false;
-      // Date (simplified for demo)
-      const date = new Date(o.created_at);
-      const today = new Date();
-      if (filters.date === 'today' && date.toDateString() !== today.toDateString()) return false;
-      
       // Search
       if (search) {
         const s = search.toLowerCase();
         if (!o.order_number.toLowerCase().includes(s) && !o.id.toLowerCase().includes(s)) return false;
+      } else {
+        // Date (simplified for demo)
+        const date = new Date(o.created_at);
+        const today = new Date();
+        if (filters.date === 'today' && date.toDateString() !== today.toDateString()) return false;
       }
       
       return true;

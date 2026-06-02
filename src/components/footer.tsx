@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, Phone } from "lucide-react";
 
 export function Footer() {
   const [email, setEmail] = useState("");
@@ -28,6 +28,37 @@ export function Footer() {
               ELEVATING PERFORMANCE THROUGH MINIMALIST AESTHETIC.
               DESIGNED IN 2026.
             </p>
+            <div className="space-y-3 pt-2">
+              <a 
+                href="https://wa.me/263782610691" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest hover:text-[#C5A021] transition-colors"
+              >
+                <Phone size={14} className="text-[#C5A021]" />
+                +263 78 261 0691
+              </a>
+              <div className="flex gap-4 pt-2">
+                <a 
+                  href="https://www.instagram.com/on_active_wear.zw?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-[#C5A021] hover:scale-110 transition-all flex items-center justify-center"
+                  title="Instagram"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-instagram"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+                </a>
+                <a 
+                  href="https://www.facebook.com/share/1AiApBzHVr/" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-[#C5A021] hover:scale-110 transition-all flex items-center justify-center"
+                  title="Facebook"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-facebook"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                </a>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -62,7 +93,7 @@ export function Footer() {
                 <Link href="#" className="hover:text-[#C5A021] transition-all hover:translate-x-1 inline-block">RETURNS</Link>
               </li>
               <li>
-                <Link href="#" className="hover:text-[#C5A021] transition-all hover:translate-x-1 inline-block">CONTACT</Link>
+                <a href="https://wa.me/263782610691" target="_blank" rel="noopener noreferrer" className="hover:text-[#C5A021] transition-all hover:translate-x-1 inline-block">CONTACT</a>
               </li>
               <li>
                 <Link href="#" className="hover:text-[#C5A021] transition-all hover:translate-x-1 inline-block">FAQ</Link>

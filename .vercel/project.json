@@ -1,16 +1,1 @@
-{
-  "projectId": "prj_OtTYEaNnMasMKFYdRTjQJ0slce9J",
-  "orgId": "team_opyXTpX1NuaSDs0XQwKaS6vZ",
-  "projectName": "on-active-web",
-  "settings": {
-    "createdAt": 1775929526457,
-    "framework": "nextjs",
-    "devCommand": null,
-    "installCommand": null,
-    "buildCommand": null,
-    "outputDirectory": null,
-    "rootDirectory": null,
-    "directoryListing": false,
-    "nodeVersion": "24.x"
-  }
-}
+{"projectId":"prj_rYqqgrruN32VYmOwaUmGjh87dTbk","orgId":"team_RztnmMec6Wu6dyhIi2HjrHT7","projectName":"on-active-web"}
