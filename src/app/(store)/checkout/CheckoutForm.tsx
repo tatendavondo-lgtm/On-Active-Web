@@ -185,7 +185,12 @@ export function CheckoutForm({ settings }: { settings: any }) {
     if (!validate()) return;
     
     setLoading(true);
-    const orderRef = 'OA-' + Math.floor(1000 + Math.random() * 9000);
+    
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+    const shortDate = dateStr.slice(2); // "YYMMDD"
+    const randomSeq = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
+    const orderRef = `OA-${shortDate}-${randomSeq}`;
 
     const payload = {
       order_ref: orderRef,

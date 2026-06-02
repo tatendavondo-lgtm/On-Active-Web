@@ -23,7 +23,11 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
     setStep("processing");
     
     try {
-      const orderRef = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
+      const today = new Date();
+      const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+      const shortDate = dateStr.slice(2); // "YYMMDD"
+      const randomSeq = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
+      const orderRef = `OA-${shortDate}-${randomSeq}`;
       
       const res = await fetch('/api/checkout', {
         method: 'POST',
