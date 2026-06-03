@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (defaultStore) {
-        await adminSupabase.from('online_order_bridge').insert({
+        const { error: bridgeError } = await adminSupabase.from('online_order_bridge').insert({
           webstore_order_id: newOrder.id,
           store_id: defaultStore.id,
           fulfillment: payload.fulfillment_type || payload.fulfillment || 'collection',
@@ -49,8 +49,13 @@ export async function POST(req: NextRequest) {
           customer_email: payload.customer_email || payload.email || '',
           items: newOrder.items || [],
           total: newOrder.total_usd || payload.total_usd || 0,
-          order_ref: newOrder.order_ref,
         });
+
+        if (bridgeError) {
+          console.error('Failed to bridge order to POS:', bridgeError);
+          // Still returning success to user since checkout succeeded, 
+          // but the order is not bridged.
+        }
       }
     }
 

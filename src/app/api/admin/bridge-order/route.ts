@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -17,6 +18,12 @@ export async function POST(req: NextRequest) {
         { error: 'Missing orderId or storeId' },
         { status: 400 }
       );
+    }
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const adminSupabase = createAdminClient();
@@ -46,7 +53,6 @@ export async function POST(req: NextRequest) {
         customer_name: 'Online Customer',
         items: order.items || [],
         total: order.total_usd || 0,
-        order_ref: order.order_ref,
         assigned_at: new Date().toISOString(),
       });
 

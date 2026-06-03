@@ -24,8 +24,9 @@ export function SplitPayment({ payments, onAddPayment, onRemovePayment, remainin
     const amt = parseFloat(amountInput);
     if (!amt || amt <= 0) return;
     
-    // Convert back to USD for canonical storage
-    const amountUsd = currency === 'USD' ? amt : amt / rate;
+    // Convert back to USD for canonical storage and round to exactly 2 decimal places
+    let amountUsd = currency === 'USD' ? amt : (amt / rate);
+    amountUsd = Math.round(amountUsd * 100) / 100;
     
     // Don't overcharge
     const finalAmountUsd = Math.min(amountUsd, remainingUsd);

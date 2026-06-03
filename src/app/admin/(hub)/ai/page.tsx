@@ -2,11 +2,18 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { AIChat } from '@/components/admin/ai/AIChat';
 import type { StoreContext } from '@/types';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AIPage() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    redirect('/admin/login');
+  }
+
   const adminSupabase = createAdminClient();
 
   const now = new Date();

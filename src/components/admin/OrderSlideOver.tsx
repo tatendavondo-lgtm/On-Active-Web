@@ -1,7 +1,8 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Package, CreditCard, Banknote, Store, User } from 'lucide-react';
+import { X, Package, CreditCard, Banknote, Store, User, Loader2 } from 'lucide-react';
 import { StatusBadge } from './ui/StatusBadge';
 import { formatUSD, formatDate } from '@/lib/admin/utils';
 import { UnifiedOrder } from './orders/OrdersTable';
@@ -13,6 +14,32 @@ interface OrderSlideOverProps {
 
 export function OrderSlideOver({ order, onClose }: OrderSlideOverProps) {
   const source = order?.source ?? 'webstore';
+  const [posItems, setPosItems] = useState<any[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+
+  useEffect(() => {
+    if (order && source.startsWith('pos') && (!order.items || order.items.length === 0)) {
+      setLoadingItems(true);
+      fetch(`/api/admin/orders/pos-items?orderId=${order.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.items) {
+            setPosItems(data.items.map((i: any) => ({
+              id: i.product_id,
+              name: i.product_name,
+              quantity: i.quantity,
+              price: i.price_usd
+            })));
+          }
+        })
+        .catch(err => console.error("Failed to load POS items:", err))
+        .finally(() => setLoadingItems(false));
+    } else {
+      setPosItems([]);
+    }
+  }, [order, source]);
+
+  const displayItems = source.startsWith('pos') ? (posItems.length > 0 ? posItems : order?.items) : order?.items;
 
   return (
     <AnimatePresence>
@@ -113,14 +140,15 @@ export function OrderSlideOver({ order, onClose }: OrderSlideOverProps) {
 
               {/* Items */}
               <div>
-                <p className="text-[#444] text-[11px] font-bold uppercase tracking-widest mb-3">
-                  Items ({order.items?.length ?? 0})
+                <p className="text-[#444] text-[11px] font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                  Items ({displayItems?.length ?? 0})
+                  {loadingItems && <Loader2 size={12} className="animate-spin text-[#888]" />}
                 </p>
-                {order.items?.length === 0 ? (
-                  <p className="text-[#555] text-sm italic">Items fetched directly from POS receipt only.</p>
+                {(!displayItems || displayItems.length === 0) && !loadingItems ? (
+                  <p className="text-[#555] text-sm italic">No items found for this order.</p>
                 ) : (
                   <div className="space-y-2">
-                    {order.items?.map((item: any, i: number) => (
+                    {displayItems?.map((item: any, i: number) => (
                       <div key={i} className="flex items-center gap-3 p-3 bg-[#111] border border-[#1a1a1a] rounded-[6px]">
                         {item.image ? (
                           <img src={item.image} alt={item.name} className="w-11 h-11 object-cover rounded-[4px] flex-shrink-0 bg-[#1a1a1a]" />

@@ -7,6 +7,7 @@ import { AlertTriangle, Box } from 'lucide-react';
 import type { InventoryItem } from '@/types';
 import { createClient } from '@/lib/supabase/client';
 import { getStockoutUrgency, formatUSD } from '@/lib/admin/utils';
+import { updateStock } from '@/app/admin/(hub)/inventory/actions';
 import { EmptyState } from '../ui/EmptyState';
 import toast from 'react-hot-toast';
 
@@ -50,13 +51,14 @@ export function InventoryTable({ inventory }: InventoryTableProps) {
   const saveStock = async (productId: string) => {
     const qty = parseInt(editValue);
     if (isNaN(qty) || qty < 0) { toast.error('Invalid quantity'); return; }
-    const supabase = createClient();
-    const { error } = await supabase
-      .from('products')
-      .update({ stock_quantity: qty, updated_at: new Date().toISOString() })
-      .eq('id', productId);
-    if (error) toast.error('Failed to update');
-    else { toast.success('Stock updated'); setEditingId(null); }
+    
+    try {
+      await updateStock(productId, qty);
+      toast.success('Stock updated');
+      setEditingId(null);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update');
+    }
   };
 
   if (inventory.length === 0) {

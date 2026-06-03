@@ -54,27 +54,19 @@ export function OrdersTable({ filters, userRole }: { filters: OrderFiltersValue;
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
     
     try {
-      const [webRes, posRes, settingsRes] = await Promise.all([
-        supabase.from('pending_orders').select('*').order('created_at', { ascending: false }).limit(150),
-        supabase.from('pos_orders').select(`
-          id, order_number, source, status, total, created_at,
-          payment_method, currency, amount_paid, exchange_rate, auto_discount_applied, auto_discount_amount,
-          employee:employees!pos_orders_employee_id_fkey(full_name),
-          salesman:employees!pos_orders_salesman_id_fkey(full_name)
-        `).order('created_at', { ascending: false }).limit(150),
-        supabase.from('settings').select('key, value').eq('key', 'zig_rate').single()
-      ]);
-
-      if (settingsRes.data) setZigRate(Number(settingsRes.data.value));
+      const res = await fetch('/api/admin/orders');
+      if (!res.ok) throw new Error('Failed to fetch orders');
+      
+      const { webOrders, posOrders, zigRate: rate } = await res.json();
+      setZigRate(rate);
 
       let unified: UnifiedOrder[] = [];
 
       // Process Webstore Orders
-      if (webRes.data) {
-        unified.push(...webRes.data.map(w => ({
+      if (webOrders) {
+        unified.push(...webOrders.map((w: any) => ({
           id: w.id,
           order_ref: w.order_ref,
           source: 'webstore' as UnifiedOrderSource,
@@ -87,9 +79,8 @@ export function OrdersTable({ filters, userRole }: { filters: OrderFiltersValue;
       }
 
       // Process POS Orders
-      if (posRes.data) {
-        // POS orders don't store items directly in the order row, we fetch them on demand or leave empty count
-        unified.push(...posRes.data.map((p: any) => ({
+      if (posOrders) {
+        unified.push(...posOrders.map((p: any) => ({
           id: p.id,
           order_ref: p.order_number,
           source: p.source === 'salesman' ? 'pos_salesman' as UnifiedOrderSource : 'pos_walk_in' as UnifiedOrderSource,
@@ -112,6 +103,7 @@ export function OrdersTable({ filters, userRole }: { filters: OrderFiltersValue;
 
       // Sort combined by date
       unified.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
       
       setOrders(unified);
     } catch (error) {

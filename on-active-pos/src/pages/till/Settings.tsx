@@ -8,9 +8,8 @@ import { Button } from '../../components/shared/Button';
 import { Badge } from '../../components/shared/Badge';
 import { 
   Printer, 
-  Globe, 
-  RefreshCw, 
   Database, 
+  RefreshCw, 
   Smartphone, 
   Store as StoreIcon,
   Shield,

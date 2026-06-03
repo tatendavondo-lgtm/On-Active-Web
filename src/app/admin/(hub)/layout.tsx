@@ -18,6 +18,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/staff': 'Staff',
   '/admin/ai': 'AI Assistant',
   '/admin/settings': 'Settings',
+  '/admin/logs': 'Audit Logs',
+  '/admin/manager': 'Manager Dashboard',
 };
 
 function HubShell({
@@ -74,7 +76,7 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
           router.push('/admin/login');
           return;
         }
-        const profileData = await res.ok ? await res.json() : null;
+        const profileData = await res.json();
         if (profileData) {
           setProfileState(profileData as Profile);
         } else {

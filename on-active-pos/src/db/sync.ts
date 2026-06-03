@@ -8,9 +8,9 @@ const CLIENT_ONLY_FIELDS = ['synced', 'synced_at', 'device_id', 'created_offline
 // Per-table field whitelist based on actual database columns
 const TABLE_COLUMNS: Record<string, string[]> = {
   salesman_orders: ['id', 'store_id', 'salesman_id', 'salesman_name', 'customer_name', 'items', 'subtotal', 'item_count', 'notes', 'status', 'created_at'],
-  shifts: ['id', 'store_id', 'employee_id', 'opened_at', 'closed_at', 'opening_cash', 'closing_cash', 'expected_cash', 'cash_difference', 'status', 'notes'],
-  pos_orders: ['id', 'order_number', 'store_id', 'employee_id', 'salesman_id', 'salesman_order_id', 'shift_id', 'source', 'fulfillment', 'status', 'subtotal', 'total_discount', 'total', 'currency', 'exchange_rate_zig', 'exchange_rate_zar', 'created_at', 'completed_at'],
-  pos_order_items: ['id', 'order_id', 'product_id', 'variant_id', 'product_name', 'variant_name', 'quantity', 'unit_price', 'line_total'],
+  shifts: ['id', 'store_id', 'employee_id', 'opened_at', 'closed_at', 'opening_cash', 'closing_cash', 'expected_cash', 'cash_difference', 'actual_cash', 'device_id', 'status', 'notes'],
+  pos_orders: ['id', 'order_number', 'store_id', 'employee_id', 'salesman_id', 'salesman_order_id', 'shift_id', 'customer_id', 'source', 'fulfillment', 'status', 'subtotal', 'total_discount', 'tax_amount', 'total', 'currency', 'exchange_rate_zig', 'exchange_rate_zar', 'device_id', 'created_at', 'completed_at'],
+  pos_order_items: ['id', 'order_id', 'product_id', 'variant_id', 'product_name', 'variant_name', 'sku', 'quantity', 'unit_price', 'discount_amount', 'line_total'],
   pos_payments: ['id', 'order_id', 'method', 'amount_usd', 'amount_local', 'local_currency', 'exchange_rate_used', 'reference', 'status', 'created_at'],
   customers: ['id', 'full_name', 'phone', 'email', 'address', 'notes', 'source', 'created_at'],
   online_order_bridge: ['id', 'webstore_order_id', 'pos_order_id', 'store_id', 'fulfillment', 'status', 'assigned_at', 'accepted_at', 'ready_at', 'completed_at', 'customer_name', 'customer_phone', 'customer_email', 'items', 'total', 'order_ref'],
@@ -56,54 +56,29 @@ export async function processSyncQueue(): Promise<{ synced: number; failed: numb
         const storeId = item.data.store_id;
         const decrement = item.data.decrement;
 
-        // 1. Update Global Products Table (Total Stock)
-        const { data: currentProd } = await supabase
-          .from('products')
-          .select('stock_quantity')
-          .eq('id', productId)
-          .single();
+        // 1. Update Global Products Table (Total Stock) via RPC to avoid race conditions
+        const { error: globalErr } = await supabase.rpc('decrement_global_inventory', {
+          p_product_id: productId,
+          p_quantity: decrement
+        });
 
-        if (currentProd) {
-          const newProdQty = Math.max(0, (currentProd.stock_quantity ?? 0) - decrement);
-          await supabase
-            .from('products')
-            .update({ stock_quantity: newProdQty, updated_at: new Date().toISOString() })
-            .eq('id', productId);
+        if (globalErr) {
+          console.error("Global inventory decrement failed:", globalErr);
+          throw globalErr;
         }
 
-        // 2. Update Branch Store Inventory safely without RPC
+        // 2. Update Branch Store Inventory safely via RPC to avoid race conditions
         if (storeId) {
-          if (variantId) {
-            const { data: currentInv } = await supabase
-              .from('store_inventory')
-              .select('quantity, id')
-              .eq('store_id', storeId)
-              .eq('variant_id', variantId)
-              .maybeSingle();
+          const { error: storeErr } = await supabase.rpc('decrement_inventory', {
+            p_store_id: storeId,
+            p_product_id: productId,
+            p_variant_id: variantId || null,
+            p_quantity: decrement
+          });
 
-            if (currentInv) {
-              const newInvQty = Math.max(0, (currentInv.quantity ?? 0) - decrement);
-              await supabase
-                .from('store_inventory')
-                .update({ quantity: newInvQty, last_updated: new Date().toISOString() })
-                .eq('id', currentInv.id);
-            }
-          } else {
-            const { data: currentInv } = await supabase
-              .from('store_inventory')
-              .select('quantity, id')
-              .eq('store_id', storeId)
-              .eq('product_id', productId)
-              .is('variant_id', null)
-              .maybeSingle();
-
-            if (currentInv) {
-              const newInvQty = Math.max(0, (currentInv.quantity ?? 0) - decrement);
-              await supabase
-                .from('store_inventory')
-                .update({ quantity: newInvQty, last_updated: new Date().toISOString() })
-                .eq('id', currentInv.id);
-            }
+          if (storeErr) {
+            console.error("Store inventory decrement failed:", storeErr);
+            throw storeErr;
           }
         }
       } else if (item.operation === 'insert') {

@@ -96,13 +96,13 @@ export function CombinedMetricsPanel({ metrics }: CombinedMetricsPanelProps) {
         <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-[#1f1f1f]">
           <div className="p-6">
             <p className="text-[#666] text-[10px] font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
-              <Globe size={12} /> Total
+              <Globe size={12} /> {filter === 'all' ? 'Total' : filter === 'web' ? 'Web Total' : 'POS Total'}
             </p>
             <AnimatedNumber 
-              value={formatUSD(localMetrics.totalRevenue)} 
+              value={formatUSD(filter === 'all' ? localMetrics.totalRevenue : filter === 'web' ? localMetrics.webstore.revenue : localMetrics.pos.revenue)} 
               className="text-3xl font-black tracking-tight font-mono mb-1" 
             />
-            <p className="text-[#444] text-[10px] uppercase tracking-wider">Combined</p>
+            <p className="text-[#444] text-[10px] uppercase tracking-wider">{filter === 'all' ? 'Combined' : 'Filtered'}</p>
           </div>
           <div className="p-6">
             <p className="text-[#666] text-[10px] font-bold uppercase tracking-widest mb-2 flex items-center gap-2">

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -45,7 +45,11 @@ export function NotificationSystem() {
           );
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          console.error('Realtime subscription error:', err);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);

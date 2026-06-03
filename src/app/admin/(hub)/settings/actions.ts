@@ -142,3 +142,30 @@ export async function toggleStoreStatus(id: string, isActive: boolean) {
   revalidatePath('/admin/settings');
   return store;
 }
+
+export async function updateStoreSettings(settings: Record<string, string>) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  const adminSupabase = createAdminClient();
+  const { data: profile } = await adminSupabase.from('profiles').select('role').eq('id', user.id).single();
+  if (profile?.role !== 'owner' && profile?.role !== 'admin') {
+    throw new Error('Forbidden — Admin or Owner only');
+  }
+
+  const updates = Object.entries(settings).map(([key, value]) => ({
+    key,
+    value,
+    updated_at: new Date().toISOString(),
+  }));
+
+  const { error } = await adminSupabase
+    .from('settings')
+    .upsert(updates, { onConflict: 'key' });
+
+  if (error) throw new Error(error.message);
+
+  await logAction('update', 'settings', 'global', { keys: Object.keys(settings) });
+  revalidatePath('/admin/settings');
+}

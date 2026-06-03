@@ -1,14 +1,20 @@
-﻿import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { ProductsManager } from '@/components/admin/products/ProductsManager';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ProductsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = user
-    ? await supabase.from('profiles').select('role').eq('id', user.id).single()
-    : { data: null };
+  
+  if (!user) {
+    redirect('/admin/login');
+  }
+
+  const adminSupabase = createAdminClient();
+  const { data: profile } = await adminSupabase.from('profiles').select('role').eq('id', user.id).single();
 
   return (
     <div className="space-y-5">

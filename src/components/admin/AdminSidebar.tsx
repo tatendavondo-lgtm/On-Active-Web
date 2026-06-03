@@ -206,7 +206,7 @@ export function AdminSidebar() {
               }`}
             >
               <Icon size={19} />
-              <span className="text-[9px] font-semibold">{item.label.split(' ')[0]}</span>
+              <span className="text-[9px] font-semibold">{item.label.replace('My Store ', '').split(' ')[0]}</span>
             </Link>
           );
         })}

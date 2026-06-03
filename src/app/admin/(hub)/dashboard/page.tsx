@@ -57,7 +57,7 @@ export default async function DashboardPage() {
     adminSupabase.from('pos_orders').select('id').gte('created_at', yesterday).lt('created_at', startOfToday).eq('status', 'completed'),
     adminSupabase.from('pos_orders').select('id, created_at, total').gte('created_at', ago90).neq('status', 'cancelled'),
     // Salesman orders for revenue chart (all in 90d window)
-    adminSupabase.from('salesman_orders').select('created_at, subtotal').gte('created_at', ago90).neq('status', 'cancelled'),
+    adminSupabase.from('salesman_orders').select('created_at, subtotal, status').gte('created_at', ago90).neq('status', 'cancelled'),
   ]);
 
   const combinedMetrics = await getCombinedMetrics();
@@ -79,10 +79,12 @@ export default async function DashboardPage() {
     const day = order.created_at.slice(0, 10);
     revenueByDay[day] = (revenueByDay[day] ?? 0) + (order.total ?? 0);
   }
-  // Include salesman subtotals in the revenue chart
+  // Include salesman subtotals in the revenue chart (only pending/accepted)
   for (const order of allSalesmanOrders90d ?? []) {
-    const day = order.created_at.slice(0, 10);
-    revenueByDay[day] = (revenueByDay[day] ?? 0) + (order.subtotal ?? 0);
+    if (order.status !== 'completed') {
+      const day = order.created_at.slice(0, 10);
+      revenueByDay[day] = (revenueByDay[day] ?? 0) + (order.subtotal ?? 0);
+    }
   }
 
   const chartData: RevenueDataPoint[] = [];

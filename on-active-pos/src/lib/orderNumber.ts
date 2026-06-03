@@ -1,7 +1,7 @@
 import { db } from '../db/dexie';
 import { ORDER_PREFIX } from '../config/constants';
 
-export async function generateOrderNumber(storeCode: string): Promise<string> {
+export async function generateOrderNumber(_storeCode: string): Promise<string> {
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
   const shortDate = dateStr.slice(2); // "YYMMDD"

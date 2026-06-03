@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { Loader2, Save } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { updateStoreSettings } from '@/app/admin/(hub)/settings/actions';
 import toast from 'react-hot-toast';
 
 interface StoreSettingsProps {
@@ -20,18 +20,14 @@ export function StoreSettings({ initialSettings }: StoreSettingsProps) {
 
   const handleSave = async () => {
     setSaving(true);
-    const supabase = createClient();
-    const updates = Object.entries(settings).map(([key, value]) => ({
-      key,
-      value,
-      updated_at: new Date().toISOString(),
-    }));
-    const { error } = await supabase
-      .from('settings')
-      .upsert(updates, { onConflict: 'key' });
-    if (error) toast.error('Failed to save settings');
-    else toast.success('Settings saved');
-    setSaving(false);
+    try {
+      await updateStoreSettings(settings);
+      toast.success('Settings saved');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const fields = [

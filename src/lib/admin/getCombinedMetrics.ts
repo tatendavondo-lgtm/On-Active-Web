@@ -24,7 +24,7 @@ export async function getCombinedMetrics(storeIdFilter?: string) {
   // All currently open shifts — any open shift is an active shift regardless of when opened
   let openShiftsQuery = adminSupabase
     .from('shifts')
-    .select('id, employee_id, store_id, opened_at, employees!inner(role)')
+    .select('id, employee_id, store_id, opened_at, employees(role)')
     .eq('status', 'open');
 
   let lowStockQuery = adminSupabase
@@ -80,8 +80,8 @@ export async function getCombinedMetrics(storeIdFilter?: string) {
   // Count all salesman orders created today (both pending, accepted and completed)
   const posSalesman = salesmanOrders.data?.length || 0;
 
-  // Salesman revenue (include pending & accepted — real money in the pipeline)
-  const salesmanRevenue = salesmanOrders.data?.reduce((sum, o) => sum + (o.subtotal || 0), 0) || 0;
+  // Salesman revenue (include pending & accepted — real money in the pipeline, exclude completed because they are in posRevenue)
+  const salesmanRevenue = salesmanOrders.data?.filter(o => o.status !== 'completed' && o.status !== 'cancelled').reduce((sum, o) => sum + (o.subtotal || 0), 0) || 0;
 
   // Pending online orders from bridge
   const bridgeTotal = bridgeOrders.data?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;

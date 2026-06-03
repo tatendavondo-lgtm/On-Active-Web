@@ -4,7 +4,6 @@ import { Trash2, Send } from 'lucide-react';
 import { useCartStore } from '../../stores/cartStore';
 import { QuantityControl } from './QuantityControl';
 import { formatUSD } from '../../lib/currency';
-import { Button } from '../shared/Button';
 import { SendToTillModal } from './SendToTillModal';
 
 export function OrderBuilder() {

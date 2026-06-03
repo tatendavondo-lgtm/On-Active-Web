@@ -60,7 +60,6 @@ export async function addStaffMember(data: { fullName: string; role: string; pin
     .insert({
       full_name: data.fullName,
       role: data.role,
-      pin: data.pin,
       pin_hash: pinHash,
       store_id: data.storeId,
       email: data.email,
@@ -108,7 +107,6 @@ export async function updateStaffMember(id: string, data: { fullName: string; ro
   };
 
   if (data.pin) {
-    updates.pin = data.pin;
     updates.pin_hash = await hashPin(data.pin);
   }
 
@@ -176,9 +174,13 @@ export async function removeTeamMember(profileId: string) {
     throw new Error('Forbidden — owner only');
   }
 
-  // Use the admin service client to bypass RLS and delete the profile
-  const { error } = await adminSupabase.from('profiles').delete().eq('id', profileId);
+  // Use the admin service client to bypass RLS and soft-delete the profile
+  const { data: targetProfile } = await adminSupabase.from('profiles').select('full_name').eq('id', profileId).single();
+  
+  const { error } = await adminSupabase.from('profiles').update({ role: 'revoked' }).eq('id', profileId);
   if (error) throw new Error(error.message);
+
+  await logAction('remove', 'team_member', profileId, { name: targetProfile?.full_name || profileId });
 
   revalidatePath('/admin/staff');
   revalidatePath('/admin/settings');

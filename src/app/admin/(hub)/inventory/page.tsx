@@ -4,11 +4,18 @@ import { LowStockAlert } from '@/components/admin/inventory/LowStockAlert';
 import { InventoryTable } from '@/components/admin/inventory/InventoryTable';
 import type { InventoryItem } from '@/types';
 import { calculateStockoutDays, calculateSuggestedRestock } from '@/lib/admin/utils';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
 export default async function InventoryPage() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    redirect('/admin/login');
+  }
+
   const adminSupabase = createAdminClient();
 
   const ago30 = new Date(Date.now() - 30 * 86400000).toISOString();
