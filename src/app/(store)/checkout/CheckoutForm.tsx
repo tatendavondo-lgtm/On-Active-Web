@@ -9,8 +9,8 @@ import { toast } from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 
 // Harare fallback coordinates if stores table is empty or query fails
-const FALLBACK_STORE_LAT = -17.825167;
-const FALLBACK_STORE_LNG = 31.053139;
+const FALLBACK_STORE_LAT = -17.8142845;
+const FALLBACK_STORE_LNG = 31.0334224;
 
 // Haversine formula to compute great-circle distance between two points in km
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
