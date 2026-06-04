@@ -1,6 +1,9 @@
-﻿import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { UTApi } from 'uploadthing/server';
+
+const utapi = new UTApi();
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,30 +34,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `products/${fileName}`;
+    // Upload directly to UploadThing
+    const response = await utapi.uploadFiles(file);
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const { error: uploadError } = await adminSupabase.storage
-      .from('product-images')
-      .upload(filePath, buffer, {
-        contentType: file.type,
-        upsert: true
-      });
-
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      return NextResponse.json({ error: uploadError.message }, { status: 500 });
+    if (response.error) {
+      console.error('UploadThing error:', response.error);
+      return NextResponse.json({ error: response.error.message }, { status: 500 });
     }
 
-    const { data: { publicUrl } } = adminSupabase.storage
-      .from('product-images')
-      .getPublicUrl(filePath);
-
-    return NextResponse.json({ url: publicUrl });
+    return NextResponse.json({ url: response.data?.url });
   } catch (err: any) {
     console.error('Server error during upload:', err);
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });

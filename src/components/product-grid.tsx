@@ -6,9 +6,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 const CATEGORIES = ["ALL", "UPPER", "LOWER", "ACCESSORIES"];
+const GENDERS = ["ALL", "MEN", "WOMEN"];
 
 export function ProductGrid() {
   const [activeCategory, setActiveCategory] = useState("ALL");
+  const [activeGender, setActiveGender] = useState("ALL");
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,12 +26,14 @@ export function ProductGrid() {
 
         if (error) throw error;
 
-        const dbMapped = (data || []).map(p => ({
+          const dbMapped = (data || []).map(p => ({
           id: p.id,
           name: p.name,
           slug: p.slug,
           price: p.price_usd,
           category: p.category?.toLowerCase() || 'uncategorized',
+          gender: p.gender?.toLowerCase() || 'all',
+          is_trending: p.is_trending || false,
           image: p.images?.[0] || null
         }));
 
@@ -46,22 +50,33 @@ export function ProductGrid() {
     return () => clearInterval(interval);
   }, []);
 
-  const filteredProducts = products.filter(p => {
-    if (activeCategory === "ALL") return true;
-    
+  let filteredProducts = products.filter(p => {
+    let catMatch = false;
     const cat = p.category.toLowerCase();
     
-    if (activeCategory === "UPPER") {
-      return ['tops', 'top', 'outerwear', 'sports bras', 'bras'].includes(cat);
+    if (activeCategory === "ALL") catMatch = true;
+    else if (activeCategory === "UPPER") {
+      catMatch = ['tops', 'top', 'outerwear', 'sports bras', 'bras'].includes(cat);
     }
-    if (activeCategory === "LOWER") {
-      return ['bottoms', 'bottom', 'leggings', 'shorts'].includes(cat);
+    else if (activeCategory === "LOWER") {
+      catMatch = ['bottoms', 'bottom', 'leggings', 'shorts'].includes(cat);
     }
-    if (activeCategory === "ACCESSORIES") {
-      return ['accessories', 'accessory'].includes(cat);
+    else if (activeCategory === "ACCESSORIES") {
+      catMatch = ['accessories', 'accessory'].includes(cat);
     }
-    
-    return cat === activeCategory.toLowerCase();
+    else catMatch = cat === activeCategory.toLowerCase();
+
+    let genderMatch = false;
+    const gen = p.gender.toLowerCase();
+    if (activeGender === "ALL") genderMatch = true;
+    else genderMatch = (gen === activeGender.toLowerCase() || gen === "unisex" || gen === "all");
+
+    return catMatch && genderMatch;
+  });
+
+  filteredProducts.sort((a, b) => {
+    if (a.is_trending === b.is_trending) return 0;
+    return a.is_trending ? -1 : 1;
   });
 
   return (
@@ -74,19 +89,33 @@ export function ProductGrid() {
               PRODUCT <span className="text-white/20">ARCHIVE.</span>
             </h2>
           </div>
-          
-          <div className="flex flex-wrap gap-4 border-b border-white/10 pb-4">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`text-[10px] font-black uppercase tracking-widest transition-all ${
-                  activeCategory === cat ? "text-[#C5A021]" : "text-white/40 hover:text-white"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+          <div className="flex flex-col gap-4 items-end">
+            <div className="flex flex-wrap gap-4 border-b border-white/10 pb-4">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`text-[10px] font-black uppercase tracking-widest transition-all ${
+                    activeCategory === cat ? "text-[#C5A021]" : "text-white/40 hover:text-white"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-4 border-b border-white/10 pb-4">
+              {GENDERS.map((gen) => (
+                <button
+                  key={gen}
+                  onClick={() => setActiveGender(gen)}
+                  className={`text-[10px] font-black uppercase tracking-widest transition-all ${
+                    activeGender === gen ? "text-[#C5A021]" : "text-white/40 hover:text-white"
+                  }`}
+                >
+                  {gen}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -114,21 +143,26 @@ export function ProductGrid() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     whileHover={{ scale: 1.02 }}
-                    className="group relative flex flex-col bg-[#111] border border-white/5 rounded-2xl overflow-hidden transition-all duration-300"
+                    className={`group relative flex flex-col bg-[#111] border border-white/5 rounded-2xl overflow-hidden transition-all duration-300 ${product.is_trending ? 'md:col-span-2 md:row-span-2' : ''}`}
                   >
-                    <div className="relative aspect-[3/4] w-full bg-[#1A1A1A]">
+                    {product.is_trending && (
+                      <div className="absolute top-4 left-4 z-10 bg-[#C5A021] text-black text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-sm shadow-xl">
+                        Trending Now
+                      </div>
+                    )}
+                    <div className={`relative w-full bg-[#1A1A1A] ${product.is_trending ? 'aspect-square md:aspect-auto md:h-full' : 'aspect-[3/4]'}`}>
                       {product.image ? (
-                        <img src={product.image} alt={product.name} className="h-full w-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0 group-hover:scale-110" />
+                        <img src={product.image} alt={product.name} className="absolute inset-0 h-full w-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0 group-hover:scale-110" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center opacity-10">
                           <span className="text-4xl font-black italic tracking-tighter">ON ACTIVE.</span>
                         </div>
                       )}
                     </div>
-                    <div className="p-6 space-y-2">
+                    <div className={`p-6 space-y-2 ${product.is_trending ? 'absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent pt-20' : ''}`}>
                       <div className="flex justify-between items-start">
-                        <h3 className="text-xl font-black uppercase tracking-tight text-white leading-tight">{product.name}</h3>
-                        <p className="text-xl font-black italic text-[#C5A021]">${product.price}</p>
+                        <h3 className={`font-black uppercase tracking-tight text-white leading-tight ${product.is_trending ? 'text-3xl' : 'text-xl'}`}>{product.name}</h3>
+                        <p className={`font-black italic text-[#C5A021] ${product.is_trending ? 'text-3xl' : 'text-xl'}`}>${product.price}</p>
                       </div>
                     </div>
                   </motion.div>

@@ -197,6 +197,11 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error('Delete error:', err);
+    if (err.message?.includes('violates foreign key constraint')) {
+      return NextResponse.json({ 
+        error: 'This product cannot be permanently deleted because it is linked to past sales or inventory records. Please mark it as "Inactive" instead to hide it from your stores.' 
+      }, { status: 400 });
+    }
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

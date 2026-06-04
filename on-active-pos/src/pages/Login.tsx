@@ -8,6 +8,7 @@ import { isSalesmanRole, type Employee } from '../types/employee';
 import { pullUpdates } from '../db/sync';
 import { logPosAction } from '../lib/audit';
 import { playNotificationSound } from '../lib/notification';
+import { Lock } from 'lucide-react';
 
 // Employee data is now fetched from Supabase via PIN verification
 
@@ -15,11 +16,24 @@ export default function Login() {
   const [error, setError] = useState('');
   const [stores, setStores] = useState<any[]>([]);
   const [selectedStore, setSelectedStore] = useState<any>(null);
+  const [session, setSession] = useState<any>(null);
+  const [terminalEmail, setTerminalEmail] = useState('');
+  const [terminalPassword, setTerminalPassword] = useState('');
+  const [setupLoading, setSetupLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useSessionStore();
   const { checkGeofence, checking } = useGeofence();
 
   useEffect(() => {
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
     async function loadStores() {
       const { data } = await supabase.from('stores').select('*').eq('is_active', true);
       if (data) {
@@ -28,7 +42,23 @@ export default function Login() {
       }
     }
     loadStores();
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  const handleTerminalSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSetupLoading(true);
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: terminalEmail,
+      password: terminalPassword,
+    });
+    if (authError) {
+      setError(authError.message);
+    }
+    setSetupLoading(false);
+  };
 
   const handleLogin = async (pin: string) => {
     setError('');
@@ -149,6 +179,53 @@ export default function Login() {
       navigate('/till');
     }
   };
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-[var(--pos-bg)] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-[var(--pos-accent)] opacity-[0.03] blur-3xl pointer-events-none" />
+        <div className="max-w-md w-full space-y-8 text-center z-10">
+          <div className="flex flex-col items-center">
+            <div className="h-16 w-16 bg-[#111] rounded-full border border-white/10 flex items-center justify-center mb-4">
+              <Lock className="text-[var(--pos-accent)]" size={24} />
+            </div>
+            <h1 className="text-2xl font-[900] uppercase tracking-tighter text-white">Terminal Setup</h1>
+            <p className="text-[var(--pos-text-secondary)] text-[10px] font-black uppercase tracking-[0.2em] mt-2">Secure this POS Terminal to Supabase</p>
+          </div>
+          <form onSubmit={handleTerminalSetup} className="bg-[#111111] p-8 rounded-[var(--pos-radius-lg)] border border-[var(--pos-border)] shadow-[0_0_50px_rgba(0,0,0,0.5)] space-y-4">
+            <div>
+              <input 
+                type="email" 
+                placeholder="Admin Email" 
+                value={terminalEmail}
+                onChange={(e) => setTerminalEmail(e.target.value)}
+                className="w-full bg-black border border-white/5 rounded-lg p-4 text-white placeholder-white/30 text-sm focus:outline-none focus:border-[var(--pos-accent)] transition-colors"
+                required
+              />
+            </div>
+            <div>
+              <input 
+                type="password" 
+                placeholder="Password" 
+                value={terminalPassword}
+                onChange={(e) => setTerminalPassword(e.target.value)}
+                className="w-full bg-black border border-white/5 rounded-lg p-4 text-white placeholder-white/30 text-sm focus:outline-none focus:border-[var(--pos-accent)] transition-colors"
+                required
+              />
+            </div>
+            <button 
+              type="submit" 
+              disabled={setupLoading}
+              className="w-full bg-[var(--pos-accent)] text-black font-black uppercase tracking-widest py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {setupLoading ? 'Authenticating...' : 'Connect Terminal'}
+            </button>
+            {error && <p className="mt-4 text-[var(--pos-error)] text-xs font-black uppercase tracking-widest">{error}</p>}
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--pos-bg)] flex flex-col items-center justify-center p-4 relative overflow-hidden">

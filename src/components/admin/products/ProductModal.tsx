@@ -34,9 +34,9 @@ interface HierarchicalSize {
 
 export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModalProps) {
   const [form, setForm] = useState({
-    name: '', slug: '', description: '', category: '',
+    name: '', slug: '', description: '', category: '', gender: 'All',
     price_usd: '', sizes: [] as string[], stock_quantity: '',
-    images: [] as string[], is_active: true, is_featured: false,
+    images: [] as string[], is_active: true, is_featured: false, is_trending: false,
   });
   const [hierarchicalSizes, setHierarchicalSizes] = useState<HierarchicalSize[]>([]);
   
@@ -51,12 +51,14 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
         slug: product.slug,
         description: product.description ?? '',
         category: product.category ?? '',
+        gender: product.gender ?? 'All',
         price_usd: String(product.price_usd),
         sizes: product.sizes ?? [],
         stock_quantity: String(product.stock_quantity),
         images: product.images ?? [],
         is_active: product.is_active,
         is_featured: product.is_featured ?? false,
+        is_trending: product.is_trending ?? false,
       });
       
       const fetchVariants = async () => {
@@ -93,7 +95,7 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
       fetchVariants();
       setFiles([]);
     } else if (!product && isOpen) {
-      setForm({ name: '', slug: '', description: '', category: '', price_usd: '', sizes: [], stock_quantity: '', images: [], is_active: true, is_featured: false });
+      setForm({ name: '', slug: '', description: '', category: '', gender: 'All', price_usd: '', sizes: [], stock_quantity: '', images: [], is_active: true, is_featured: false, is_trending: false });
       setHierarchicalSizes([]);
       setFiles([]);
       setActiveSizeTab(null);
@@ -161,12 +163,14 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
       slug: form.slug || generateSlug(form.name),
       description: form.description || null,
       category: form.category || null,
+      gender: form.gender,
       price_usd: parseFloat(form.price_usd),
       sizes: Array.from(new Set(derivedVariants.map(v => v.size))),
       stock_quantity: totalStock,
       images: [...form.images, ...uploadedUrls],
       is_active: form.is_active,
       is_featured: form.is_featured,
+      is_trending: form.is_trending,
       variants: derivedVariants,
       updated_at: new Date().toISOString(),
     };
@@ -252,6 +256,18 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                     </select>
                   </div>
                   <div>
+                    <label className="label-admin">Gender</label>
+                    <select
+                      value={form.gender}
+                      onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}
+                      className="input-admin"
+                    >
+                      <option value="All">All</option>
+                      <option value="Men">Men</option>
+                      <option value="Women">Women</option>
+                    </select>
+                  </div>
+                  <div>
                     <label className="label-admin">Base Price (USD) *</label>
                     <input
                       type="number"
@@ -296,6 +312,16 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                         <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-black rounded-full transition-transform ${form.is_featured ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                       <span className="text-white text-[10px] font-bold uppercase tracking-widest">{form.is_featured ? 'Featured' : 'Standard'}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, is_trending: !f.is_trending }))}
+                        className={`relative w-10 h-5 rounded-full transition-colors ${form.is_trending ? 'bg-[#C5A021]' : 'bg-[#2a2a2a]'}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-black rounded-full transition-transform ${form.is_trending ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                      <span className="text-white text-[10px] font-bold uppercase tracking-widest">{form.is_trending ? 'Trending' : 'Standard'}</span>
                     </div>
                   </div>
 
@@ -434,9 +460,31 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                       onChange={(e) => e.target.files && setFiles(Array.from(e.target.files))}
                       className="input-admin cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-[#C5A021] file:text-black hover:file:bg-[#A6861C]"
                     />
-                    <div className="flex gap-2 mt-3 flex-wrap">
-                      {files.map((f, i) => <img key={i} src={URL.createObjectURL(f)} className="h-24 w-24 object-cover rounded-[8px] border border-[#1f1f1f]" />)}
-                      {!files.length && form.images.map((img, i) => <img key={i} src={img} className="h-24 w-24 object-cover rounded-[8px] border border-[#1f1f1f]" />)}
+                    <div className="flex gap-2 mt-3 flex-wrap pt-2">
+                      {form.images.map((img, i) => (
+                        <div key={`existing-${i}`} className="relative group">
+                          <img src={img} className="h-24 w-24 object-cover rounded-[8px] border border-[#1f1f1f]" />
+                          <button
+                            type="button"
+                            onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }))}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                      {files.map((f, i) => (
+                        <div key={`new-${i}`} className="relative group">
+                          <img src={URL.createObjectURL(f)} className="h-24 w-24 object-cover rounded-[8px] border border-[#1f1f1f]" />
+                          <button
+                            type="button"
+                            onClick={() => setFiles(fs => fs.filter((_, idx) => idx !== i))}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

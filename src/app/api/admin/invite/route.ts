@@ -27,7 +27,8 @@ export async function POST(request: NextRequest) {
   const { email, fullName, role } = await request.json();
   if (!email) return Response.json({ error: 'Email required' }, { status: 400 });
 
-  const tempPassword = 'OnActive123!';
+  // Generate a random secure 16-character password with a special character
+  const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + "!";
 
   // Direct user creation to bypass SMTP email limits and redirect URL mismatches in local dev
   const { data: createdUser, error } = await adminClient.auth.admin.createUser({

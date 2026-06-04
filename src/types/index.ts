@@ -36,12 +36,14 @@ export interface Product {
   slug: string;
   description: string | null;
   category: string;
+  gender?: string;
   price_usd: number;
   sizes: string[];
   stock_quantity: number;
   images: string[];
   is_active: boolean;
   is_featured: boolean;
+  is_trending?: boolean;
   created_at: string;
   updated_at?: string;
   // Computed / UI-only fields

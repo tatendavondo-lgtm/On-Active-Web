@@ -21,11 +21,12 @@ export async function getCombinedMetrics(storeIdFilter?: string) {
     .select('id, total, status, fulfillment')
     .not('status', 'in', '("completed","cancelled")');
 
-  // All currently open shifts — any open shift is an active shift regardless of when opened
+  // Only count shifts opened today to prevent stale/abandoned shifts from accumulating indefinitely
   let openShiftsQuery = adminSupabase
     .from('shifts')
     .select('id, employee_id, store_id, opened_at, employees(role)')
-    .eq('status', 'open');
+    .eq('status', 'open')
+    .gte('opened_at', todayISO);
 
   let lowStockQuery = adminSupabase
     .from('store_inventory')

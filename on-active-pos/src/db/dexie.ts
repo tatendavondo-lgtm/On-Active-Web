@@ -104,22 +104,28 @@ export interface LocalExchangeRate {
   fetched_at: string;
 }
 
+export interface SyncErrorItem extends SyncQueueItem {
+  failed_at: string;
+}
+
 class PosDatabase extends Dexie {
   products!: Table<LocalProduct>;
   salesmanOrders!: Table<LocalSalesmanOrder>;
   orders!: Table<LocalOrder>;
   syncQueue!: Table<SyncQueueItem>;
+  syncErrors!: Table<SyncErrorItem>;
   exchangeRates!: Table<LocalExchangeRate>;
   customers!: Table<PosCustomer>;
   shifts!: Table<PosShift>;
 
   constructor() {
     super('OnActivePOS');
-    this.version(6).stores({
+    this.version(7).stores({
       products: 'id, category, sku, updated_at',
       salesmanOrders: 'id, store_id, salesman_id, status, created_at',
       orders: 'id, order_number, source, fulfillment, status, synced, created_at, shift_id, store_id',
       syncQueue: '++id, table, operation, created_at',
+      syncErrors: '++id, table, operation, created_at, failed_at',
       exchangeRates: 'id, target_currency',
       customers: 'id, full_name, phone, email',
       shifts: 'id, store_id, employee_id, status'

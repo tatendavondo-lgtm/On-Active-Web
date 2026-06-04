@@ -44,8 +44,9 @@ export async function processSyncQueue(): Promise<{ synced: number; failed: numb
 
   for (const item of items) {
     if ((item.attempts ?? 0) >= 5) {
-      console.warn(`Skipping permanently failed sync item:`, item.table, item.last_error);
-      await db.syncQueue.delete(item.id!); // Actually delete it so it stops looping
+      console.warn(`Moving permanently failed sync item to syncErrors:`, item.table, item.last_error);
+      await db.syncErrors.add({ ...item, failed_at: new Date().toISOString() });
+      await db.syncQueue.delete(item.id!);
       continue;
     }
 
