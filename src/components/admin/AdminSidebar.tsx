@@ -28,7 +28,8 @@ const OWNER_ITEMS = [
   { href: '/admin/staff', icon: Users, label: 'Staff' },
   { href: '/admin/logs', icon: FileText, label: 'Audit Logs' },
   { href: '/admin/ai', icon: Sparkles, label: 'AI Assistant' },
-  { href: '/admin/settings', icon: Settings, label: 'Settings' },
+  { href: '/admin/settings/profile', icon: Settings, label: 'My Profile' },
+  { href: '/admin/settings', icon: Settings, label: 'Store Settings' },
 ];
 
 const MANAGER_ITEMS = [
@@ -37,6 +38,7 @@ const MANAGER_ITEMS = [
   { href: '/admin/inventory', icon: Box, label: 'My Store Inventory' },
   { href: '/admin/staff', icon: Users, label: 'My Store Staff' },
   { href: '/admin/ai', icon: Sparkles, label: 'AI Assistant' },
+  { href: '/admin/settings/profile', icon: Settings, label: 'My Profile' },
 ];
 
 export function AdminSidebar() {
