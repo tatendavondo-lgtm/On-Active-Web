@@ -7,12 +7,14 @@ import { useSessionStore } from '../../stores/sessionStore';
 import { db } from '../../db/dexie';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
+import { generateUUID } from '../../lib/uuid';
+
 export function TillShell({ children }: { children: ReactNode }) {
   const { shiftId, setShiftId, employee, store, deviceId } = useSessionStore() as any;
   useKeyboardShortcuts();
 
   const handleOpenShift = async (openingCash: number) => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     const now = new Date().toISOString();
     const shiftData = {
       id,

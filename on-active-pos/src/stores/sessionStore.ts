@@ -4,6 +4,8 @@ import type { Employee } from '../types/employee';
 import type { Store } from '../types/store';
 import { DEVICE_ID_KEY } from '../config/constants';
 
+import { generateUUID } from '../lib/uuid';
+
 interface SessionState {
   employee: Employee | null;
   store: Store | null;
@@ -18,7 +20,7 @@ interface SessionState {
 function getDeviceId(): string {
   let id = localStorage.getItem(DEVICE_ID_KEY);
   if (!id) {
-    id = crypto.randomUUID();
+    id = generateUUID();
     localStorage.setItem(DEVICE_ID_KEY, id);
   }
   return id;

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
-const CATEGORIES = ["ALL", "UPPER", "LOWER", "ACCESSORIES"];
+const CATEGORIES = ["ALL", "UPPER", "LOWER", "SETS", "ACCESSORIES"];
 const GENDERS = ["ALL", "MEN", "WOMEN"];
 
 export function ProductGrid() {
@@ -60,6 +60,9 @@ export function ProductGrid() {
     }
     else if (activeCategory === "LOWER") {
       catMatch = ['bottoms', 'bottom', 'leggings', 'shorts'].includes(cat);
+    }
+    else if (activeCategory === "SETS") {
+      catMatch = ['sets', 'set', 'tracksuits', 'tracksuit'].includes(cat);
     }
     else if (activeCategory === "ACCESSORIES") {
       catMatch = ['accessories', 'accessory'].includes(cat);

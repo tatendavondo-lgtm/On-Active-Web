@@ -35,7 +35,7 @@ export function SearchBar({ value, onChange, onSubmit }: SearchBarProps) {
           }
         }}
         placeholder="SEARCH PRODUCTS, SKU..."
-        className="block w-full pl-12 pr-10 h-12 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-xs font-black uppercase tracking-widest text-white placeholder-white/30 focus:outline-none focus:border-[var(--pos-accent)] focus:ring-1 focus:ring-[var(--pos-accent)] transition-all shadow-lg"
+        className="block w-full pl-12 pr-10 h-12 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-black uppercase tracking-widest text-white placeholder-white/30 focus:outline-none focus:border-[var(--pos-accent)] focus:ring-1 focus:ring-[var(--pos-accent)] transition-all shadow-lg"
       />
       {localValue && (
         <button 

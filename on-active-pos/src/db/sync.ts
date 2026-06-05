@@ -2,6 +2,8 @@ import { db } from './dexie';
 import { supabase } from '../config/supabase';
 import type { Order } from '../types/order';
 
+import { generateUUID } from '../lib/uuid';
+
 // Fields that exist locally but NOT in the remote Supabase tables
 const CLIENT_ONLY_FIELDS = ['synced', 'synced_at', 'device_id', 'created_offline'];
 
@@ -296,7 +298,7 @@ export async function pullUpdates(storeId: string): Promise<void> {
           }
 
           return {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             product_id: item.productId || item.product_id || '',
             variant_id: item.variantId || item.variant_id || null,
             product_name: item.name || item.product_name || 'Unknown',
@@ -323,7 +325,7 @@ export async function pullUpdates(storeId: string): Promise<void> {
             salesman_id: undefined,
             salesman_order_id: undefined,
             items,
-            payments: [{ id: crypto.randomUUID(), method: 'online_payment', amount_usd: total, status: 'completed', order_id: bo.id } as any],
+            payments: [{ id: generateUUID(), method: 'online_payment', amount_usd: total, status: 'completed', order_id: bo.id } as any],
             subtotal: total,
             auto_discount_applied: false,
             auto_discount_amount: 0,

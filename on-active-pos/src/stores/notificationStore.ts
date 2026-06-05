@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
 
+import { generateUUID } from '../lib/uuid';
+
 export interface Notification {
   id: string;
   type: 'info' | 'success' | 'warning' | 'error' | 'incoming_order' | 'online_order';
@@ -30,7 +32,7 @@ export const useNotificationStore = create<NotificationState>()(
       unreadCount: 0,
       addNotification: (n) =>
         set((state) => {
-          const id = crypto.randomUUID();
+          const id = generateUUID();
           const timestamp = new Date().toISOString();
           state.notifications.unshift({ ...n, id, timestamp, read: false });
           state.unreadCount += 1;

@@ -4,6 +4,8 @@ import { formatUSD, formatZIG, formatZAR } from '../../lib/currency';
 import { useExchangeRates } from '../../hooks/useExchangeRates';
 import type { Payment } from '../../types/order';
 
+import { generateUUID } from '../../lib/uuid';
+
 interface SplitPaymentProps {
   payments: Payment[];
   onAddPayment: (payment: Payment) => void;
@@ -32,7 +34,7 @@ export function SplitPayment({ payments, onAddPayment, onRemovePayment, remainin
     const finalAmountUsd = Math.min(amountUsd, remainingUsd);
     
     onAddPayment({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       method,
       amount_usd: finalAmountUsd,
       status: 'completed',

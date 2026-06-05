@@ -95,7 +95,7 @@ export default function Settings() {
             <h1 className="text-4xl font-black uppercase tracking-tight text-white">POS Configuration</h1>
             <p className="text-zinc-400 text-sm">Configure hardware, offline databases, local merchants, and currency parameters</p>
           </div>
-          <div className="flex items-center gap-2 bg-zinc-900/40 border border-zinc-800/60 px-4 py-2.5 rounded-2xl backdrop-blur-md self-start md:self-auto">
+          <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800/60 px-4 py-2.5 rounded-2xl self-start md:self-auto">
             <Cpu className="w-4 h-4 text-zinc-500" />
             <span className="text-xs text-zinc-400 font-medium">Terminal ID:</span>
             <span className="text-xs font-mono font-black text-emerald-400">{deviceId.substring(0, 8).toUpperCase()}</span>
@@ -106,7 +106,7 @@ export default function Settings() {
         <div className="flex flex-col md:flex-row gap-10 items-start">
           
           {/* Navigation Panel */}
-          <nav className="flex flex-row md:flex-col gap-2 w-full md:w-64 bg-zinc-900/20 border border-zinc-800/40 p-2 rounded-2xl overflow-x-auto md:overflow-x-visible backdrop-blur-md">
+          <nav className="flex flex-row md:flex-col gap-2 w-full md:w-64 bg-zinc-900 border border-zinc-800 p-2 rounded-2xl overflow-x-auto md:overflow-x-visible">
             <button 
               onClick={() => setActiveTab('store')}
               className={`flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 w-full whitespace-nowrap ${
@@ -154,7 +154,7 @@ export default function Settings() {
           </nav>
 
           {/* Active Content Container - Giving plenty of breathing room */}
-          <div className="flex-1 w-full bg-zinc-950/40 border border-zinc-800/60 p-8 md:p-10 rounded-3xl shadow-xl min-h-[400px] backdrop-blur-md">
+          <div className="flex-1 w-full bg-zinc-950 border border-zinc-800 p-8 md:p-10 rounded-3xl shadow-xl min-h-[400px]">
             
             {/* STORE TAB */}
             {activeTab === 'store' && (

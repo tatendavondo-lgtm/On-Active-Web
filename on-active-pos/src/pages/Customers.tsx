@@ -15,6 +15,7 @@ import {
   ChevronRight,
   MoreVertical
 } from 'lucide-react';
+import { generateUUID } from '../lib/uuid';
 
 export default function Customers() {
   const { store } = useSessionStore();
@@ -158,7 +159,7 @@ function AddCustomerModal({ isOpen, onClose, storeId: _storeId }: { isOpen: bool
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     const now = new Date().toISOString();
     
     const customer: PosCustomer = {
@@ -182,7 +183,7 @@ function AddCustomerModal({ isOpen, onClose, storeId: _storeId }: { isOpen: bool
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90">
       <div className="bg-[var(--pos-surface)] w-full max-w-lg rounded-[var(--pos-radius-lg)] border border-[var(--pos-border)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="p-6 border-b border-[var(--pos-border)]">
           <h2 className="text-xl font-bold">Add New Customer</h2>

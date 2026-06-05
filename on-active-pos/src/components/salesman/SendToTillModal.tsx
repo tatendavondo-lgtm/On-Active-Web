@@ -6,6 +6,8 @@ import { useSessionStore } from '../../stores/sessionStore';
 import { db } from '../../db/dexie';
 import { formatUSD } from '../../lib/currency';
 
+import { generateUUID } from '../../lib/uuid';
+
 interface SendToTillModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -28,7 +30,7 @@ export function SendToTillModal({ isOpen, onClose, customerName, setCustomerName
     setSending(true);
     
     try {
-      const orderId = crypto.randomUUID();
+      const orderId = generateUUID();
       const now = new Date().toISOString();
 
       const orderData = {

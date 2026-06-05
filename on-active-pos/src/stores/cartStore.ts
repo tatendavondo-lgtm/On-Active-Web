@@ -4,6 +4,8 @@ import type { CartItem, HeldTransaction, AutoDiscount } from '../types/cart';
 import { MAX_HELD_TRANSACTIONS } from '../config/constants';
 import { calculateAutoDiscount } from '../lib/autoDiscount';
 
+import { generateUUID } from '../lib/uuid';
+
 /**
  * Inline recalculation — operates directly on the immer draft.
  * MUST be called inside a set() callback, NOT as a nested set().
@@ -86,7 +88,7 @@ export const useCartStore = create<CartState>()(
         } else {
           state.items.push({
             ...item,
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             discount_amount: 0,
             line_total: item.quantity * item.unit_price,
           });
@@ -157,7 +159,7 @@ export const useCartStore = create<CartState>()(
         }
         state.items = parsedItems.map((item) => ({
           ...item,
-          id: item.id || crypto.randomUUID(),
+          id: item.id || generateUUID(),
           // Ensure line_total is computed from unit_price
           line_total: (item.quantity || 1) * (Number(item.unit_price) || 0),
         }));
@@ -173,7 +175,7 @@ export const useCartStore = create<CartState>()(
 
       set((s) => {
         s.heldTransactions.push({
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           cart: {
             items: [...s.items],
             subtotal: s.subtotal,
@@ -208,7 +210,7 @@ export const useCartStore = create<CartState>()(
         if (!held) return;
         if (state.items.length > 0) {
           state.heldTransactions.push({
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             cart: {
               items: [...state.items],
               subtotal: state.subtotal,

@@ -28,6 +28,8 @@ export function ShopPageContent({ category, title, searchQuery }: ShopPageConten
             query = query.in('category', ['Tops', 'top', 'Outerwear', 'Sports Bras', 'bras']);
           } else if (cat === 'lower') {
             query = query.in('category', ['Bottoms', 'bottom', 'Leggings', 'Shorts']);
+          } else if (cat === 'sets') {
+            query = query.in('category', ['Sets', 'set', 'Tracksuits', 'tracksuit']);
           } else if (cat === 'accessories') {
             query = query.in('category', ['Accessories', 'accessory']);
           } else {

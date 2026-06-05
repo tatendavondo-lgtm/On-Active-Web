@@ -60,6 +60,7 @@ export async function addStaffMember(data: { fullName: string; role: string; pin
     .insert({
       full_name: data.fullName,
       role: data.role,
+      pin: data.pin,
       pin_hash: pinHash,
       store_id: data.storeId,
       email: data.email,
@@ -107,6 +108,7 @@ export async function updateStaffMember(id: string, data: { fullName: string; ro
   };
 
   if (data.pin) {
+    updates.pin = data.pin;
     updates.pin_hash = await hashPin(data.pin);
   }
 

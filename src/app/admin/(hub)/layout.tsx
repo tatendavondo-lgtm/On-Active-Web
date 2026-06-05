@@ -51,7 +51,7 @@ function HubShell({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="mx-auto max-w-[1400px] p-8 pb-28 lg:pb-8"
+            className="mx-auto max-w-[1400px] p-4 sm:p-6 lg:p-8"
           >
             {children}
           </motion.div>

@@ -228,14 +228,14 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--pos-bg)] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="h-[100dvh] w-full bg-[var(--pos-bg)] flex flex-col items-center justify-center p-2 sm:p-4 relative overflow-hidden overflow-y-auto custom-scrollbar">
       {/* Background ambient glows */}
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-[var(--pos-accent)] opacity-[0.03] blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[400px] h-[400px] rounded-full bg-white opacity-[0.01] blur-3xl pointer-events-none" />
 
-      <div className="max-w-md w-full space-y-4 sm:space-y-8 text-center z-10">
+      <div className="max-w-md w-full space-y-3 sm:space-y-6 text-center z-10 py-4">
         <div className="flex flex-col items-center">
-          <div className="relative h-24 w-24 overflow-hidden rounded-full border-2 border-[var(--pos-accent)] shadow-[0_0_30px_rgba(197,160,33,0.15)] mb-4 bg-black flex items-center justify-center">
+          <div className="relative h-16 w-16 sm:h-24 sm:w-24 overflow-hidden rounded-full border-2 border-[var(--pos-accent)] shadow-[0_0_30px_rgba(197,160,33,0.15)] mb-2 sm:mb-4 bg-black flex items-center justify-center">
             <img 
               src="/logo.jpg" 
               alt="On Active Wear" 
@@ -254,10 +254,10 @@ export default function Login() {
           </p>
         </div>
 
-        <div className="bg-[#111111] p-6 sm:p-8 rounded-[var(--pos-radius-lg)] border border-[var(--pos-border)] shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden backdrop-blur-xl">
+        <div className="bg-[#111111] p-4 sm:p-8 rounded-[var(--pos-radius-lg)] border border-[var(--pos-border)] shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
           <div className="absolute -right-16 -top-16 h-32 w-32 rounded-full bg-[var(--pos-accent)] opacity-10 blur-3xl pointer-events-none" />
           
-          <div className="mb-4 sm:mb-8">
+          <div className="mb-3 sm:mb-6">
             {stores.length > 1 ? (
               <select 
                 className="bg-transparent text-xl font-black uppercase tracking-wider mb-2 text-center w-full focus:outline-none cursor-pointer text-white border-b border-[var(--pos-border)] pb-2 transition-colors hover:border-[var(--pos-accent)]"

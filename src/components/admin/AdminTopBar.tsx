@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Menu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '@/store/admin';
 
@@ -10,7 +10,7 @@ interface AdminTopBarProps {
 }
 
 export function AdminTopBar({ pageTitle }: AdminTopBarProps) {
-  const { notifications, markAllRead } = useAdmin();
+  const { notifications, markAllRead, setMobileMenuOpen } = useAdmin();
   const unreadCount = notifications.filter((n) => !n.read).length;
   const [now, setNow] = useState(new Date());
   const [showNotifs, setShowNotifs] = useState(false);
@@ -29,8 +29,16 @@ export function AdminTopBar({ pageTitle }: AdminTopBarProps) {
   };
 
   return (
-    <header className="h-16 border-b border-[#1f1f1f] bg-[#0d0d0d] flex items-center justify-between px-6 lg:px-8 flex-shrink-0">
-      <h1 className="text-white font-bold text-base lg:text-lg tracking-tight">{pageTitle}</h1>
+    <header className="h-16 border-b border-[#1f1f1f] bg-[#0d0d0d] flex items-center justify-between px-4 sm:px-6 lg:px-8 flex-shrink-0">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="lg:hidden p-2 -ml-2 text-[#aaa] hover:text-white transition-colors"
+        >
+          <Menu size={20} />
+        </button>
+        <h1 className="text-white font-bold text-base lg:text-lg tracking-tight truncate max-w-[150px] sm:max-w-xs">{pageTitle}</h1>
+      </div>
 
       <div className="flex items-center gap-3">
         {/* Live clock */}

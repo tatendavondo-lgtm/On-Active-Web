@@ -3,6 +3,8 @@ import { generateOrderNumber } from './orderNumber';
 import type { CartItem, AutoDiscount } from '../types/cart';
 import type { Payment, Order } from '../types/order';
 
+import { generateUUID } from './uuid';
+
 interface ProcessOrderParams {
   storeId: string;
   employeeId: string;
@@ -29,7 +31,7 @@ export async function processOrder(params: ProcessOrderParams) {
   const { storeId, shiftId } = params;
   const orderNumber = await generateOrderNumber(storeId);
   const now = new Date().toISOString();
-  const orderId = crypto.randomUUID();
+  const orderId = generateUUID();
 
   // 1. Build PosOrder object
   const order: Order = {
@@ -130,7 +132,7 @@ export async function queueOrderForSync(order: Order): Promise<void> {
       table: 'pos_order_items',
       operation: 'insert',
       data: {
-        id: crypto.randomUUID(), // Local only items generated their own IDs when adding to cart
+        id: generateUUID(), // Local only items generated their own IDs when adding to cart
         order_id: order.id,
         product_id: item.product_id,
         variant_id: item.variant_id,

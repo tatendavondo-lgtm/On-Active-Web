@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { playNotificationSound } from '../../lib/notification';
 
 interface PinPadProps {
@@ -48,12 +47,12 @@ export function PinPad({ onSubmit, loading }: PinPadProps) {
   }, [pin, loading]);
 
   return (
-    <div className="flex flex-col items-center gap-6 max-w-sm mx-auto">
-      <div className="flex gap-4 mb-4">
+    <div className="flex flex-col items-center gap-4 sm:gap-6 max-w-sm mx-auto">
+      <div className="flex gap-3 sm:gap-4 mb-2 sm:mb-4">
         {[...Array(6)].map((_, i) => (
           <div 
             key={i}
-            className={`w-4 h-4 rounded-full border-2 ${
+            className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 ${
               i < pin.length 
                 ? 'bg-[var(--pos-text-primary)] border-[var(--pos-text-primary)]' 
                 : 'border-[var(--pos-border)] bg-transparent'
@@ -62,42 +61,38 @@ export function PinPad({ onSubmit, loading }: PinPadProps) {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-4 w-full">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 w-full">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
-          <motion.button
+          <button
             key={num}
-            whileTap={{ scale: 0.92 }}
             onClick={() => handlePress(num)}
             disabled={loading}
-            className="h-20 text-3xl font-mono bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 rounded-[var(--pos-radius-lg)] transition-colors shadow-lg"
+            className="h-14 sm:h-16 md:h-20 text-2xl sm:text-3xl font-mono bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 rounded-[var(--pos-radius-lg)] transition-colors shadow-lg active:scale-95"
           >
             {num}
-          </motion.button>
+          </button>
         ))}
-        <motion.button
-          whileTap={{ scale: 0.92 }}
+        <button
           onClick={handleDelete}
           disabled={loading}
-          className="h-20 text-xl font-medium bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 rounded-[var(--pos-radius-lg)] transition-colors text-[var(--pos-text-secondary)] shadow-lg"
+          className="h-14 sm:h-16 md:h-20 text-lg sm:text-xl font-medium bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 rounded-[var(--pos-radius-lg)] transition-colors text-[var(--pos-text-secondary)] shadow-lg active:scale-95"
         >
           CLR
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.92 }}
+        </button>
+        <button
           onClick={() => handlePress('0')}
           disabled={loading}
-          className="h-20 text-3xl font-mono bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 rounded-[var(--pos-radius-lg)] transition-colors shadow-lg"
+          className="h-14 sm:h-16 md:h-20 text-2xl sm:text-3xl font-mono bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 rounded-[var(--pos-radius-lg)] transition-colors shadow-lg active:scale-95"
         >
           0
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.92 }}
+        </button>
+        <button
           onClick={handleSubmit}
           disabled={loading || pin.length < 4}
-          className="h-20 text-2xl bg-[var(--pos-accent)] text-black hover:opacity-90 rounded-[var(--pos-radius-lg)] disabled:opacity-50 shadow-[0_0_20px_rgba(197,160,33,0.3)] transition-all"
+          className="h-14 sm:h-16 md:h-20 text-xl sm:text-2xl bg-[var(--pos-accent)] text-black hover:opacity-90 rounded-[var(--pos-radius-lg)] disabled:opacity-50 shadow-[0_0_20px_rgba(197,160,33,0.3)] transition-all active:scale-95"
         >
           {loading ? '...' : '⏎'}
-        </motion.button>
+        </button>
       </div>
     </div>
   );

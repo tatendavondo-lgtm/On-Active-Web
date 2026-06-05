@@ -4,6 +4,7 @@ export interface Profile {
   id: string;
   role: AdminRole;
   full_name: string | null;
+  email?: string | null;
   created_at: string;
 }
 

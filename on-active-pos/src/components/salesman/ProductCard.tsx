@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useCartStore } from '../../stores/cartStore';
 import { VariantSelector } from './VariantSelector';
 import { formatUSD } from '../../lib/currency';
-import { motion } from 'framer-motion';
 import { playNotificationSound } from '../../lib/notification';
 import type { LocalProduct } from '../../db/dexie';
 
@@ -39,11 +38,9 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <>
-      <motion.button 
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+      <button 
         onClick={handleClick}
-        className="group relative flex flex-col bg-white/5 backdrop-blur-md border border-white/10 rounded-[var(--pos-radius-lg)] overflow-hidden hover:bg-white/10 hover:border-[var(--pos-accent)] hover:shadow-[0_0_20px_rgba(197,160,33,0.15)] transition-colors duration-300 text-left shadow-lg"
+        className="group relative flex flex-col bg-zinc-900 border border-zinc-800 rounded-[var(--pos-radius-lg)] overflow-hidden hover:bg-zinc-800 hover:border-[var(--pos-accent)] hover:shadow-[0_0_20px_rgba(197,160,33,0.15)] transition-colors duration-300 text-left shadow-lg"
       >
         <div className="aspect-square bg-black/40 w-full overflow-hidden relative">
           {product.image_url ? (
@@ -54,7 +51,7 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
           {totalStock <= 0 && (
-            <div className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-[2px]">
+            <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
               <span className="bg-[var(--pos-error)] text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded">OUT OF STOCK</span>
             </div>
           )}
@@ -68,7 +65,7 @@ export function ProductCard({ product }: ProductCardProps) {
             </span>
           </div>
         </div>
-      </motion.button>
+      </button>
 
       <VariantSelector 
         isOpen={showVariants} 
