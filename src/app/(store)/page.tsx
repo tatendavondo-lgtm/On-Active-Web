@@ -64,7 +64,7 @@ export default function ComingSoonPage() {
           className="inline-flex items-center gap-2 border border-[#C5A021]/30 bg-[#C5A021]/5 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.3em] text-[#C5A021]"
         >
           <span className="h-1.5 w-1.5 bg-[#C5A021] rounded-full animate-ping" />
-          Webstore Under Construction
+          Coming Soon
         </motion.div>
 
         {/* Hero Headlines */}
