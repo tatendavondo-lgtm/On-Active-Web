@@ -84,6 +84,37 @@ export async function processSyncQueue(): Promise<{ synced: number; failed: numb
             throw storeErr;
           }
         }
+      } else if (item.table === 'products' && item.operation === 'update' && item.data.increment) {
+        const productId = item.data.product_id;
+        const variantId = item.data.variant_id;
+        const storeId = item.data.store_id;
+        const increment = item.data.increment;
+
+        // 1. Update Global Products Table (Total Stock) via RPC to avoid race conditions
+        const { error: globalErr } = await supabase.rpc('increment_global_inventory', {
+          p_product_id: productId,
+          p_quantity: increment
+        });
+
+        if (globalErr) {
+          console.error("Global inventory increment failed:", globalErr);
+          throw globalErr;
+        }
+
+        // 2. Update Branch Store Inventory safely via RPC to avoid race conditions
+        if (storeId) {
+          const { error: storeErr } = await supabase.rpc('increment_inventory', {
+            p_store_id: storeId,
+            p_product_id: productId,
+            p_variant_id: variantId || null,
+            p_quantity: increment
+          });
+
+          if (storeErr) {
+            console.error("Store inventory increment failed:", storeErr);
+            throw storeErr;
+          }
+        }
       } else if (item.operation === 'insert') {
         // Strip client-only fields that don't exist in Supabase tables
         const cleaned = sanitizeForRemote(item.table, item.data);

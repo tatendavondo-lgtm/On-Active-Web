@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { logAuditAction } from '@/lib/admin/audit';
+import { UTApi } from 'uploadthing/server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,6 +26,28 @@ export async function POST(req: NextRequest) {
 
     const payload = await req.json();
     const { variants: incomingVariants, ...productData } = payload;
+
+    // Check for removed images to delete from UploadThing
+    if (payload.id && productData.images) {
+      const { data: oldProduct } = await adminSupabase.from('products').select('images').eq('id', payload.id).single();
+      if (oldProduct && oldProduct.images) {
+        const removedImages = oldProduct.images.filter((oldImg: string) => !productData.images.includes(oldImg));
+        if (removedImages.length > 0) {
+          const fileKeys = removedImages.map((url: string) => {
+            const parts = url.split('/f/');
+            return parts.length > 1 ? parts[1] : null;
+          }).filter(Boolean) as string[];
+          if (fileKeys.length > 0) {
+            try {
+              const utapi = new UTApi();
+              await utapi.deleteFiles(fileKeys);
+            } catch (e) {
+              console.error("Failed to delete removed images from UploadThing", e);
+            }
+          }
+        }
+      }
+    }
 
     const { data: result, error } = payload.id
       ? await adminSupabase.from('products').update(productData).eq('id', payload.id).select().single()
@@ -179,6 +202,9 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Missing product ID' }, { status: 400 });
     }
 
+    // Fetch product images to delete from UploadThing
+    const { data: product } = await adminSupabase.from('products').select('images').eq('id', id).single();
+
     // Associated variants and inventory will be deleted via ON DELETE CASCADE if configured in DB,
     // otherwise we handle it manually here to be safe.
     await adminSupabase.from('store_inventory').delete().eq('product_id', id);
@@ -186,6 +212,22 @@ export async function DELETE(req: NextRequest) {
     const { error } = await adminSupabase.from('products').delete().eq('id', id);
 
     if (error) throw error;
+
+    if (product && product.images && product.images.length > 0) {
+      const fileKeys = product.images.map((url: string) => {
+        const parts = url.split('/f/');
+        return parts.length > 1 ? parts[1] : null;
+      }).filter(Boolean) as string[];
+
+      if (fileKeys.length > 0) {
+        try {
+          const utapi = new UTApi();
+          await utapi.deleteFiles(fileKeys);
+        } catch (e) {
+          console.error("Failed to delete images from UploadThing", e);
+        }
+      }
+    }
 
     await logAuditAction({
       action: 'delete_product',

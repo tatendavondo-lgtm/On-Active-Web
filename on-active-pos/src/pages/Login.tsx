@@ -35,10 +35,35 @@ export default function Login() {
     });
 
     async function loadStores() {
-      const { data } = await supabase.from('stores').select('*').eq('is_active', true);
-      if (data) {
-        setStores(data);
-        setSelectedStore(data[0]);
+      try {
+        const { data, error } = await supabase.from('stores').select('*').eq('is_active', true);
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setStores(data);
+          setSelectedStore(data[0]);
+          localStorage.setItem('cached_stores', JSON.stringify(data));
+        } else {
+          // Try to load from cache if online fetch returned empty (maybe RLS issue, or just no stores)
+          const cached = localStorage.getItem('cached_stores');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            setStores(parsed);
+            setSelectedStore(parsed[0]);
+          } else {
+            setError('No active stores found in database. Please create one.');
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load stores from cloud, checking cache...", err);
+        const cached = localStorage.getItem('cached_stores');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          setStores(parsed);
+          setSelectedStore(parsed[0]);
+        } else {
+          setError('Offline: Could not load stores and no cache exists.');
+        }
       }
     }
     loadStores();
@@ -102,12 +127,30 @@ export default function Login() {
 
     const employee = employeeData as Employee;
 
-    // 2. Geofence Check
-    if (!selectedStore) {
-      setError('No store selected');
+    // 2. Resolve Store
+    let targetStore = selectedStore;
+    
+    if (!targetStore && employee.store_id) {
+      // Try to find it in loaded stores
+      targetStore = stores.find(s => s.id === employee.store_id);
+      
+      // If still missing, fetch directly from DB
+      if (!targetStore && navigator.onLine) {
+        const { data: fetchStore } = await supabase.from('stores').select('*').eq('id', employee.store_id).single();
+        if (fetchStore) {
+          targetStore = fetchStore;
+          setSelectedStore(fetchStore);
+        }
+      }
+    }
+
+    if (!targetStore) {
+      setError('No store selected and could not determine store from employee profile.');
       return;
     }
-    const geo = await checkGeofence(selectedStore);
+
+    // 3. Geofence Check
+    const geo = await checkGeofence(targetStore);
     if (!geo.allowed && geo.error) {
       console.warn('Geofence verification failed:', geo.error);
       setError(geo.error);
@@ -121,7 +164,7 @@ export default function Login() {
       
       // Clear stale cache and pull updates
       await db.products.clear();
-      await pullUpdates(selectedStore.id);
+      await pullUpdates(targetStore.id);
 
       // Check if this cashier already has an active open shift in this store
       if (!isSalesmanRole(employee.role)) {
@@ -130,7 +173,7 @@ export default function Login() {
           .equals(employee.id)
           .toArray();
         const activeShift = existingShifts.find(
-          s => s.store_id === selectedStore.id && s.status === 'open'
+          s => s.store_id === targetStore.id && s.status === 'open'
         );
         if (activeShift) {
           shiftId = activeShift.id;
@@ -147,7 +190,7 @@ export default function Login() {
           .equals(employee.id)
           .toArray();
         const activeShift = existingShifts.find(
-          s => s.store_id === selectedStore.id && s.status === 'open'
+          s => s.store_id === targetStore.id && s.status === 'open'
         );
         if (activeShift) {
           shiftId = activeShift.id;
@@ -158,7 +201,7 @@ export default function Login() {
     }
 
     // 4. Login & Redirect
-    login(employee, selectedStore, shiftId);
+    login(employee, targetStore, shiftId);
 
     logPosAction({
       userId: employee.id,
@@ -166,8 +209,8 @@ export default function Login() {
       userRole: employee.role,
       action: 'login',
       targetType: 'terminal',
-      targetId: selectedStore.id,
-      storeId: selectedStore.id
+      targetId: targetStore.id,
+      storeId: targetStore.id
     });
 
     // Initialize audio context on first user interaction (login)

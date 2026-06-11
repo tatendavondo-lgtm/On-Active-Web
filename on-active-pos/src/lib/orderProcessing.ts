@@ -202,3 +202,114 @@ export async function queueOrderForSync(order: Order): Promise<void> {
     });
   }
 }
+
+export interface ProcessRefundParams {
+  order: Order;
+  refundItems: { item: any; returnQuantity: number }[];
+  refundMethod: 'cash' | 'ecocash' | 'innbucks' | 'card';
+  reason: string;
+  refundTotalUsd: number;
+}
+
+export async function processRefund(params: ProcessRefundParams) {
+  const { order, refundItems, refundMethod, reason, refundTotalUsd } = params;
+  const now = new Date().toISOString();
+  const paymentId = generateUUID();
+
+  // 1. Determine new status
+  let isFullRefund = true;
+  const returnMap = new Map();
+  for (const r of refundItems) returnMap.set(r.item.id, r.returnQuantity);
+
+  for (const item of order.items) {
+    const rq = returnMap.get(item.id) || 0;
+    if (rq < item.quantity) {
+      isFullRefund = false;
+      break;
+    }
+  }
+
+  const newStatus = isFullRefund ? 'refunded' : 'partially_refunded';
+
+  // 2. Add negative payment record
+  const refundPayment: Payment = {
+    id: paymentId,
+    method: refundMethod,
+    amount_usd: -Math.abs(refundTotalUsd), // Ensure it's negative
+    status: 'refunded',
+    reference: reason // Store reason in reference
+  };
+
+  // 3. Update local Dexie order
+  const updatedOrder = await db.orders.get(order.id);
+  if (updatedOrder) {
+    const payments = updatedOrder.payments || [];
+    payments.push(refundPayment);
+    await db.orders.update(order.id, {
+      status: newStatus,
+      payments,
+      updated_at: now
+    } as any);
+  }
+
+  // 4. Queue status update and payment sync
+  await db.syncQueue.add({
+    table: 'pos_orders',
+    operation: 'update',
+    data: { id: order.id, status: newStatus, updated_at: now },
+    created_at: now,
+    attempts: 0
+  });
+
+  await db.syncQueue.add({
+    table: 'pos_payments',
+    operation: 'insert',
+    data: {
+      ...refundPayment,
+      order_id: order.id,
+      created_at: now
+    },
+    created_at: now,
+    attempts: 0
+  });
+
+  // 5. Handle Restocking Local & Remote
+  for (const { item, returnQuantity } of refundItems) {
+    if (returnQuantity <= 0) continue;
+
+    // A. Local stock increment
+    try {
+      const product = await db.products.get(item.product_id);
+      if (product) {
+        if (item.variant_id) {
+          const vIndex = product.variants.findIndex(v => v.id === item.variant_id);
+          if (vIndex !== -1) {
+            product.variants[vIndex].stock += returnQuantity;
+          }
+        } else {
+          if (product.variants.length > 0) {
+            product.variants[0].stock += returnQuantity;
+          }
+        }
+        await db.products.put(product);
+      }
+    } catch (err) {
+      console.warn('Failed to update local inventory for returned item', item.product_id, err);
+    }
+
+    // B. Queue for remote sync (increment)
+    await db.syncQueue.add({
+      table: 'products',
+      operation: 'update',
+      data: {
+        id: item.product_id,
+        product_id: item.product_id,
+        variant_id: item.variant_id || null,
+        store_id: order.store_id,
+        increment: returnQuantity,
+      },
+      created_at: now,
+      attempts: 0,
+    });
+  }
+}

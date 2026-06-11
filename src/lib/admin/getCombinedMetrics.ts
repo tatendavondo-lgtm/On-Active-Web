@@ -71,17 +71,20 @@ export async function getCombinedMetrics(storeIdFilter?: string) {
     salesmanQuery,
   ]);
 
-  const webRevenue = webOrders.data?.reduce((sum, o) => sum + (o.total_usd || 0), 0) || 0;
+  // Webstore Revenue ONLY counts orders processed and confirmed by the POS
+  const webRevenue = posOrders.data?.filter(o => o.source === 'online').reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+  // Count raw web orders for traffic visibility, but not for revenue
   const webCount = webOrders.data?.length || 0;
 
-  const posRevenue = posOrders.data?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+  // POS Revenue (Walk-ins only, since online is separated above)
+  const posRevenue = posOrders.data?.filter(o => o.source === 'walk_in').reduce((sum, o) => sum + (o.total || 0), 0) || 0;
   const posCount = posOrders.data?.length || 0;
   const posWalkIn = posOrders.data?.filter(o => o.source === 'walk_in').length || 0;
 
   // Count all salesman orders created today (both pending, accepted and completed)
   const posSalesman = salesmanOrders.data?.length || 0;
 
-  // Salesman revenue (include pending & accepted — real money in the pipeline, exclude completed because they are in posRevenue)
+  // Salesman revenue (include pending & accepted — real money in the pipeline, exclude completed because they are in posRevenue if processed by POS, or if not we just count pipeline)
   const salesmanRevenue = salesmanOrders.data?.filter(o => o.status !== 'completed' && o.status !== 'cancelled').reduce((sum, o) => sum + (o.subtotal || 0), 0) || 0;
 
   // Pending online orders from bridge
@@ -113,7 +116,7 @@ export async function getCombinedMetrics(storeIdFilter?: string) {
       inProgress: bridgeInProgress,
       count: (bridgeOrders.data?.length || 0),
     },
-    // Total revenue = completed POS + online webstore + salesman pipeline
+    // Total revenue = confirmed POS online + POS walk-in + salesman pipeline
     totalRevenue: webRevenue + posRevenue + salesmanRevenue,
     totalOrdersToday: webCount + posCount + pendingSalesmanCount,
     openShifts: shiftsCount,

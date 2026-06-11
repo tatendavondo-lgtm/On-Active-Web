@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { formatUSD, formatZIG, formatZAR } from '../../lib/currency';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { Button } from '../shared/Button';
 import type { Order } from '../../types/order';
+import { RefundModal } from './RefundModal';
 
 interface OrderDetailProps {
   order: Order;
@@ -10,6 +12,8 @@ interface OrderDetailProps {
 }
 
 export function OrderDetail({ order, salesmanName, employeeName }: OrderDetailProps) {
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+
   const getFormat = (cur: string) => {
     if (cur === 'ZIG') return formatZIG;
     if (cur === 'ZAR') return formatZAR;
@@ -27,9 +31,16 @@ export function OrderDetail({ order, salesmanName, employeeName }: OrderDetailPr
             <span>{new Date(order.created_at).toLocaleString()}</span>
           </div>
         </div>
-        <Button variant="secondary" onClick={() => alert('Print receipt will be in Prompt 3')}>
-          Print Receipt
-        </Button>
+        <div className="flex gap-2">
+          {order.status === 'completed' && (
+            <Button variant="secondary" onClick={() => setIsRefundModalOpen(true)} className="text-red-400 hover:text-red-300 border-red-500/30 hover:border-red-500 hover:bg-red-500/10">
+              Refund / Return
+            </Button>
+          )}
+          <Button variant="secondary" onClick={() => alert('Print receipt will be in Prompt 3')}>
+            Print Receipt
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-8">
@@ -132,6 +143,14 @@ export function OrderDetail({ order, salesmanName, employeeName }: OrderDetailPr
           </div>
         )}
       </div>
+
+      {isRefundModalOpen && (
+        <RefundModal 
+          order={order} 
+          onClose={() => setIsRefundModalOpen(false)} 
+          onRefundComplete={() => setIsRefundModalOpen(false)} 
+        />
+      )}
     </div>
   );
 }
