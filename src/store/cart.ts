@@ -21,13 +21,13 @@ export const useCart = create<CartState>()(
       isCartOpen: false,
 
       addItem: (newItem) => set((state) => {
-        const id = `${newItem.productId}-${newItem.size}`;
-        const existingItem = state.items.find(item => `${item.productId}-${item.size}` === id);
+        const id = `${newItem.productId}-${newItem.size}-${newItem.color || ''}`;
+        const existingItem = state.items.find(item => `${item.productId}-${item.size}-${item.color || ''}` === id);
 
         if (existingItem) {
           return {
             items: state.items.map(item =>
-              `${item.productId}-${item.size}` === id
+              `${item.productId}-${item.size}-${item.color || ''}` === id
                 ? { ...item, quantity: item.quantity + 1 }
                 : item
             ),
@@ -40,16 +40,16 @@ export const useCart = create<CartState>()(
       }),
 
       removeItem: (id: string) => set((state) => ({
-        items: state.items.filter(item => `${item.productId}-${item.size}` !== id)
+        items: state.items.filter(item => `${item.productId}-${item.size}-${item.color || ''}` !== id)
       })),
 
       updateQuantity: (id: string, quantity: number) => set((state) => {
         if (quantity <= 0) {
-          return { items: state.items.filter(item => `${item.productId}-${item.size}` !== id) };
+          return { items: state.items.filter(item => `${item.productId}-${item.size}-${item.color || ''}` !== id) };
         }
         return {
           items: state.items.map(item =>
-            `${item.productId}-${item.size}` === id ? { ...item, quantity } : item
+            `${item.productId}-${item.size}-${item.color || ''}` === id ? { ...item, quantity } : item
           )
         };
       }),

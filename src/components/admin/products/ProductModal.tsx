@@ -127,16 +127,37 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
   const remainingForSizes = (parseInt(form.stock_quantity) || 0) - totalAllocatedToSizes;
 
   const handleSave = async () => {
-    if (!form.name || !form.price_usd) {
-      toast.error('Name and price are required');
+    // 1. Detailed Validation & Friendly Error Messages
+    if (!form.name.trim()) {
+      toast.error('Please enter a Product Name.', { id: 'val-name' });
+      return;
+    }
+
+    const price = parseFloat(form.price_usd);
+    if (isNaN(price) || price < 0) {
+      toast.error('Please enter a valid Base Price (e.g. 29.99).', { id: 'val-price' });
+      return;
+    }
+
+    const totalStock = parseInt(form.stock_quantity);
+    if (isNaN(totalStock) || totalStock < 0) {
+      toast.error('Please specify the Total Product Inventory.', { id: 'val-stock' });
       return;
     }
 
     const totalAllocated = derivedVariants.reduce((sum, v) => sum + v.stock, 0);
-    const totalStock = parseInt(form.stock_quantity) || 0;
-    
     if (totalAllocated !== totalStock) {
-      toast.error(`Total allocated (${totalAllocated}) must match total stock (${totalStock})`);
+      toast.error(`Allocation Mismatch: You have ${totalStock} total items, but allocated ${totalAllocated} to sizes. They must match exactly!`, { id: 'val-alloc', duration: 5000 });
+      return;
+    }
+
+    if (derivedVariants.length === 0 && totalStock > 0) {
+      toast.error('Please allocate the stock to at least one size (e.g. click "M" and enter the quantity).', { id: 'val-size', duration: 5000 });
+      return;
+    }
+
+    if (form.images.length === 0 && files.length === 0) {
+      toast.error('Please upload at least one image for the product.', { id: 'val-img' });
       return;
     }
 

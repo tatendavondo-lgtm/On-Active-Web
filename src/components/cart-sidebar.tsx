@@ -47,7 +47,7 @@ export function CartSidebar() {
                 ) : (
                   <div className="space-y-6">
                     {items.map((item) => {
-                      const itemKey = `${item.productId}-${item.size}`;
+                      const itemKey = `${item.productId}-${item.size}-${item.color || ''}`;
                       return (
                       <div key={itemKey} className="flex gap-4">
                         <div className="relative h-24 w-20 flex-shrink-0 bg-[#0A0A0A] border border-white/5 rounded-md overflow-hidden">
@@ -66,7 +66,7 @@ export function CartSidebar() {
                                 <X className="h-4 w-4 opacity-50 hover:opacity-100" />
                               </button>
                             </div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-[#C5A021]">Size: {item.size}</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-[#C5A021]">Size: {item.size} {item.color && `| Color: ${item.color}`}</p>
                           </div>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center border border-white/20 rounded-sm">
