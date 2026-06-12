@@ -163,21 +163,20 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
 
     setSaving(true);
 
-    const uploadedUrls: string[] = [];
-    for (const file of files) {
-      const formData = new FormData();
-      formData.append('file', file);
-      try {
+    try {
+      // 2. Upload Images Concurrently (Massive Speed Boost)
+      const uploadPromises = files.map(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
         const uploadRes = await fetch('/api/admin/upload', { method: 'POST', body: formData });
         const uploadData = await uploadRes.json();
-        if (!uploadRes.ok || uploadData.error) throw new Error(uploadData.error || 'Upload failed');
-        uploadedUrls.push(uploadData.url);
-      } catch (err: any) {
-        toast.error(`Failed to upload ${file.name}: ${err.message}`);
-        setSaving(false);
-        return;
-      }
-    }
+        if (!uploadRes.ok || uploadData.error) {
+          throw new Error(uploadData.error || `Failed to upload ${file.name}`);
+        }
+        return uploadData.url;
+      });
+
+      const uploadedUrls = await Promise.all(uploadPromises);
 
     const payload = {
       name: form.name,
@@ -214,7 +213,11 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
       onSaved();
       onClose();
     }
-    setSaving(false);
+    } catch (error: any) {
+      toast.error(error.message || 'An unexpected error occurred.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
