@@ -61,6 +61,7 @@ export async function addStaffMember(data: { fullName: string; role: string; pin
       .insert({
         full_name: data.fullName,
         role: data.role,
+        pin: data.pin,
         pin_hash: pinHash,
         store_id: data.storeId,
         email: data.email?.trim() || null,
@@ -85,13 +86,6 @@ export async function addStaffMember(data: { fullName: string; role: string; pin
     console.error('addStaffMember error:', err);
     return { error: err.message || 'Internal Server Error' };
   }
-}
-
-  await logAction('create', 'employee', employee.id, { name: data.fullName, role: data.role });
-  
-  revalidatePath('/admin/staff');
-  revalidatePath('/admin/settings');
-  return employee;
 }
 
 export async function updateStaffMember(id: string, data: { fullName: string; role: string; pin?: string; storeId: string; email?: string; phone?: string }) {
@@ -123,6 +117,7 @@ export async function updateStaffMember(id: string, data: { fullName: string; ro
     };
 
     if (data.pin) {
+      updates.pin = data.pin;
       updates.pin_hash = await hashPin(data.pin);
     }
 
