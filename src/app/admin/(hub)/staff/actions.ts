@@ -78,9 +78,6 @@ export async function addStaffMember(data: { fullName: string; role: string; pin
     }
 
     await logAction('create', 'employee', employee.id, { name: data.fullName, role: data.role });
-    
-    revalidatePath('/admin/staff');
-    revalidatePath('/admin/settings');
     return employee;
   } catch (err: any) {
     console.error('addStaffMember error:', err);
@@ -134,9 +131,6 @@ export async function updateStaffMember(id: string, data: { fullName: string; ro
     }
 
     await logAction('update', 'employee', id, { name: data.fullName, role: data.role, pinChanged: !!data.pin });
-
-    revalidatePath('/admin/staff');
-    revalidatePath('/admin/settings');
     return employee;
   } catch (err: any) {
     console.error('updateStaffMember error:', err);
