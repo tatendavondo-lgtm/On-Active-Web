@@ -5,6 +5,11 @@ import { processSyncQueue, pullUpdates } from '../db/sync';
 import { db } from '../db/dexie';
 import { supabase } from '../config/supabase';
 
+// Global locks to prevent multiple hook instances from creating duplicate intervals/listeners
+let isIntervalRunning = false;
+let isRealtimeSubscribed = false;
+let globalSyncingLock = false;
+
 export interface SyncState {
   status: 'idle' | 'syncing' | 'error';
   pendingCount: number;
@@ -21,7 +26,6 @@ export function useSync(): SyncState {
   const [lastError, setLastError] = useState<string | null>(null);
 
   const [pendingCount, setPendingCount] = useState(0);
-  const isSyncingRef = useRef(false);
 
   const checkPendingCount = useCallback(async () => {
     const newCount = await db.syncQueue.count();
@@ -30,9 +34,9 @@ export function useSync(): SyncState {
 
   const syncNow = useCallback(async () => {
     if (!isOnline || !store) return;
-    if (isSyncingRef.current) return;
+    if (globalSyncingLock) return;
 
-    isSyncingRef.current = true;
+    globalSyncingLock = true;
     setStatus('syncing');
     setLastError(null);
 
@@ -47,18 +51,19 @@ export function useSync(): SyncState {
       setLastError(err.message || 'Unknown sync error');
       setStatus('error');
     } finally {
-      isSyncingRef.current = false;
+      globalSyncingLock = false;
     }
   }, [isOnline, store, checkPendingCount]);
 
   // Periodic sync (ONLY pushes local changes up, doesn't pull down entire catalog)
   useEffect(() => {
-    if (!isOnline || !store) return;
+    if (!isOnline || !store || isIntervalRunning) return;
 
     checkPendingCount();
 
+    isIntervalRunning = true;
     const interval = setInterval(() => {
-      if (isSyncingRef.current) return;
+      if (globalSyncingLock) return;
       
       // Only auto-sync if we have internet and a store is loaded
       if (isOnline && store) {
@@ -69,13 +74,17 @@ export function useSync(): SyncState {
       }
     }, 30000); // Increased frequency to 30 seconds for better responsiveness
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      isIntervalRunning = false;
+    };
   }, [isOnline, store, checkPendingCount]);
 
   // Realtime listeners for catalog updates
   useEffect(() => {
-    if (!isOnline || !store) return;
+    if (!isOnline || !store || isRealtimeSubscribed) return;
     
+    isRealtimeSubscribed = true;
     const handleCatalogChange = () => {
       console.log('Catalog changed remotely! Pulling updates...');
       pullUpdates(store.id).catch(console.error);
@@ -86,7 +95,7 @@ export function useSync(): SyncState {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handleCatalogChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'product_variants' }, handleCatalogChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'store_inventory', filter: `store_id=eq.${store.id}` }, handleCatalogChange)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'salesman_orders', filter: `store_id=eq.${store.id}` }, handleCatalogChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'salesman_orders', filter: `store_id=eq.${store.id}` }, handleCatalogChange)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'online_order_bridge', filter: `store_id=eq.${store.id}` }, handleCatalogChange)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'online_order_bridge', filter: `store_id=eq.${store.id}` }, handleCatalogChange)
       .subscribe((status) => {
@@ -98,6 +107,7 @@ export function useSync(): SyncState {
     return () => {
       console.log(`Cleaning up ${channelName}`);
       supabase.removeChannel(sub);
+      isRealtimeSubscribed = false;
     };
   }, [isOnline, store]);
 

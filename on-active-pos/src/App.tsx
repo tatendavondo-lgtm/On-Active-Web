@@ -9,6 +9,7 @@ import { ToastContainer } from './components/shared/Toast';
 import { useNotificationListener } from './hooks/useNotifications';
 import { AnimatedRoutes } from './components/shared/AnimatedRoutes';
 import { PageTransition } from './components/shared/PageTransition';
+import { ErrorBoundary } from './components/shared/ErrorBoundary';
 
 // Salesman pages
 import SalesFloor from './pages/salesman/SalesFloor';
@@ -33,6 +34,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ErrorBoundary>
       <ToastContainer />
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -83,6 +85,7 @@ export default function App() {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

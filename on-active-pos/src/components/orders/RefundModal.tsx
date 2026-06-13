@@ -5,6 +5,8 @@ import { formatUSD } from '../../lib/currency';
 import type { Order } from '../../types/order';
 import { processRefund } from '../../lib/orderProcessing';
 
+import { useSessionStore } from '../../stores/sessionStore';
+
 interface RefundModalProps {
   order: Order;
   onClose: () => void;
@@ -12,17 +14,18 @@ interface RefundModalProps {
 }
 
 export function RefundModal({ order, onClose, onRefundComplete }: RefundModalProps) {
+  const { shiftId } = useSessionStore();
   const [returnQuantities, setReturnQuantities] = useState<Record<string, number>>({});
   const [method, setMethod] = useState<'cash' | 'ecocash' | 'innbucks' | 'card'>('cash');
   const [reason, setReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Available items for refund (ones that haven't been fully refunded yet)
-  // For simplicity, we just use the original order items.
-  const items = order.items;
+  const items = order.items.filter(i => i.quantity - (i.refunded_quantity || 0) > 0);
 
-  const handleQtyChange = (itemId: string, qty: number, max: number) => {
-    const validQty = Math.max(0, Math.min(qty, max));
+  const handleQtyChange = (itemId: string, qty: number, max: number, refunded: number) => {
+    const available = max - refunded;
+    const validQty = Math.max(0, Math.min(qty, available));
     setReturnQuantities(prev => ({
       ...prev,
       [itemId]: validQty
@@ -43,7 +46,7 @@ export function RefundModal({ order, onClose, onRefundComplete }: RefundModalPro
   const isValid = refundTotal > 0 && reason.trim().length > 0;
 
   const handleRefund = async () => {
-    if (!isValid) return;
+    if (!isValid || !shiftId) return;
     setIsProcessing(true);
     try {
       const refundItems = items
@@ -58,7 +61,8 @@ export function RefundModal({ order, onClose, onRefundComplete }: RefundModalPro
         refundItems,
         refundMethod: method,
         reason,
-        refundTotalUsd: refundTotal
+        refundTotalUsd: refundTotal,
+        shiftId
       });
 
       onRefundComplete();
@@ -96,7 +100,7 @@ export function RefundModal({ order, onClose, onRefundComplete }: RefundModalPro
                 <thead className="bg-[var(--pos-surface)] border-b border-[var(--pos-border-subtle)]">
                   <tr>
                     <th className="px-4 py-2 text-left font-medium">Item</th>
-                    <th className="px-4 py-2 text-right font-medium">Qty Sold</th>
+                    <th className="px-4 py-2 text-right font-medium">Available</th>
                     <th className="px-4 py-2 text-right font-medium">Return Qty</th>
                   </tr>
                 </thead>
@@ -108,15 +112,15 @@ export function RefundModal({ order, onClose, onRefundComplete }: RefundModalPro
                         {item.variant_name && <div className="text-xs text-[var(--pos-text-muted)]">{item.variant_name}</div>}
                       </td>
                       <td className="px-4 py-3 text-right text-[var(--pos-text-muted)]">
-                        {item.quantity}
+                        {item.quantity - (item.refunded_quantity || 0)} / {item.quantity}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <input 
                           type="number" 
                           min="0" 
-                          max={item.quantity}
+                          max={item.quantity - (item.refunded_quantity || 0)}
                           value={returnQuantities[item.id] || ''}
-                          onChange={(e) => handleQtyChange(item.id, parseInt(e.target.value) || 0, item.quantity)}
+                          onChange={(e) => handleQtyChange(item.id, parseInt(e.target.value) || 0, item.quantity, item.refunded_quantity || 0)}
                           placeholder="0"
                           className="w-16 bg-[var(--pos-surface)] border border-[var(--pos-border)] rounded px-2 py-1 text-right text-white focus:outline-none focus:border-[var(--pos-accent)]"
                         />

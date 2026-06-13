@@ -108,7 +108,18 @@ export function useIncomingOrders() {
           schema: 'public',
           table: 'salesman_orders',
           filter: `store_id=eq.${store.id}`,
-        }, () => {
+        }, async (payload) => {
+          const updatedOrder = payload.new as any;
+          try {
+            await db.salesmanOrders.update(updatedOrder.id, {
+              status: updatedOrder.status,
+              items: typeof updatedOrder.items === 'string' ? JSON.parse(updatedOrder.items) : (updatedOrder.items || []),
+              subtotal: updatedOrder.subtotal || 0,
+              item_count: updatedOrder.item_count || 0,
+            });
+          } catch (e) {
+            console.warn('Failed to update local incoming order:', e);
+          }
           loadLocal();
         })
         .subscribe();

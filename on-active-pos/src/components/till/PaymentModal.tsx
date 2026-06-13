@@ -21,7 +21,7 @@ export function PaymentModal({ isOpen, onClose, total, autoDiscount, onComplete 
   const [payments, setPayments] = useState<Payment[]>([]);
 
   const totalPaidUsd = payments.reduce((sum, p) => sum + p.amount_usd, 0);
-  const remainingUsd = Math.max(0, total - totalPaidUsd);
+  const remainingUsd = Math.max(0, Math.round((total - totalPaidUsd) * 100) / 100);
   const isComplete = remainingUsd === 0;
 
   const handleAddPayment = (p: Payment) => {

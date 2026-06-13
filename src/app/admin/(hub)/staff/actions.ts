@@ -35,43 +35,57 @@ export async function hashPin(pin: string): Promise<string> {
 }
 
 export async function addStaffMember(data: { fullName: string; role: string; pin: string; storeId: string; email?: string; phone?: string }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Unauthorized');
 
-  const adminSupabase = createAdminClient();
-  
-  // Secure role check on the server (bypassing RLS)
-  const { data: callerProfile } = await adminSupabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
+    const adminSupabase = createAdminClient();
+    
+    // Secure role check on the server (bypassing RLS)
+    const { data: callerProfile } = await adminSupabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
 
-  const allowedRoles = ['owner', 'manager', 'admin'];
-  if (!callerProfile || !allowedRoles.includes(callerProfile.role?.toLowerCase())) {
-    throw new Error('Forbidden — insufficient permissions');
+    const allowedRoles = ['owner', 'manager', 'admin'];
+    if (!callerProfile || !allowedRoles.includes(callerProfile.role?.toLowerCase())) {
+      throw new Error('Forbidden — insufficient permissions');
+    }
+
+    const pinHash = await hashPin(data.pin);
+
+    const { data: employee, error } = await adminSupabase
+      .from('employees')
+      .insert({
+        full_name: data.fullName,
+        role: data.role,
+        pin_hash: pinHash,
+        store_id: data.storeId,
+        email: data.email?.trim() || null,
+        phone: data.phone?.trim() || null,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') return { error: 'A staff member already exists with this email, phone, or PIN.' };
+      return { error: error.message };
+    }
+
+    await logAction('create', 'employee', employee.id, { name: data.fullName, role: data.role });
+    
+    revalidatePath('/admin/staff');
+    revalidatePath('/admin/settings');
+    return employee;
+  } catch (err: any) {
+    console.error('addStaffMember error:', err);
+    return { error: err.message || 'Internal Server Error' };
   }
-
-  const pinHash = await hashPin(data.pin);
-
-  const { data: employee, error } = await adminSupabase
-    .from('employees')
-    .insert({
-      full_name: data.fullName,
-      role: data.role,
-      pin: data.pin,
-      pin_hash: pinHash,
-      store_id: data.storeId,
-      email: data.email,
-      phone: data.phone,
-      is_active: true,
-      created_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
+}
 
   await logAction('create', 'employee', employee.id, { name: data.fullName, role: data.role });
   
@@ -81,51 +95,58 @@ export async function addStaffMember(data: { fullName: string; role: string; pin
 }
 
 export async function updateStaffMember(id: string, data: { fullName: string; role: string; pin?: string; storeId: string; email?: string; phone?: string }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Unauthorized');
 
-  const adminSupabase = createAdminClient();
+    const adminSupabase = createAdminClient();
 
-  // Secure role check on the server (bypassing RLS)
-  const { data: callerProfile } = await adminSupabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
+    // Secure role check on the server (bypassing RLS)
+    const { data: callerProfile } = await adminSupabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
 
-  const allowedRoles = ['owner', 'manager', 'admin'];
-  if (!callerProfile || !allowedRoles.includes(callerProfile.role?.toLowerCase())) {
-    throw new Error('Forbidden — insufficient permissions');
+    const allowedRoles = ['owner', 'manager', 'admin'];
+    if (!callerProfile || !allowedRoles.includes(callerProfile.role?.toLowerCase())) {
+      throw new Error('Forbidden — insufficient permissions');
+    }
+
+    const updates: any = {
+      full_name: data.fullName,
+      role: data.role,
+      store_id: data.storeId,
+      email: data.email?.trim() || null,
+      phone: data.phone?.trim() || null,
+    };
+
+    if (data.pin) {
+      updates.pin_hash = await hashPin(data.pin);
+    }
+
+    const { data: employee, error } = await adminSupabase
+      .from('employees')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') return { error: 'A staff member already exists with this email, phone, or PIN.' };
+      return { error: error.message };
+    }
+
+    await logAction('update', 'employee', id, { name: data.fullName, role: data.role, pinChanged: !!data.pin });
+
+    revalidatePath('/admin/staff');
+    revalidatePath('/admin/settings');
+    return employee;
+  } catch (err: any) {
+    console.error('updateStaffMember error:', err);
+    return { error: err.message || 'Internal Server Error' };
   }
-
-  const updates: any = {
-    full_name: data.fullName,
-    role: data.role,
-    store_id: data.storeId,
-    email: data.email,
-    phone: data.phone,
-  };
-
-  if (data.pin) {
-    updates.pin = data.pin;
-    updates.pin_hash = await hashPin(data.pin);
-  }
-
-  const { data: employee, error } = await adminSupabase
-    .from('employees')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-
-  await logAction('update', 'employee', id, { name: data.fullName, role: data.role, pinChanged: !!data.pin });
-
-  revalidatePath('/admin/staff');
-  revalidatePath('/admin/settings');
-  return employee;
 }
 
 export async function deactivateStaffMember(id: string) {

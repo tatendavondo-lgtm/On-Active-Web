@@ -209,10 +209,11 @@ export interface ProcessRefundParams {
   refundMethod: 'cash' | 'ecocash' | 'innbucks' | 'card';
   reason: string;
   refundTotalUsd: number;
+  shiftId: string;
 }
 
 export async function processRefund(params: ProcessRefundParams) {
-  const { order, refundItems, refundMethod, reason, refundTotalUsd } = params;
+  const { order, refundItems, refundMethod, reason, refundTotalUsd, shiftId } = params;
   const now = new Date().toISOString();
   const paymentId = generateUUID();
 
@@ -222,8 +223,11 @@ export async function processRefund(params: ProcessRefundParams) {
   for (const r of refundItems) returnMap.set(r.item.id, r.returnQuantity);
 
   for (const item of order.items) {
-    const rq = returnMap.get(item.id) || 0;
-    if (rq < item.quantity) {
+    const returningNow = returnMap.get(item.id) || 0;
+    const previouslyRefunded = item.refunded_quantity || 0;
+    const totalRefunded = returningNow + previouslyRefunded;
+    
+    if (totalRefunded < item.quantity) {
       isFullRefund = false;
       break;
     }
@@ -237,7 +241,8 @@ export async function processRefund(params: ProcessRefundParams) {
     method: refundMethod,
     amount_usd: -Math.abs(refundTotalUsd), // Ensure it's negative
     status: 'refunded',
-    reference: reason // Store reason in reference
+    reference: reason, // Store reason in reference
+    shift_id: shiftId
   };
 
   // 3. Update local Dexie order
@@ -245,9 +250,20 @@ export async function processRefund(params: ProcessRefundParams) {
   if (updatedOrder) {
     const payments = updatedOrder.payments || [];
     payments.push(refundPayment);
+    
+    // Update items refunded_quantity
+    const newItems = updatedOrder.items.map(item => {
+      const returning = returnMap.get(item.id) || 0;
+      if (returning > 0) {
+        return { ...item, refunded_quantity: (item.refunded_quantity || 0) + returning };
+      }
+      return item;
+    });
+
     await db.orders.update(order.id, {
       status: newStatus,
       payments,
+      items: newItems,
       updated_at: now
     } as any);
   }
@@ -276,6 +292,18 @@ export async function processRefund(params: ProcessRefundParams) {
   // 5. Handle Restocking Local & Remote
   for (const { item, returnQuantity } of refundItems) {
     if (returnQuantity <= 0) continue;
+
+    // Queue update for the specific order item so remote DB tracks refunded_quantity
+    await db.syncQueue.add({
+      table: 'pos_order_items',
+      operation: 'update',
+      data: {
+        id: item.id,
+        refunded_quantity: (item.refunded_quantity || 0) + returnQuantity
+      },
+      created_at: now,
+      attempts: 0
+    });
 
     // A. Local stock increment
     try {

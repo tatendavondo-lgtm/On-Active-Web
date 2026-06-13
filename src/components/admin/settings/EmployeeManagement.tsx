@@ -98,10 +98,18 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
           ...form,
           pin: form.pin.trim() || undefined
         });
+        if ('error' in updated) {
+          toast.error(updated.error);
+          return;
+        }
         setEmployees(prev => prev.map(e => e.id === editingId ? updated : e));
         toast.success('Staff member updated');
       } else {
         const data = await addStaffMember(form);
+        if ('error' in data) {
+          toast.error(data.error);
+          return;
+        }
         setEmployees(prev => [data, ...prev]);
         toast.success(`${form.fullName} added to POS staff`);
       }

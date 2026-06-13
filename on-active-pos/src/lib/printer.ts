@@ -47,12 +47,13 @@ function concatBytes(...arrays: Uint8Array[]): Uint8Array {
 }
 
 function padRight(text: string, width: number): string {
-  return text.length >= width ? text.substring(0, width) : text + ' '.repeat(width - text.length);
+  const w = Math.max(0, width);
+  return text.length >= w ? text.substring(0, w) : text + ' '.repeat(w - text.length);
 }
 
 function formatLine(left: string, right: string, totalWidth = 32): string {
   const rightLen = right.length;
-  const leftMax = totalWidth - rightLen - 1;
+  const leftMax = Math.max(0, totalWidth - rightLen - 1);
   return padRight(left, leftMax) + ' ' + right;
 }
 
@@ -261,9 +262,15 @@ class PrinterService {
     
     console.log('Printing via Web Bluetooth...');
     const CHUNK_SIZE = 20;
-    for (let i = 0; i < data.length; i += CHUNK_SIZE) {
-      const chunk = data.slice(i, i + CHUNK_SIZE);
-      await this.characteristic.writeValue(chunk);
+    try {
+      for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+        const chunk = data.slice(i, i + CHUNK_SIZE);
+        await this.characteristic.writeValue(chunk);
+      }
+    } catch (err) {
+      console.error('Failed to write to Web Bluetooth printer, flag disconnected:', err);
+      this.status.connected = false;
+      throw err;
     }
   }
 

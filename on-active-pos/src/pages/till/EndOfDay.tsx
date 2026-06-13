@@ -7,6 +7,7 @@ import { Button } from '../../components/shared/Button';
 import { Numpad } from '../../components/shared/Numpad';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Lock, Info } from 'lucide-react';
+import type { Order } from '../../types/order';
 
 export default function EndOfDay() {
   const { employee, shiftId, logout } = useSessionStore();
@@ -17,7 +18,7 @@ export default function EndOfDay() {
 
   // Fetch orders for this shift
   const shiftOrders = useLiveQuery(
-    () => db.orders.where('shift_id').equals(shiftId || '').toArray(),
+    () => shiftId ? db.orders.filter(o => o.shift_id === shiftId || o.payments?.some(p => p.shift_id === shiftId)).toArray() : ([] as Order[]),
     [shiftId]
   );
 
@@ -48,15 +49,31 @@ export default function EndOfDay() {
     };
 
     shiftOrders.forEach(o => {
-      summary.totalSales += o.total;
-      summary.orderCount += 1;
-      (summary.sources as any)[o.source] += 1;
-      summary.discounts.auto += o.auto_discount_amount || 0;
-      summary.discounts.manual += o.manual_discount_amount || 0;
-      summary.discounts.total += (o.auto_discount_amount || 0) + (o.manual_discount_amount || 0);
+      const isCurrentShiftOrder = o.shift_id === shiftId;
+      let orderTotalSales = isCurrentShiftOrder ? o.total : 0;
+      
+      if (isCurrentShiftOrder) {
+        summary.orderCount += 1;
+        (summary.sources as any)[o.source] += 1;
+        summary.discounts.auto += o.auto_discount_amount || 0;
+        summary.discounts.manual += o.manual_discount_amount || 0;
+        summary.discounts.total += (o.auto_discount_amount || 0) + (o.manual_discount_amount || 0);
+      }
 
       o.payments.forEach(p => {
+        // If this order is from a previous shift, ONLY process payments made in CURRENT shift
+        if (!isCurrentShiftOrder && p.shift_id !== shiftId) {
+          return;
+        }
+
+        // Handle negative refund payments to reduce net sales
+        if (p.amount_usd < 0) {
+          orderTotalSales += p.amount_usd;
+        }
+
         if (p.method === 'cash') {
+
+
           if (!p.local_currency) summary.payments.cash_usd += p.amount_usd;
           else if (p.local_currency === 'ZIG') {
             summary.payments.cash_zig += p.amount_local || 0;
@@ -71,6 +88,8 @@ export default function EndOfDay() {
         else if (p.method === 'card') summary.payments.card += p.amount_usd;
         else if (p.method === 'online_payment') summary.payments.online += p.amount_usd;
       });
+
+      summary.totalSales += orderTotalSales;
     });
 
     return summary;

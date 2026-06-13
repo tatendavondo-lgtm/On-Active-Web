@@ -59,28 +59,28 @@ export function transformOrderToReceipt(order: Order, storeInfo: any, cashierNam
     time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     cashier: cashierName,
     salesman: salesmanName,
-    items: order.items.map(item => ({
-      name: item.product_name,
+    items: (order.items || []).map(item => ({
+      name: item.product_name || 'Item',
       variant: item.variant_name,
-      qty: item.quantity,
-      unitPrice: item.unit_price,
-      lineTotal: item.line_total
+      qty: item.quantity || 1,
+      unitPrice: item.unit_price || 0,
+      lineTotal: item.line_total || 0
     })),
-    subtotal: order.subtotal,
+    subtotal: order.subtotal || 0,
     autoDiscount: order.auto_discount_applied ? {
       percentage: 2, // Hardcoded per requirement
-      amount: order.auto_discount_amount
+      amount: order.auto_discount_amount || 0
     } : undefined,
     manualDiscount: order.manual_discount_type ? {
       type: order.manual_discount_type as any,
       value: order.manual_discount_value || 0,
-      amount: order.manual_discount_amount
+      amount: order.manual_discount_amount || 0
     } : undefined,
-    totalDiscount: order.total_discount,
-    total: order.total,
-    payments: order.payments.map(p => ({
-      method: p.method,
-      amount: p.amount_usd,
+    totalDiscount: order.total_discount || 0,
+    total: order.total || 0,
+    payments: (order.payments || []).map(p => ({
+      method: p.method || 'Unknown',
+      amount: p.amount_usd || 0,
       currency: p.local_currency || 'USD',
       localAmount: p.amount_local,
       exchangeRate: p.exchange_rate_used,

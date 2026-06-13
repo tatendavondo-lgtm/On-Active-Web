@@ -11,27 +11,29 @@ export function useOnlineOrders() {
   );
 
   const moveToStatus = async (orderId: string, newStatus: string) => {
-    const now = new Date().toISOString();
-    
-    // Update local DB
-    await db.orders.update(orderId, { 
-      status: newStatus,
-      updated_at: now
-    } as any);
-
-    // Add to sync queue for backend update
-    await db.syncQueue.add({
-      table: 'online_order_bridge',
-      operation: 'update',
-      data: { id: orderId, status: newStatus, updated_at: now },
-      created_at: now,
-      attempts: 0
-    });
-
-    // Deduct stock quantity when completed in the POS
-    if (newStatus === 'completed') {
+    try {
       const order = await db.orders.get(orderId);
-      if (order && order.items) {
+      if (!order || order.status === newStatus) return;
+
+      const now = new Date().toISOString();
+      
+      // Update local DB
+      await db.orders.update(orderId, { 
+        status: newStatus,
+        updated_at: now
+      } as any);
+
+      // Add to sync queue for backend update
+      await db.syncQueue.add({
+        table: 'online_order_bridge',
+        operation: 'update',
+        data: { id: orderId, status: newStatus, updated_at: now },
+        created_at: now,
+        attempts: 0
+      });
+
+      // Deduct stock quantity when completed in the POS
+      if (newStatus === 'completed' && order.items) {
         for (const item of order.items) {
           if (item.product_id) {
             // A. Local stock deduction for immediate UI updates
@@ -71,6 +73,8 @@ export function useOnlineOrders() {
           }
         }
       }
+    } catch (err) {
+      console.error('Failed to move order status:', err);
     }
   };
 

@@ -11,9 +11,9 @@ const CLIENT_ONLY_FIELDS = ['synced', 'synced_at', 'device_id', 'created_offline
 const TABLE_COLUMNS: Record<string, string[]> = {
   salesman_orders: ['id', 'store_id', 'salesman_id', 'salesman_name', 'customer_name', 'items', 'subtotal', 'item_count', 'notes', 'status', 'created_at'],
   shifts: ['id', 'store_id', 'employee_id', 'opened_at', 'closed_at', 'opening_cash', 'closing_cash', 'expected_cash', 'cash_difference', 'actual_cash', 'device_id', 'status', 'notes'],
-  pos_orders: ['id', 'order_number', 'store_id', 'employee_id', 'salesman_id', 'salesman_order_id', 'shift_id', 'customer_id', 'source', 'fulfillment', 'status', 'subtotal', 'total_discount', 'tax_amount', 'total', 'currency', 'exchange_rate_zig', 'exchange_rate_zar', 'device_id', 'created_at', 'completed_at'],
-  pos_order_items: ['id', 'order_id', 'product_id', 'variant_id', 'product_name', 'variant_name', 'sku', 'quantity', 'unit_price', 'discount_amount', 'line_total'],
-  pos_payments: ['id', 'order_id', 'method', 'amount_usd', 'amount_local', 'local_currency', 'exchange_rate_used', 'reference', 'status', 'created_at'],
+  pos_orders: ['id', 'order_number', 'store_id', 'employee_id', 'salesman_id', 'salesman_order_id', 'shift_id', 'customer_id', 'source', 'fulfillment', 'status', 'subtotal', 'auto_discount_applied', 'auto_discount_amount', 'manual_discount_amount', 'manual_discount_type', 'manual_discount_value', 'total_discount', 'tax_amount', 'total', 'currency', 'exchange_rate_zig', 'exchange_rate_zar', 'device_id', 'created_at', 'updated_at', 'completed_at'],
+  pos_order_items: ['id', 'order_id', 'product_id', 'variant_id', 'product_name', 'variant_name', 'sku', 'quantity', 'unit_price', 'discount_amount', 'line_total', 'refunded_quantity'],
+  pos_payments: ['id', 'order_id', 'method', 'amount_usd', 'amount_local', 'local_currency', 'exchange_rate_used', 'reference', 'tendered', 'change_given', 'status', 'created_at'],
   customers: ['id', 'full_name', 'phone', 'email', 'address', 'notes', 'source', 'created_at'],
   online_order_bridge: ['id', 'webstore_order_id', 'pos_order_id', 'store_id', 'fulfillment', 'status', 'assigned_at', 'accepted_at', 'ready_at', 'completed_at', 'customer_name', 'customer_phone', 'customer_email', 'items', 'total', 'order_ref'],
   products: ['id', 'stock_quantity'], 
@@ -228,12 +228,13 @@ export async function pullUpdates(storeId: string): Promise<void> {
     }
   }
 
-  // 1. Pull new salesman orders
+  // 1. Pull recent salesman orders (all statuses so we catch cancellations and completions)
   const { data: salesmanOrders } = await supabase
     .from('salesman_orders')
     .select('*')
     .eq('store_id', storeId)
-    .in('status', ['pending', 'accepted']);
+    .order('created_at', { ascending: false })
+    .limit(200);
 
   if (salesmanOrders) {
     for (const so of salesmanOrders) {
@@ -244,10 +245,17 @@ export async function pullUpdates(storeId: string): Promise<void> {
           salesman_name: so.salesman_name || 'Unknown',
           items: typeof so.items === 'string' ? JSON.parse(so.items) : (so.items || []),
           synced: true,
-          device_id: '',
+          device_id: so.device_id || '',
         });
-      } else if (exists.status !== so.status) {
-        await db.salesmanOrders.update(so.id, { status: so.status });
+      } else {
+        // Update status or other fields if changed
+        if (exists.status !== so.status || exists.subtotal !== so.subtotal) {
+          await db.salesmanOrders.update(so.id, { 
+            status: so.status,
+            items: typeof so.items === 'string' ? JSON.parse(so.items) : (so.items || []),
+            subtotal: so.subtotal
+          });
+        }
       }
     }
   }

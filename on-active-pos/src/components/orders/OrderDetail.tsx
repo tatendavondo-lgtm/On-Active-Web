@@ -32,7 +32,7 @@ export function OrderDetail({ order, salesmanName, employeeName }: OrderDetailPr
           </div>
         </div>
         <div className="flex gap-2">
-          {order.status === 'completed' && (
+          {(order.status === 'completed' || order.status === 'partially_refunded') && (
             <Button variant="secondary" onClick={() => setIsRefundModalOpen(true)} className="text-red-400 hover:text-red-300 border-red-500/30 hover:border-red-500 hover:bg-red-500/10">
               Refund / Return
             </Button>

@@ -9,6 +9,7 @@ export interface OrderItem {
   unit_price: number;
   discount_amount: number;
   line_total: number;
+  refunded_quantity?: number;
 }
 
 export interface Payment {
@@ -22,6 +23,7 @@ export interface Payment {
   tendered?: number;
   change_given?: number;
   status: 'pending' | 'completed' | 'failed' | 'refunded';
+  shift_id?: string;
 }
 
 export interface Order {

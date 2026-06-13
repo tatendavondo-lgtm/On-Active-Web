@@ -22,9 +22,10 @@ export function DiscountModal({ isOpen, onClose, subtotal, autoDiscount, onApply
   
   // Calculate discount
   const baseAmount = autoDiscount.applied ? autoDiscount.discounted_total : subtotal;
-  const discountAmount = type === 'percentage' 
-    ? baseAmount * (numValue / 100)
-    : numValue;
+  const discountAmount = Math.min(
+    baseAmount,
+    type === 'percentage' ? baseAmount * (numValue / 100) : numValue
+  );
     
   const finalTotal = Math.max(0, baseAmount - discountAmount);
   

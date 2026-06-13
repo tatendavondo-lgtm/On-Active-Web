@@ -120,8 +120,8 @@ class PosDatabase extends Dexie {
 
   constructor() {
     super('OnActivePOS');
-    this.version(7).stores({
-      products: 'id, category, sku, updated_at',
+    this.version(8).stores({
+      products: 'id, name, category, sku, updated_at',
       salesmanOrders: 'id, store_id, salesman_id, status, created_at',
       orders: 'id, order_number, source, fulfillment, status, synced, created_at, shift_id, store_id',
       syncQueue: '++id, table, operation, created_at',

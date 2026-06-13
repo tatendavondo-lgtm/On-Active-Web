@@ -75,6 +75,15 @@ export default function TillRegister() {
     }
 
     try {
+      // 3. ATOMIC LOCK CHECK: Ensure the order is still 'pending' locally
+      // Since useIncomingOrders now writes UPDATE payloads directly to Dexie,
+      // if another Till accepted this, the local DB will show it as 'accepted'.
+      const currentOrderState = await db.salesmanOrders.get(order.id);
+      if (!currentOrderState || currentOrderState.status !== 'pending') {
+        toast.error('This order is no longer pending (it may have been claimed by another till or cancelled).');
+        return;
+      }
+
       await acceptOrder(order.id);
       setSelectedOrder({ ...order, status: 'accepted' });
     } catch (err: any) {

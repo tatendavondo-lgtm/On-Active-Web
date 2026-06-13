@@ -1,5 +1,8 @@
 -- 1. CREATE ATOMIC INVENTORY INCREMENT RPCS (FOR REFUNDS)
 
+-- Drop existing function if parameter names changed
+DROP FUNCTION IF EXISTS increment_inventory(uuid, uuid, uuid, integer);
+
 -- For store-specific inventory (branch level)
 CREATE OR REPLACE FUNCTION increment_inventory(
   p_store_id UUID,
@@ -30,3 +33,6 @@ BEGIN
   WHERE id = p_product_id;
 END;
 $$ LANGUAGE plpgsql;
+
+-- 2. ALTER pos_order_items TO SUPPORT REFUNDS
+ALTER TABLE pos_order_items ADD COLUMN IF NOT EXISTS refunded_quantity INT DEFAULT 0;
