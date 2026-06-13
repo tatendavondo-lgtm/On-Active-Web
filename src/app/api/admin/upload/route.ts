@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { UTApi } from 'uploadthing/server';
 
 const utapi = new UTApi({ 
-  token: process.env.UPLOADTHING_SECRET || process.env.UPLOADTHING_TOKEN 
+  apiKey: process.env.UPLOADTHING_SECRET 
 });
 
 export async function POST(req: NextRequest) {
