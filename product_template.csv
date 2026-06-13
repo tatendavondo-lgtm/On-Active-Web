@@ -1,0 +1,10 @@
+Product Name,Category,Gender,Base Price (USD),Description,Size,Color,Quantity,Featured,Trending
+Example T-Shirt,Tops,All,29.99,Premium cotton athletic tee,S,Black,10,Yes,No
+Example T-Shirt,Tops,All,29.99,,S,White,8,Yes,No
+Example T-Shirt,Tops,All,29.99,,M,Black,15,Yes,No
+Example T-Shirt,Tops,All,29.99,,M,White,12,Yes,No
+Example T-Shirt,Tops,All,29.99,,L,Black,10,Yes,No
+Example T-Shirt,Tops,All,29.99,,L,White,7,Yes,No
+Example Leggings,Leggings,Women,45.00,High-waist compression leggings,XS,Navy,5,No,Yes
+Example Leggings,Leggings,Women,45.00,,S,Navy,8,No,Yes
+Example Leggings,Leggings,Women,45.00,,M,Navy,10,No,Yes

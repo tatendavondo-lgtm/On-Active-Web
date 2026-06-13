@@ -4,6 +4,9 @@ import { OrderStatusBadge } from './OrderStatusBadge';
 import { Button } from '../shared/Button';
 import type { Order } from '../../types/order';
 import { RefundModal } from './RefundModal';
+import { printerService } from '../../lib/printer';
+import { transformOrderToReceipt } from '../../lib/receipt';
+import { useSessionStore } from '../../stores/sessionStore';
 
 interface OrderDetailProps {
   order: Order;
@@ -13,6 +16,16 @@ interface OrderDetailProps {
 
 export function OrderDetail({ order, salesmanName, employeeName }: OrderDetailProps) {
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const { store } = useSessionStore();
+
+  const handlePrint = async () => {
+    try {
+      const receiptData = transformOrderToReceipt(order, store || {}, employeeName || 'Unknown Till', salesmanName);
+      await printerService.printReceipt(receiptData);
+    } catch (e) {
+      alert('Failed to print: ' + (e as Error).message);
+    }
+  };
 
   const getFormat = (cur: string) => {
     if (cur === 'ZIG') return formatZIG;
@@ -37,7 +50,7 @@ export function OrderDetail({ order, salesmanName, employeeName }: OrderDetailPr
               Refund / Return
             </Button>
           )}
-          <Button variant="secondary" onClick={() => alert('Print receipt will be in Prompt 3')}>
+          <Button variant="secondary" onClick={handlePrint}>
             Print Receipt
           </Button>
         </div>

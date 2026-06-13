@@ -35,11 +35,27 @@ export default function Orders() {
       if (search) {
         const s = search.toLowerCase();
         if (!o.order_number.toLowerCase().includes(s) && !o.id.toLowerCase().includes(s)) return false;
-      } else {
-        // Date (simplified for demo)
+      }
+      
+      // Date
+      if (filters.date !== 'all') {
         const date = new Date(o.created_at);
         const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        
         if (filters.date === 'today' && date.toDateString() !== today.toDateString()) return false;
+        if (filters.date === 'yesterday' && date.toDateString() !== yesterday.toDateString()) return false;
+        if (filters.date === 'week') {
+          const weekAgo = new Date(today);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          if (date < weekAgo) return false;
+        }
+        if (filters.date === 'month') {
+          const monthAgo = new Date(today);
+          monthAgo.setMonth(monthAgo.getMonth() - 1);
+          if (date < monthAgo) return false;
+        }
       }
       
       return true;

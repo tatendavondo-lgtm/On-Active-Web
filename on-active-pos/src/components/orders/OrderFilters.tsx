@@ -1,5 +1,5 @@
 export interface FilterState {
-  date: 'today' | 'yesterday' | 'week' | 'month';
+  date: 'today' | 'yesterday' | 'week' | 'month' | 'all';
   source: 'all' | 'salesman' | 'walk_in' | 'online';
   status: 'all' | 'pending' | 'completed' | 'cancelled';
 }
@@ -35,6 +35,7 @@ export function OrderFilters({ filters, onChange, search, onSearchChange }: Orde
           <option value="yesterday">Yesterday</option>
           <option value="week">This Week</option>
           <option value="month">This Month</option>
+          <option value="all">All Time</option>
         </select>
 
         <select

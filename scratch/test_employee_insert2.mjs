@@ -10,30 +10,29 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function testAdd() {
+async function addTillOperator() {
   try {
-    const pinHash = await bcrypt.hash('1234', 10);
+    const pin = '4321';
+    const pinHash = await bcrypt.hash(pin, 10);
     
     // Fetch a store ID
-    const { data: stores } = await supabase.from('stores').select('id').limit(1);
-    const storeId = stores?.[0]?.id;
+    const { data: stores } = await supabase.from('stores').select('id, name').limit(1);
+    const store = stores?.[0];
     
-    if (!storeId) {
+    if (!store) {
       console.log("No store found");
       return;
     }
     
-    console.log("Inserting employee...");
+    console.log(`Adding to store: ${store.name}`);
     const { data, error } = await supabase
       .from('employees')
       .insert({
-        full_name: 'test',
-        role: 'salesman',
-        pin: '1234',
+        full_name: 'Till Ops 1',
+        role: 'till_operator',
+        pin: pin,
         pin_hash: pinHash,
-        store_id: storeId,
-        email: 'test@gmail.com',
-        phone: '08883271117',
+        store_id: store.id,
         is_active: true,
         created_at: new Date().toISOString(),
       })
@@ -43,26 +42,15 @@ async function testAdd() {
     if (error) {
       console.error("Insert Error:", error);
     } else {
-      console.log("Success:", data);
-      
-      console.log("Logging action...");
-      // Simulate logAction
-      const { error: logError } = await supabase.from('audit_logs').insert({
-        user_id: '22b64021-1b61-4dfc-8df2-0e9ba1efb36a', // Samu's ID
-        user_name: 'Samu Sibanda',
-        user_role: 'owner',
-        source: 'admin',
-        action: 'create',
-        target_type: 'employee',
-        target_id: data.id,
-        details: { name: 'test', role: 'salesman' },
-      });
-      if (logError) console.error("Log Error:", logError);
-      else console.log("Log success");
+      console.log("Successfully created till operator!");
+      console.log("Name:", data.full_name);
+      console.log("Role:", data.role);
+      console.log("PIN:", pin);
+      console.log("Store:", store.name);
     }
   } catch (err) {
     console.error("Caught error:", err);
   }
 }
 
-testAdd();
+addTillOperator();
