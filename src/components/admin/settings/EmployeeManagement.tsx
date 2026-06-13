@@ -161,39 +161,45 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
         </p>
 
         {/* Form */}
-        <div className={`space-y-4 mb-8 p-4 bg-[#0a0a0a] border rounded-[6px] transition-colors ${editingId ? 'border-[#C5A021]/30' : 'border-[#1a1a1a]'}`}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
+        <div suppressHydrationWarning className={`space-y-4 mb-8 p-4 bg-[#0a0a0a] border rounded-[6px] transition-colors ${editingId ? 'border-[#C5A021]/30' : 'border-[#1a1a1a]'}`}>
+          <div suppressHydrationWarning className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div suppressHydrationWarning className="sm:col-span-2">
               <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">Full Name</label>
-              <input
+              <div suppressHydrationWarning>
+                <input
                 type="text"
                 value={form.fullName}
                 onChange={(e) => setForm(f => ({ ...f, fullName: e.target.value }))}
                 placeholder="John Doe"
                 className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#2a2a2a]"
               />
+              </div>
             </div>
-            <div>
+            <div suppressHydrationWarning>
               <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">Email (Optional)</label>
-              <input
+              <div suppressHydrationWarning>
+                <input
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="john@onactive.co.zw"
                 className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#2a2a2a]"
               />
+              </div>
             </div>
-            <div>
+            <div suppressHydrationWarning>
               <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">Phone (Optional)</label>
-              <input
+              <div suppressHydrationWarning>
+                <input
                 type="text"
                 value={form.phone}
                 onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))}
                 placeholder="+263 7..."
                 className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#2a2a2a]"
               />
+              </div>
             </div>
-            <div>
+            <div suppressHydrationWarning>
               <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">Role</label>
               <select
                 value={form.role}
@@ -213,11 +219,12 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
                 {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-            <div className="sm:col-span-2">
+            <div suppressHydrationWarning className="sm:col-span-2">
               <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">
                 {editingId ? 'Change PIN (Leave blank to keep current)' : 'Login PIN (4-Digits)'}
               </label>
-              <input
+              <div suppressHydrationWarning className="relative">
+                <input
                 type="text"
                 maxLength={4}
                 value={form.pin}
@@ -225,6 +232,7 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
                 placeholder={editingId ? '••••' : '1234'}
                 className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#C5A021]/50 font-mono tracking-[0.2em]"
               />
+              </div>
             </div>
           </div>
           <button
