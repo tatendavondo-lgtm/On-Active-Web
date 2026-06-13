@@ -3,9 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { UTApi } from 'uploadthing/server';
 
-const utapi = new UTApi({ 
-  apiKey: process.env.UPLOADTHING_SECRET 
-});
+const utapi = new UTApi();
 
 export async function POST(req: NextRequest) {
   try {
