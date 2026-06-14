@@ -78,7 +78,7 @@ export async function addStaffMember(data: { fullName: string; role: string; pin
     }
 
     await logAction('create', 'employee', employee.id, { name: data.fullName, role: data.role });
-    return employee;
+    return JSON.parse(JSON.stringify(employee));
   } catch (err: any) {
     console.error('addStaffMember error:', err);
     return { error: err.message || 'Internal Server Error' };
@@ -131,7 +131,7 @@ export async function updateStaffMember(id: string, data: { fullName: string; ro
     }
 
     await logAction('update', 'employee', id, { name: data.fullName, role: data.role, pinChanged: !!data.pin });
-    return employee;
+    return JSON.parse(JSON.stringify(employee));
   } catch (err: any) {
     console.error('updateStaffMember error:', err);
     return { error: err.message || 'Internal Server Error' };
