@@ -47,3 +47,53 @@ export async function POST(request: NextRequest) {
     directCreated: false 
   });
 }
+
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Use service role client to verify caller and send the invite
+  const adminClient = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { data: callerProfile } = await adminClient
+    .from('profiles')
+    .select('role, full_name')
+    .eq('id', user.id)
+    .single();
+
+  if (callerProfile?.role !== 'owner') {
+    return Response.json({ error: 'Forbidden — owner only' }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const profileId = searchParams.get('id');
+
+  if (!profileId) {
+    return Response.json({ error: 'Profile ID is required' }, { status: 400 });
+  }
+
+  const { data: targetProfile } = await adminClient.from('profiles').select('full_name').eq('id', profileId).single();
+  
+  const { error } = await adminClient.from('profiles').update({ role: 'revoked' }).eq('id', profileId);
+  if (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  // Log action
+  await adminClient.from('audit_logs').insert({
+    user_id: user.id,
+    user_name: callerProfile?.full_name || 'Owner',
+    user_role: callerProfile?.role || 'owner',
+    source: 'admin',
+    action: 'remove',
+    target_type: 'team_member',
+    target_id: profileId,
+    details: { name: targetProfile?.full_name || profileId },
+  });
+
+  return Response.json({ success: true });
+}

@@ -57,7 +57,12 @@ export function TeamManagement({ managers: initialManagers }: TeamManagementProp
 
   const handleRemove = async (managerId: string) => {
     try {
-      await removeTeamMember(managerId);
+      const res = await fetch(`/api/admin/invite?id=${managerId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to remove manager');
+
       toast.success('Manager removed');
       setManagers((prev) => prev.filter((m) => m.id !== managerId));
       setRemoveTarget(null);
