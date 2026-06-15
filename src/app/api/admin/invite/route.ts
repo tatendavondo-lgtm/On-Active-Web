@@ -53,7 +53,7 @@ export async function DELETE(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Use service role client to verify caller and send the invite
+  // Use service role client to verify caller and delete user
   const adminClient = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -78,7 +78,9 @@ export async function DELETE(request: NextRequest) {
 
   const { data: targetProfile } = await adminClient.from('profiles').select('full_name').eq('id', profileId).single();
   
-  const { error } = await adminClient.from('profiles').update({ role: 'revoked' }).eq('id', profileId);
+  // Actually delete the user from auth.users. This will cascade to profiles.
+  const { error } = await adminClient.auth.admin.deleteUser(profileId);
+  
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
