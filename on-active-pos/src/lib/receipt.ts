@@ -53,7 +53,7 @@ export function transformOrderToReceipt(order: Order, storeInfo: any, cashierNam
   return {
     storeName: storeInfo.name,
     storeAddress: storeInfo.address || 'CBD, Harare',
-    storePhone: storeInfo.phone || '+263 242 000 000',
+    storePhone: storeInfo.phone || '+263782610691',
     orderNumber: order.order_number,
     date: dateObj.toLocaleDateString(),
     time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
