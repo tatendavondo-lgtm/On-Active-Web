@@ -38,15 +38,15 @@ export function TeamManagement({ managers: initialManagers }: TeamManagementProp
         }),
       });
       const data = await res.json();
-      if (!res.ok) toast.error(data.error ?? 'Failed to create manager account');
+      if (!res.ok) toast.error(data.error ?? 'Failed to send invitation');
       else {
-        toast.success(`Account created for ${inviteName}! Password: ${data.tempPassword}`, { duration: 10000 });
+        toast.success(`Invitation email sent to ${inviteName}!`, { duration: 6000 });
         setInviteEmail('');
         setInviteName('');
         // Reload page to fetch the newly created manager profile
         setTimeout(() => {
           window.location.reload();
-        }, 2000);
+        }, 1500);
       }
     } catch {
       toast.error('Network error — please try again');

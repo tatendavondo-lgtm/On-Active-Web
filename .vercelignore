@@ -1,0 +1,6 @@
+scratch/
+node_modules/
+.next/
+out/
+.git/
+on-active-pos/
