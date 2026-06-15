@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Loader2, Trash2, UserPlus, Users, Store, Shield, Wallet, Briefcase, UserCircle, Edit2, X, Phone, Mail } from 'lucide-react';
-import { addStaffMember, updateStaffMember, deactivateStaffMember } from '@/app/admin/(hub)/staff/actions';
 import { ConfirmModal } from '../ConfirmModal';
 import { EmptyState } from '../ui/EmptyState';
 import toast from 'react-hot-toast';
@@ -52,8 +51,6 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
   const [submitting, setSubmitting] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<Employee | null>(null);
 
-
-
   const resetForm = () => {
     setForm({
       fullName: '',
@@ -94,20 +91,44 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
     setSubmitting(true);
     try {
       if (editingId) {
-        const updated = await updateStaffMember(editingId, {
-          ...form,
-          pin: form.pin.trim() || undefined
+        // UPDATE via PUT
+        const res = await fetch('/api/admin/staff', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingId,
+            fullName: form.fullName,
+            role: form.role,
+            pin: form.pin.trim() || undefined,
+            storeId: form.storeId,
+            email: form.email,
+            phone: form.phone,
+          }),
         });
-        if ('error' in updated) {
-          toast.error(updated.error);
+        const data = await res.json();
+        if (!res.ok) {
+          toast.error(data.error || 'Failed to update staff member');
           return;
         }
-        setEmployees(prev => prev.map(e => e.id === editingId ? updated : e));
+        setEmployees(prev => prev.map(e => e.id === editingId ? data : e));
         toast.success('Staff member updated');
       } else {
-        const data = await addStaffMember(form);
-        if ('error' in data) {
-          toast.error(data.error);
+        // CREATE via POST
+        const res = await fetch('/api/admin/staff', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fullName: form.fullName,
+            role: form.role,
+            pin: form.pin,
+            storeId: form.storeId,
+            email: form.email,
+            phone: form.phone,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          toast.error(data.error || 'Failed to add staff member');
           return;
         }
         setEmployees(prev => [data, ...prev]);
@@ -123,7 +144,12 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
 
   const handleRemove = async (id: string) => {
     try {
-      await deactivateStaffMember(id);
+      const res = await fetch(`/api/admin/staff?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to deactivate staff member');
+        return;
+      }
       toast.success('Staff member deactivated');
       setEmployees((prev) => prev.filter((e) => e.id !== id));
       setRemoveTarget(null);
@@ -161,45 +187,39 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
         </p>
 
         {/* Form */}
-        <div suppressHydrationWarning className={`space-y-4 mb-8 p-4 bg-[#0a0a0a] border rounded-[6px] transition-colors ${editingId ? 'border-[#C5A021]/30' : 'border-[#1a1a1a]'}`}>
-          <div suppressHydrationWarning className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div suppressHydrationWarning className="sm:col-span-2">
+        <div className={`space-y-4 mb-8 p-4 bg-[#0a0a0a] border rounded-[6px] transition-colors ${editingId ? 'border-[#C5A021]/30' : 'border-[#1a1a1a]'}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
               <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">Full Name</label>
-              <div suppressHydrationWarning>
-                <input
+              <input
                 type="text"
                 value={form.fullName}
                 onChange={(e) => setForm(f => ({ ...f, fullName: e.target.value }))}
                 placeholder="John Doe"
                 className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#2a2a2a]"
               />
-              </div>
             </div>
-            <div suppressHydrationWarning>
+            <div>
               <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">Email (Optional)</label>
-              <div suppressHydrationWarning>
-                <input
+              <input
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="john@onactive.co.zw"
                 className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#2a2a2a]"
               />
-              </div>
             </div>
-            <div suppressHydrationWarning>
+            <div>
               <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">Phone (Optional)</label>
-              <div suppressHydrationWarning>
-                <input
+              <input
                 type="text"
                 value={form.phone}
                 onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))}
                 placeholder="+263 7..."
                 className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#2a2a2a]"
               />
-              </div>
             </div>
-            <div suppressHydrationWarning>
+            <div>
               <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">Role</label>
               <select
                 value={form.role}
@@ -219,20 +239,19 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
                 {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-            <div suppressHydrationWarning className="sm:col-span-2">
+            <div className="sm:col-span-2">
               <label className="text-[#444] text-[10px] font-bold uppercase tracking-wider block mb-1.5">
                 {editingId ? 'Change PIN (Leave blank to keep current)' : 'Login PIN (4-Digits)'}
               </label>
-              <div suppressHydrationWarning className="relative">
-                <input
+              <input
                 type="text"
                 maxLength={4}
                 value={form.pin}
                 onChange={(e) => setForm(f => ({ ...f, pin: e.target.value.replace(/\D/g, '') }))}
                 placeholder={editingId ? '••••' : '1234'}
+                autoComplete="off"
                 className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-sm outline-none focus:border-[#C5A021]/50 font-mono tracking-[0.2em]"
               />
-              </div>
             </div>
           </div>
           <button
@@ -313,4 +332,3 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
     </>
   );
 }
-
