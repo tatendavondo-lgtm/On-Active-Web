@@ -55,11 +55,26 @@ export default async function ManagerDashboardPage() {
 
   const combinedMetrics = await getCombinedMetrics(storeId);
 
+  // Get start of today in Harare timezone
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Africa/Harare',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(now);
+  const year = parts.find(p => p.type === 'year')?.value;
+  const month = parts.find(p => p.type === 'month')?.value;
+  const day = parts.find(p => p.type === 'day')?.value;
+  const todayISO = new Date(`${year}-${month}-${day}T00:00:00.000+02:00`).toISOString();
+
   const [recentPosOrders, lowStockInventory, activeShifts] = await Promise.all([
     adminSupabase
       .from('pos_orders')
       .select('id, order_number, source, status, total, created_at')
       .eq('store_id', storeId)
+      .gte('created_at', todayISO)
       .order('created_at', { ascending: false })
       .limit(6),
     adminSupabase
@@ -73,6 +88,7 @@ export default async function ManagerDashboardPage() {
       .select('id, opened_at, employee:employees(full_name, role)')
       .eq('store_id', storeId)
       .eq('status', 'open')
+      .gte('opened_at', todayISO)
   ]);
 
   return (

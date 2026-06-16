@@ -7,6 +7,7 @@ import { RevenueChart } from '@/components/admin/dashboard/RevenueChart';
 import { RecentOrdersTable } from '@/components/admin/dashboard/RecentOrdersTable';
 import { TopProducts } from '@/components/admin/dashboard/TopProducts';
 import type { RevenueDataPoint, TopProduct, StoreContext } from '@/types';
+import { getLiveZigRate } from '@/lib/exchangeRates';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,7 +63,7 @@ export default async function DashboardPage() {
 
   const combinedMetrics = await getCombinedMetrics();
 
-  const zigRate = Number(settings?.find((s) => s.key === 'zig_rate')?.value ?? 13500);
+  const zigRate = await getLiveZigRate();
 
   // Build revenue metrics
   const onlineRevenue = (thisMonthOrders ?? []).reduce((s, o) => s + (o.total_usd ?? 0), 0);

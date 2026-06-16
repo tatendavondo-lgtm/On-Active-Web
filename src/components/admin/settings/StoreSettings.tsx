@@ -11,7 +11,6 @@ interface StoreSettingsProps {
 
 export function StoreSettings({ initialSettings }: StoreSettingsProps) {
   const [settings, setSettings] = useState({
-    zig_rate: initialSettings.zig_rate ?? '13500',
     whatsapp_number: initialSettings.whatsapp_number ?? '',
     delivery_fee_usd: initialSettings.delivery_fee_usd ?? '5.00',
     free_delivery_threshold_usd: initialSettings.free_delivery_threshold_usd ?? '150.00',
@@ -31,7 +30,6 @@ export function StoreSettings({ initialSettings }: StoreSettingsProps) {
   };
 
   const fields = [
-    { key: 'zig_rate', label: 'ZiG Exchange Rate', hint: 'ZiG per 1 USD', type: 'number' },
     { key: 'whatsapp_number', label: 'Business WhatsApp', hint: '+263 xxx xxx xxx', type: 'text' },
     { key: 'delivery_fee_usd', label: 'Delivery Fee (USD)', hint: 'Charged per order', type: 'number' },
     { key: 'free_delivery_threshold_usd', label: 'Free Delivery Threshold (USD)', hint: 'Orders above this get free delivery', type: 'number' },

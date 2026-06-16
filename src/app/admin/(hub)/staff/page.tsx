@@ -54,7 +54,7 @@ export default async function StaffPage() {
 
         {/* Manager Profiles - Visible by both, but only editable if owner (TeamManagement component handles roles check for deletions) */}
         <div>
-          <TeamManagement managers={managers ?? []} />
+          <TeamManagement managers={managers ?? []} stores={stores ?? []} />
         </div>
       </div>
     </div>

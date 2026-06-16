@@ -11,13 +11,17 @@ import toast from 'react-hot-toast';
 
 interface TeamManagementProps {
   managers: Profile[];
+  stores: { id: string; name: string }[];
 }
 
-export function TeamManagement({ managers: initialManagers }: TeamManagementProps) {
-  const [managers, setManagers] = useState(initialManagers);
+export function TeamManagement({ managers: initialManagers, stores }: TeamManagementProps) {
+  // Filter out any managers that have been marked as removed
+  const activeManagers = initialManagers.filter(m => m.full_name !== '[REMOVED]');
+  const [managers, setManagers] = useState(activeManagers);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
   const [inviteRole, setInviteRole] = useState('manager');
+  const [inviteStore, setInviteStore] = useState(stores[0]?.id || '');
   const [inviting, setInviting] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<Profile | null>(null);
 
@@ -26,6 +30,11 @@ export function TeamManagement({ managers: initialManagers }: TeamManagementProp
       toast.error('Email and Name are required'); 
       return; 
     }
+    if (!inviteStore && inviteRole === 'manager') {
+      toast.error('Please assign a store to this manager');
+      return;
+    }
+    
     setInviting(true);
     try {
       const res = await fetch('/api/admin/invite', {
@@ -34,7 +43,8 @@ export function TeamManagement({ managers: initialManagers }: TeamManagementProp
         body: JSON.stringify({ 
           email: inviteEmail,
           fullName: inviteName,
-          role: inviteRole
+          role: inviteRole,
+          storeId: inviteStore
         }),
       });
       const data = await res.json();
@@ -97,20 +107,33 @@ export function TeamManagement({ managers: initialManagers }: TeamManagementProp
               className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-[6px] px-4 py-2.5 text-white text-sm outline-none focus:border-[#2a2a2a] transition-colors"
             />
           </div>
-          <div className="flex gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <select
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value)}
-              className="flex-1 bg-[#0a0a0a] border border-[#1f1f1f] rounded-[6px] px-4 py-2.5 text-white text-sm outline-none"
+              className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-[6px] px-4 py-2.5 text-white text-sm outline-none"
             >
               <option value="manager">Manager</option>
               <option value="admin">Admin</option>
             </select>
+            
+            <select
+              value={inviteStore}
+              onChange={(e) => setInviteStore(e.target.value)}
+              disabled={inviteRole !== 'manager'}
+              className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-[6px] px-4 py-2.5 text-white text-sm outline-none disabled:opacity-50"
+            >
+              <option value="" disabled>Assign to store...</option>
+              {stores.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+
             <button
               id="invite-manager-btn"
               onClick={handleInvite}
               disabled={inviting}
-              className="flex items-center gap-2 px-6 py-2.5 bg-[#C5A021] text-black text-sm font-bold rounded-[6px] hover:bg-[#A6861C] disabled:opacity-50 transition-colors"
+              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-[#C5A021] text-black text-sm font-bold rounded-[6px] hover:bg-[#A6861C] disabled:opacity-50 transition-colors"
             >
               {inviting ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
               Invite

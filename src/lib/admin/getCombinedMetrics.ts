@@ -5,9 +5,22 @@ export async function getCombinedMetrics(storeIdFilter?: string) {
   const supabase = await createClient();
   const adminSupabase = createAdminClient();
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayISO = today.toISOString();
+  // Calculate the start of "today" in Harare timezone (Africa/Harare)
+  // This prevents orders from disappearing between midnight and 2 AM due to Vercel's UTC servers.
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Africa/Harare',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(now);
+  const year = parts.find(p => p.type === 'year')?.value;
+  const month = parts.find(p => p.type === 'month')?.value;
+  const day = parts.find(p => p.type === 'day')?.value;
+  
+  // Construct the midnight string in Harare time and convert to standard ISO UTC for Supabase
+  const todayISO = new Date(`${year}-${month}-${day}T00:00:00.000+02:00`).toISOString();
 
   // Queries for webstore and POS
   let posQuery = adminSupabase

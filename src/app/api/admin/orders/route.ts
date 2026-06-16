@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { getLiveZigRate } from '@/lib/exchangeRates';
 
 export async function GET() {
   try {
@@ -13,7 +14,7 @@ export async function GET() {
 
     const adminSupabase = createAdminClient();
 
-    const [webRes, posRes, settingsRes] = await Promise.all([
+    const [webRes, posRes, zigRate] = await Promise.all([
       adminSupabase.from('pending_orders').select('*').order('created_at', { ascending: false }).limit(150),
       adminSupabase.from('pos_orders').select(`
         id, order_number, source, status, total, created_at,
@@ -21,7 +22,7 @@ export async function GET() {
         employee:employees!pos_orders_employee_id_fkey(full_name),
         salesman:employees!pos_orders_salesman_id_fkey(full_name)
       `).order('created_at', { ascending: false }).limit(150),
-      adminSupabase.from('settings').select('key, value').eq('key', 'zig_rate').single()
+      getLiveZigRate()
     ]);
 
     if (webRes.error) console.error("Web orders error:", webRes.error);
@@ -30,7 +31,7 @@ export async function GET() {
     return NextResponse.json({
       webOrders: webRes.data || [],
       posOrders: posRes.data || [],
-      zigRate: settingsRes.data ? Number(settingsRes.data.value) : 13.5
+      zigRate
     });
 
   } catch (error: any) {
@@ -38,3 +39,4 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

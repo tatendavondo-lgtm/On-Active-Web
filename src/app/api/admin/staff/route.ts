@@ -169,7 +169,12 @@ export async function DELETE(request: Request) {
 
     const { error } = await adminSupabase
       .from('employees')
-      .update({ is_active: false })
+      .update({ 
+        is_active: false,
+        pin: `del_${id.substring(0, 8)}`,
+        email: null,
+        phone: null
+      })
       .eq('id', id);
 
     if (error) {

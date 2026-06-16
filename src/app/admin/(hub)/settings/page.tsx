@@ -42,7 +42,7 @@ export default async function SettingsPage() {
       </div>
       <StoreSettings initialSettings={settingsMap} />
       <BranchManagement initialStores={allStores ?? []} />
-      <TeamManagement managers={managers ?? []} />
+      <TeamManagement managers={managers ?? []} stores={activeStores} />
       <EmployeeManagement 
         initialEmployees={employees ?? []} 
         stores={activeStores} 

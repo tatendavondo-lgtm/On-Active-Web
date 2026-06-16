@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { AIChat } from '@/components/admin/ai/AIChat';
 import type { StoreContext } from '@/types';
 import { redirect } from 'next/navigation';
+import { getLiveZigRate } from '@/lib/exchangeRates';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +49,7 @@ export default async function AIPage() {
     invMap[item.product_id] = (invMap[item.product_id] ?? 0) + item.quantity;
   });
 
-  const zigRate = Number(settings?.find((s) => s.key === 'zig_rate')?.value ?? 13.5);
+  const zigRate = await getLiveZigRate();
   const onlineRevenue = (thisMonthOrders ?? []).reduce((s, o) => s + (o.total_usd ?? 0), 0);
   const posRevenue = (thisMonthPosOrders ?? []).reduce((s, o) => s + (o.total ?? 0), 0);
   const revenue = onlineRevenue + posRevenue;
