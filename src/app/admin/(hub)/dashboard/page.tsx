@@ -70,34 +70,8 @@ export default async function DashboardPage() {
   const posRevenue = (thisMonthPosOrders ?? []).reduce((s, o) => s + (o.total ?? 0), 0);
   const thisRevenue = onlineRevenue + posRevenue;
 
-  // Build 90-day revenue chart data — combine all channels including salesman
-  const revenueByDay: Record<string, number> = {};
-  for (const order of allOrders90d ?? []) {
-    const day = order.created_at.slice(0, 10);
-    revenueByDay[day] = (revenueByDay[day] ?? 0) + (order.total_usd ?? 0);
-  }
-  for (const order of allPosOrders90d ?? []) {
-    const day = order.created_at.slice(0, 10);
-    revenueByDay[day] = (revenueByDay[day] ?? 0) + (order.total ?? 0);
-  }
-  // Include salesman subtotals in the revenue chart (only pending/accepted)
-  for (const order of allSalesmanOrders90d ?? []) {
-    if (order.status !== 'completed') {
-      const day = order.created_at.slice(0, 10);
-      revenueByDay[day] = (revenueByDay[day] ?? 0) + (order.subtotal ?? 0);
-    }
-  }
-
+  // Build 90-day chart data is no longer needed here as RevenueChart handles it yearly
   const chartData: RevenueDataPoint[] = [];
-  for (let i = 89; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000);
-    const key = d.toISOString().slice(0, 10);
-    chartData.push({
-      date: key,
-      label: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-      revenue: revenueByDay[key] ?? 0,
-    });
-  }
 
   // Fetch POS order items for top products
   const posOrderIds = (allPosOrders90d ?? []).map(o => o.id).filter(Boolean);
@@ -176,7 +150,7 @@ export default async function DashboardPage() {
       <AIInsightBanner storeContext={storeContext} />
 
       {/* Revenue chart */}
-      <RevenueChart data={chartData} />
+      <RevenueChart initialData={chartData} initialYear={now.getFullYear()} />
 
       {/* Bottom grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
