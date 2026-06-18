@@ -1,0 +1,1195 @@
+[
+  {
+    "name": "Small gym carry bags",
+    "slug": "small-gym-carry-bags",
+    "category": "Accessories",
+    "gender": "All",
+    "price_usd": 15,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "M",
+        "color": "Cream",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "Standard",
+        "color": "Red",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "Standard",
+        "color": "Navy blue",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "Standard",
+        "color": "Butternut yellow",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "Standard",
+        "color": "Lilac",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "Standard",
+        "color": "Black",
+        "stock": 1,
+        "price": 15
+      }
+    ],
+    "sizes": [
+      "M"
+    ]
+  },
+  {
+    "name": "Ladies airport outfit",
+    "slug": "ladies-airport-outfit",
+    "category": null,
+    "gender": "Women",
+    "price_usd": 35,
+    "description": "2 peac set",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "XL",
+        "color": "Brown",
+        "stock": 1,
+        "price": 35
+      }
+    ],
+    "sizes": [
+      "XL"
+    ]
+  },
+  {
+    "name": "Short sleeve biker body glove",
+    "slug": "short-sleeve-biker-body-glove",
+    "category": null,
+    "gender": "All",
+    "price_usd": 17,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "M",
+        "color": "Black",
+        "stock": 1,
+        "price": 17
+      },
+      {
+        "size": "L",
+        "color": "Black",
+        "stock": 0,
+        "price": 17
+      }
+    ],
+    "sizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "name": "2Peace long tight",
+    "slug": "2peace-long-tight",
+    "category": "Bottoms",
+    "gender": "All",
+    "price_usd": 40,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "M",
+        "color": "Green",
+        "stock": 1,
+        "price": 40
+      },
+      {
+        "size": "L",
+        "color": "Pink",
+        "stock": 1,
+        "price": 40
+      }
+    ],
+    "sizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "name": "Ladies running shorts",
+    "slug": "ladies-running-shorts",
+    "category": "Shorts",
+    "gender": "Women",
+    "price_usd": 22,
+    "description": "Running shorts with tight",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "XL",
+        "color": "White",
+        "stock": 11,
+        "price": 22
+      },
+      {
+        "size": "XL",
+        "color": "Green",
+        "stock": 1,
+        "price": 22
+      },
+      {
+        "size": "XL",
+        "color": "Pink",
+        "stock": 1,
+        "price": 22
+      },
+      {
+        "size": "XL",
+        "color": "Dusty mauve/Taupe",
+        "stock": 1,
+        "price": 22
+      },
+      {
+        "size": "XL",
+        "color": "Pink",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "XL",
+        "color": "Blue",
+        "stock": 1,
+        "price": 22
+      },
+      {
+        "size": "XL",
+        "color": "White",
+        "stock": 1,
+        "price": 22
+      },
+      {
+        "size": "M",
+        "color": "Black",
+        "stock": 1,
+        "price": 22
+      },
+      {
+        "size": "L",
+        "color": "Black",
+        "stock": 1,
+        "price": 22
+      },
+      {
+        "size": "XL",
+        "color": "Black",
+        "stock": 1,
+        "price": 20
+      }
+    ],
+    "sizes": [
+      "XL",
+      "M",
+      "L"
+    ]
+  },
+  {
+    "name": "Sports braas",
+    "slug": "sports-braas",
+    "category": "Sports Bras",
+    "gender": "Women",
+    "price_usd": 20,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "M",
+        "color": "Black",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "XXL",
+        "color": "Black",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "3XL",
+        "color": "Black",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "XL",
+        "color": "Navy blue",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "XXL",
+        "color": "Navy blue",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "M",
+        "color": "White",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "XL",
+        "color": "White",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "XXL",
+        "color": "White",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "XXL",
+        "color": "Brown",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "3XL",
+        "color": "Combat green",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "XL",
+        "color": "Red",
+        "stock": 1,
+        "price": 20
+      }
+    ],
+    "sizes": [
+      "M",
+      "XXL",
+      "3XL",
+      "XL"
+    ]
+  },
+  {
+    "name": "Tracksuits",
+    "slug": "tracksuits",
+    "category": "Outerwear",
+    "gender": "All",
+    "price_usd": 40,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "XXL",
+        "color": "White",
+        "stock": 1,
+        "price": 40
+      },
+      {
+        "size": "XXL",
+        "color": "Green",
+        "stock": 1,
+        "price": 40
+      },
+      {
+        "size": "3XL",
+        "color": "White",
+        "stock": 1,
+        "price": 40
+      },
+      {
+        "size": "3XL",
+        "color": "Black",
+        "stock": 1,
+        "price": 40
+      },
+      {
+        "size": "XL",
+        "color": "Grean",
+        "stock": 1,
+        "price": 40
+      },
+      {
+        "size": "XL",
+        "color": "White",
+        "stock": 1,
+        "price": 50
+      }
+    ],
+    "sizes": [
+      "XXL",
+      "3XL",
+      "XL"
+    ]
+  },
+  {
+    "name": "Ladies long sleeve top",
+    "slug": "ladies-long-sleeve-top",
+    "category": "Tops",
+    "gender": "Women",
+    "price_usd": 18,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "L",
+        "color": "Gray",
+        "stock": 1,
+        "price": 18
+      },
+      {
+        "size": "L",
+        "color": "Navy blue",
+        "stock": 1,
+        "price": 18
+      },
+      {
+        "size": "L",
+        "color": "Baby blue",
+        "stock": 1,
+        "price": 18
+      },
+      {
+        "size": "M",
+        "color": "Maroon",
+        "stock": 1,
+        "price": 18
+      },
+      {
+        "size": "XL",
+        "color": "Yellow",
+        "stock": 1,
+        "price": 18
+      },
+      {
+        "size": "XL",
+        "color": "Red",
+        "stock": 1,
+        "price": 18
+      },
+      {
+        "size": "M",
+        "color": "Sage gray",
+        "stock": 1,
+        "price": 18
+      },
+      {
+        "size": "XL",
+        "color": "Sage gray",
+        "stock": 1,
+        "price": 18
+      }
+    ],
+    "sizes": [
+      "L",
+      "M",
+      "XL"
+    ]
+  },
+  {
+    "name": "Ladies assorted tops",
+    "slug": "ladies-assorted-tops",
+    "category": "Tops",
+    "gender": "Women",
+    "price_usd": 15,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "XL",
+        "color": "Cream",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "M",
+        "color": "Olive green",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "L",
+        "color": "Red",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XL",
+        "color": "Red",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "M",
+        "color": "Blue",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "L",
+        "color": "blue",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "M",
+        "color": "Black",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XL",
+        "color": "Black",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XXL",
+        "color": "Black",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XL",
+        "color": "Grayish blue",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "M",
+        "color": "Pale lilac",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "L",
+        "color": "Pale lilac",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XL",
+        "color": "Pale lilac",
+        "stock": 1,
+        "price": 15
+      }
+    ],
+    "sizes": [
+      "XL",
+      "M",
+      "L",
+      "XXL"
+    ]
+  },
+  {
+    "name": "Sports braa top",
+    "slug": "sports-braa-top",
+    "category": "Tops",
+    "gender": "Women",
+    "price_usd": 20,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "M",
+        "color": "Cream",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "L",
+        "color": "Black",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "L",
+        "color": "Pink",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "S",
+        "color": "Purple",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "M",
+        "color": "Purple",
+        "stock": 1,
+        "price": 20
+      }
+    ],
+    "sizes": [
+      "M",
+      "L",
+      "S"
+    ]
+  },
+  {
+    "name": "Men`s long tights",
+    "slug": "mens-long-tights",
+    "category": "Bottoms",
+    "gender": "Men",
+    "price_usd": 15,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "S",
+        "color": "Black",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "L",
+        "color": "White",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XL",
+        "color": "White",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XL",
+        "color": "Blue",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XXL",
+        "color": "Blue",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "S",
+        "color": "Sage green",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "M",
+        "color": "Sage green",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XXL",
+        "color": "Gray",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "S",
+        "color": "Black",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "L",
+        "color": "Brown",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XL",
+        "color": "Brown",
+        "stock": 1,
+        "price": 15
+      }
+    ],
+    "sizes": [
+      "S",
+      "L",
+      "XL",
+      "XXL",
+      "M"
+    ]
+  },
+  {
+    "name": "Men`s half legged",
+    "slug": "mens-half-legged",
+    "category": "Bottoms",
+    "gender": "Men",
+    "price_usd": 15,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "3XL",
+        "color": "Black",
+        "stock": 1,
+        "price": 15
+      }
+    ],
+    "sizes": [
+      "3XL"
+    ]
+  },
+  {
+    "name": "Men`s shorts tights",
+    "slug": "mens-shorts-tights",
+    "category": "Shorts",
+    "gender": "Men",
+    "price_usd": 15,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "M",
+        "color": "Black",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "L",
+        "color": "Navy blue",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XL",
+        "color": "Navy blue",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XXL",
+        "color": "Blue",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XL",
+        "color": "Gray",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "S",
+        "color": "Yellow",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "M",
+        "color": "Red",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "XL",
+        "color": "Army green",
+        "stock": 1,
+        "price": 15
+      }
+    ],
+    "sizes": [
+      "M",
+      "L",
+      "XL",
+      "XXL",
+      "S"
+    ]
+  },
+  {
+    "name": "Skorts",
+    "slug": "skorts",
+    "category": null,
+    "gender": "All",
+    "price_usd": 20,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "XL",
+        "color": "White",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "XL",
+        "color": "Cream",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "M",
+        "color": "Black",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "L",
+        "color": "Black",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "XL",
+        "color": "Black",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "M",
+        "color": "Green",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "XL",
+        "color": "Green",
+        "stock": 1,
+        "price": 20
+      },
+      {
+        "size": "XL",
+        "color": "Navy blue",
+        "stock": 1,
+        "price": 20
+      }
+    ],
+    "sizes": [
+      "XL",
+      "M",
+      "L"
+    ]
+  },
+  {
+    "name": "Ladies 2 piece set",
+    "slug": "ladies-2-piece-set",
+    "category": "Outerwear",
+    "gender": "Women",
+    "price_usd": 28,
+    "description": "flared pants",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "XL",
+        "color": "Grean",
+        "stock": 1,
+        "price": 28
+      },
+      {
+        "size": "XL",
+        "color": "Black",
+        "stock": 1,
+        "price": 28
+      }
+    ],
+    "sizes": [
+      "XL"
+    ]
+  },
+  {
+    "name": "Rap over",
+    "slug": "rap-over",
+    "category": null,
+    "gender": "Women",
+    "price_usd": 30,
+    "description": "Body glove dress",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "XL",
+        "color": "Black",
+        "stock": 1,
+        "price": 30
+      },
+      {
+        "size": "XL",
+        "color": "Brown",
+        "stock": 1,
+        "price": 30
+      },
+      {
+        "size": "XL",
+        "color": "Navy blue",
+        "stock": 1,
+        "price": 30
+      },
+      {
+        "size": "XL",
+        "color": "Gray",
+        "stock": 1,
+        "price": 30
+      }
+    ],
+    "sizes": [
+      "XL"
+    ]
+  },
+  {
+    "name": "Rep over",
+    "slug": "rep-over",
+    "category": null,
+    "gender": "Women",
+    "price_usd": 30,
+    "description": "Body glove dress",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "XL",
+        "color": "Nude brown",
+        "stock": 1,
+        "price": 30
+      }
+    ],
+    "sizes": [
+      "XL"
+    ]
+  },
+  {
+    "name": "Biker sleeveless",
+    "slug": "biker-sleeveless",
+    "category": null,
+    "gender": "Women",
+    "price_usd": 15,
+    "description": "Body glove",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "M",
+        "color": "Charcoal grey",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "M",
+        "color": "Baby blue",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "L",
+        "color": "Gray",
+        "stock": 1,
+        "price": 15
+      },
+      {
+        "size": "L",
+        "color": "Blue",
+        "stock": 1,
+        "price": 15
+      }
+    ],
+    "sizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "name": "FLFC",
+    "slug": "flfc",
+    "category": null,
+    "gender": "All",
+    "price_usd": 30,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "L",
+        "color": "Navy blue",
+        "stock": 1,
+        "price": 30
+      },
+      {
+        "size": "L",
+        "color": "Green",
+        "stock": 1,
+        "price": 30
+      },
+      {
+        "size": "L",
+        "color": "Blue",
+        "stock": 1,
+        "price": 30
+      },
+      {
+        "size": "M",
+        "color": "Pink",
+        "stock": 1,
+        "price": 30
+      },
+      {
+        "size": "M",
+        "color": "Gray",
+        "stock": 1,
+        "price": 30
+      },
+      {
+        "size": "M",
+        "color": "Brown",
+        "stock": 1,
+        "price": 30
+      },
+      {
+        "size": "M",
+        "color": "Back",
+        "stock": 1,
+        "price": 30
+      },
+      {
+        "size": "S",
+        "color": "Red",
+        "stock": 1,
+        "price": 30
+      },
+      {
+        "size": "S",
+        "color": "Black",
+        "stock": 1,
+        "price": 30
+      }
+    ],
+    "sizes": [
+      "L",
+      "M",
+      "S"
+    ]
+  },
+  {
+    "name": "Full length full cover body glove",
+    "slug": "full-length-full-cover-body-glove",
+    "category": null,
+    "gender": "All",
+    "price_usd": 30,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "L",
+        "color": "Brown",
+        "stock": 1,
+        "price": 30
+      }
+    ],
+    "sizes": [
+      "L"
+    ]
+  },
+  {
+    "name": "Long sleeve biker body glove",
+    "slug": "long-sleeve-biker-body-glove",
+    "category": null,
+    "gender": "All",
+    "price_usd": 25,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "M",
+        "color": "Blue",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "M",
+        "color": "Black",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "M",
+        "color": "Pink",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "M",
+        "color": "Navy blue",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "M",
+        "color": "White",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "L",
+        "color": "Nude brown",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "L",
+        "color": "Gray",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "L",
+        "color": "Brown",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "L",
+        "color": "Coffee brown",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "L",
+        "color": "Pink",
+        "stock": 1,
+        "price": 25
+      }
+    ],
+    "sizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "name": "Ladies assorted 2 piece sets",
+    "slug": "ladies-assorted-2-piece-sets",
+    "category": null,
+    "gender": "Women",
+    "price_usd": 25,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "L",
+        "color": "Pink",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "L",
+        "color": "Navy blue",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "XL",
+        "color": "Grayish blue",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "XL",
+        "color": "Nude brown",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "XL",
+        "color": "Maroon",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "L",
+        "color": "Nude brown",
+        "stock": 1,
+        "price": 25
+      }
+    ],
+    "sizes": [
+      "L",
+      "XL"
+    ]
+  },
+  {
+    "name": "Ladies 2 piece with long tights",
+    "slug": "ladies-2-piece-with-long-tights",
+    "category": null,
+    "gender": "Women",
+    "price_usd": 25,
+    "description": "",
+    "is_featured": false,
+    "is_trending": false,
+    "variants": [
+      {
+        "size": "L",
+        "color": "Pink",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "L",
+        "color": "Gray",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "L",
+        "color": "Green",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "L",
+        "color": "Pale lilac",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "L",
+        "color": "Charcoal grey",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "M",
+        "color": "Gray",
+        "stock": 1,
+        "price": 25
+      },
+      {
+        "size": "M",
+        "color": "Blue",
+        "stock": 1,
+        "price": 25
+      }
+    ],
+    "sizes": [
+      "L",
+      "M"
+    ]
+  }
+]
