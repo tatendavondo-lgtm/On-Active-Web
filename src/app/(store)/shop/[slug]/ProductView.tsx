@@ -94,7 +94,7 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
 
   useEffect(() => {
     if (images[0]) setActiveImage(images[0]);
-  }, [liveProduct?.id, images]);
+  }, [liveProduct?.id]);
 
   // 2. Computed Selections
   const variantSizes = useMemo(() => {
@@ -187,13 +187,22 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
             transition={{ duration: 0.3 }}
             className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-[#111111] border border-white/5"
           >
-            <Image
-              src={activeImage}
-              alt={name}
-              fill
-              className="object-cover"
-              priority
-            />
+            {activeImage && activeImage !== "/images/placeholder.jpg" ? (
+              <Image
+                src={activeImage}
+                alt={name}
+                fill
+                className="object-cover"
+                priority
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#111] to-[#0a0a0a]">
+                <div className="text-center space-y-2 opacity-10">
+                  <span className="block text-5xl sm:text-6xl font-[900] tracking-tighter italic">ON ACTIVE.</span>
+                  <span className="block text-[10px] font-black uppercase tracking-[0.4em]">NO IMAGE AVAILABLE</span>
+                </div>
+              </div>
+            )}
           </motion.div>
 
           {images.length > 1 && (
