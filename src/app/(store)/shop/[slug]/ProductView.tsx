@@ -233,9 +233,6 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
             </h1>
             <div className="mt-5 flex items-end gap-4">
               <span className="text-3xl font-black italic text-white">${displayPrice.toFixed(2)}</span>
-              <span className="text-sm font-bold text-white/30 tracking-widest pb-0.5">
-                {(displayPrice * (zigRate || 1)).toFixed(0)} ZiG
-              </span>
             </div>
           </div>
 

@@ -46,7 +46,7 @@ export default function TermsPage() {
             <div>
               <h2 className="text-xl font-black uppercase text-white mb-4">4. Payments and Pricing</h2>
               <p className="font-medium leading-relaxed mb-4">
-                We accept payments in USD and Zimbabwe Gold (ZiG) at our live system rate displayed on the checkout page. Payment methods include:
+                We accept payments in USD. Payment methods include:
               </p>
               <ul className="list-disc pl-6 space-y-2 text-white/50">
                 <li>EcoCash transfers to our official merchant/merchant line.</li>

@@ -484,9 +484,6 @@ export function CheckoutForm({ settings }: { settings: any }) {
                 <span className="text-lg font-black uppercase tracking-widest text-white">Total</span>
                 <span className="text-2xl font-black italic text-white">${cartTotal.toFixed(2)}</span>
               </div>
-              <span className="text-xs font-black uppercase tracking-[0.2em] text-[#C5A021]">
-                {(cartTotal * settings.zig_rate).toFixed(0)} ZiG
-              </span>
             </div>
           </div>
         </div>
