@@ -15,6 +15,7 @@ interface ShopPageContentProps {
 export function ShopPageContent({ category, title, searchQuery }: ShopPageContentProps) {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState("ALL");
 
   useEffect(() => {
     async function fetchProducts() {
@@ -22,18 +23,24 @@ export function ShopPageContent({ category, title, searchQuery }: ShopPageConten
         const supabase = createClient();
         let query = supabase.from('products').select('*').eq('is_active', true);
         
-        if (category && category !== 'collections') {
-          const cat = category.toLowerCase();
-          if (cat === 'upper') {
-            query = query.in('category', ['Tops', 'top', 'Outerwear', 'Sports Bras', 'bras']);
-          } else if (cat === 'lower') {
-            query = query.in('category', ['Bottoms', 'bottom', 'Leggings', 'Shorts']);
-          } else if (cat === 'sets') {
-            query = query.in('category', ['Sets', 'set', 'Tracksuits', 'tracksuit']);
-          } else if (cat === 'accessories') {
-            query = query.in('category', ['Accessories', 'accessory']);
-          } else {
-            query = query.ilike('category', category);
+        const catLower = category?.toLowerCase();
+        if (catLower) {
+          if (catLower === 'men') {
+            query = query.in('gender', ['Men', 'men', 'All', 'all', 'Unisex', 'unisex', 'ALL']);
+          } else if (catLower === 'women') {
+            query = query.in('gender', ['Women', 'women', 'All', 'all', 'Unisex', 'unisex', 'ALL']);
+          } else if (catLower !== 'collections') {
+            if (catLower === 'upper') {
+              query = query.in('category', ['Tops', 'top', 'Outerwear', 'Sports Bras', 'bras']);
+            } else if (catLower === 'lower') {
+              query = query.in('category', ['Bottoms', 'bottom', 'Leggings', 'Shorts']);
+            } else if (catLower === 'sets') {
+              query = query.in('category', ['Sets', 'set', 'Tracksuits', 'tracksuit']);
+            } else if (catLower === 'accessories') {
+              query = query.in('category', ['Accessories', 'accessory']);
+            } else {
+              query = query.ilike('category', category as string);
+            }
           }
         }
 
@@ -50,6 +57,7 @@ export function ShopPageContent({ category, title, searchQuery }: ShopPageConten
           slug: p.slug,
           price: p.price_usd,
           category: p.category?.toLowerCase() || 'uncategorized',
+          gender: p.gender?.toLowerCase() || 'all',
           image: p.images?.[0] || null
         }));
 
@@ -63,7 +71,28 @@ export function ShopPageContent({ category, title, searchQuery }: ShopPageConten
     }
 
     fetchProducts();
-  }, [category]);
+  }, [category, searchQuery]);
+
+  const CATEGORIES = ["ALL", "UPPER", "LOWER", "SETS", "ACCESSORIES"];
+  const isFilterable = ['men', 'women', 'collections'].includes(category?.toLowerCase() || '');
+
+  const filteredProducts = products.filter(p => {
+    if (!isFilterable || activeCategory === "ALL") return true;
+    const cat = p.category.toLowerCase();
+    if (activeCategory === "UPPER") {
+      return ['tops', 'top', 'outerwear', 'sports bras', 'bras'].includes(cat);
+    }
+    if (activeCategory === "LOWER") {
+      return ['bottoms', 'bottom', 'leggings', 'shorts'].includes(cat);
+    }
+    if (activeCategory === "SETS") {
+      return ['sets', 'set', 'tracksuits', 'tracksuit'].includes(cat);
+    }
+    if (activeCategory === "ACCESSORIES") {
+      return ['accessories', 'accessory'].includes(cat);
+    }
+    return cat === activeCategory.toLowerCase();
+  });
 
   return (
     <div className="container mx-auto px-4 py-32 sm:px-10">
@@ -73,6 +102,24 @@ export function ShopPageContent({ category, title, searchQuery }: ShopPageConten
           {title}.
         </h1>
       </div>
+
+      {isFilterable && (
+        <div className="mb-12 flex justify-center border-b border-white/10 pb-6">
+          <div className="flex flex-wrap justify-center gap-6 sm:gap-10">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`text-[11px] font-black uppercase tracking-widest transition-all ${
+                  activeCategory === cat ? "text-[#C5A021]" : "text-white/40 hover:text-white"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
@@ -91,7 +138,7 @@ export function ShopPageContent({ category, title, searchQuery }: ShopPageConten
           className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
         >
           <AnimatePresence>
-            {products.map((product) => (
+            {filteredProducts.map((product) => (
               <Link key={product.id} href={`/shop/${product.slug}`}>
                 <motion.div
                   layout
