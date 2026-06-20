@@ -91,6 +91,7 @@ export default function Login() {
     // 1. Verify PIN via secure RPC or Local Cache
     let employeeData = null;
     let authError = null;
+    let serverReachedAndRejected = false;
 
     try {
       if (navigator.onLine) {
@@ -101,14 +102,18 @@ export default function Login() {
         if (employeeData && !authError) {
           // Cache for offline login
           localStorage.setItem(`cached_employee_${pin}`, JSON.stringify(employeeData));
+        } else if (authError && authError.code === 'PGRST116') {
+          // Explicitly rejected by server (PIN invalid or employee deactivated)
+          localStorage.removeItem(`cached_employee_${pin}`);
+          serverReachedAndRejected = true;
         }
       }
     } catch (e) {
       console.warn("Network error during login, falling back to local cache", e);
     }
 
-    // Fallback to local storage if offline or network error
-    if (!employeeData) {
+    // Fallback to local storage ONLY if offline or network error (NOT if server rejected)
+    if (!employeeData && !serverReachedAndRejected) {
       const cached = localStorage.getItem(`cached_employee_${pin}`);
       if (cached) {
         try {
@@ -120,7 +125,7 @@ export default function Login() {
       }
     }
 
-    if (authError || !employeeData) {
+    if (!employeeData) {
       setError('Invalid PIN or inactive account (or device is offline and no cache exists)');
       return;
     }
