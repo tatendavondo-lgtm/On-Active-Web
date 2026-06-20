@@ -50,13 +50,19 @@ export function CartSidebar() {
                       const itemKey = `${item.productId}-${item.size}-${item.color || ''}`;
                       return (
                       <div key={itemKey} className="flex gap-4">
-                        <div className="relative h-24 w-20 flex-shrink-0 bg-[#0A0A0A] border border-white/5 rounded-md overflow-hidden">
-                          <Image
-                            src={item.image}
-                            alt={item.name}
-                            fill
-                            className="object-cover"
-                          />
+                        <div className="relative h-24 w-20 flex-shrink-0 bg-[#0A0A0A] border border-white/5 rounded-md overflow-hidden flex items-center justify-center">
+                          {item.image && item.image !== "/images/placeholder.jpg" ? (
+                            <Image
+                              src={item.image}
+                              alt={item.name}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <span className="text-[9px] font-black italic tracking-tighter text-white/20 uppercase">
+                              ON ACTIVE
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-1 flex-col justify-between">
                           <div>

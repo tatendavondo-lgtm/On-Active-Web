@@ -450,8 +450,14 @@ export function CheckoutForm({ settings }: { settings: any }) {
           <div className="space-y-4 mb-6">
             {items.map(item => (
               <div key={`${item.productId}-${item.size}`} className="flex gap-4">
-                <div className="relative h-16 w-12 bg-black border border-white/5">
-                  <Image src={item.image} alt={item.name} fill className="object-cover" />
+                <div className="relative h-16 w-12 bg-black border border-white/5 flex items-center justify-center">
+                  {item.image && item.image !== "/images/placeholder.jpg" ? (
+                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                  ) : (
+                    <span className="text-[7px] font-black italic tracking-tighter text-white/20 uppercase">
+                      ON ACTIVE
+                    </span>
+                  )}
                 </div>
                 <div className="flex-1">
                   <h3 className="text-xs uppercase font-bold text-white/90">{item.name}</h3>
