@@ -94,6 +94,7 @@ export function RevenueChart({ initialData, initialYear }: RevenueChartProps) {
             interval="preserveStartEnd"
           />
           <YAxis
+            domain={[0, 'auto']}
             tick={{ fill: '#444', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
