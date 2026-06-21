@@ -93,7 +93,7 @@ export default function EndOfDay() {
     });
 
     return summary;
-  }, [shiftOrders]);
+  }, [shiftOrders, shiftId]);
 
   const openingFloat = currentShift?.opening_cash || 0;
   const expectedCash = (stats?.payments.cash_usd || 0) + openingFloat;

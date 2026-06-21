@@ -59,7 +59,9 @@ export function useSync(): SyncState {
   useEffect(() => {
     if (!isOnline || !store || isIntervalRunning) return;
 
-    checkPendingCount();
+    requestAnimationFrame(() => {
+      checkPendingCount().catch(console.error);
+    });
 
     isIntervalRunning = true;
     const interval = setInterval(() => {

@@ -24,7 +24,7 @@ export default function Customers() {
 
   const customers = useLiveQuery(
     () => {
-      let query = db.customers;
+      const query = db.customers;
       if (search) {
         return query
           .filter(c => 

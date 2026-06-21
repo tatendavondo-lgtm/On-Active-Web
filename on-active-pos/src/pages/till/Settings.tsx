@@ -36,7 +36,6 @@ export default function Settings() {
 
   useEffect(() => {
     // Keep printer info in sync if it changes
-    setPrinterInfo(printerService.getPrinterStatus());
     const interval = setInterval(() => {
       setPrinterInfo(printerService.getPrinterStatus());
     }, 2000);
