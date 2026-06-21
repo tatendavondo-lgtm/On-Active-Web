@@ -18,6 +18,38 @@ export function ShopPageContent({ category, title, searchQuery }: ShopPageConten
   const [activeCategory, setActiveCategory] = useState("ALL");
 
   useEffect(() => {
+    const savedCat = sessionStorage.getItem(`category_${window.location.pathname}`);
+    if (savedCat) {
+      setActiveCategory(savedCat);
+    }
+  }, []);
+
+  const handleCategoryChange = (cat: string) => {
+    setActiveCategory(cat);
+    sessionStorage.setItem(`category_${window.location.pathname}`, cat);
+  };
+
+  useEffect(() => {
+    if (!loading && products.length > 0) {
+      const savedScroll = sessionStorage.getItem(`scroll_${window.location.pathname}`);
+      if (savedScroll) {
+        const timer = setTimeout(() => {
+          window.scrollTo(0, parseInt(savedScroll, 10));
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [loading, products]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      sessionStorage.setItem(`scroll_${window.location.pathname}`, window.scrollY.toString());
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
     async function fetchProducts() {
       try {
         const supabase = createClient();
@@ -109,7 +141,7 @@ export function ShopPageContent({ category, title, searchQuery }: ShopPageConten
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
-                onClick={() => setActiveCategory(cat)}
+                onClick={() => handleCategoryChange(cat)}
                 className={`text-[11px] font-black uppercase tracking-widest transition-all ${
                   activeCategory === cat ? "text-[#C5A021]" : "text-white/40 hover:text-white"
                 }`}
