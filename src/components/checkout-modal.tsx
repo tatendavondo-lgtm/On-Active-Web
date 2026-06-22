@@ -11,6 +11,14 @@ interface CheckoutModalProps {
   onClose: () => void;
 }
 
+const generateOrderRef = () => {
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+  const shortDate = dateStr.slice(2); // "YYMMDD"
+  const randomSeq = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
+  return `OA-${shortDate}-${randomSeq}`;
+};
+
 export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   const { items, clearCart, setIsCartOpen } = useCart();
   const cartTotal = items.reduce((total, item) => total + item.price_usd * item.quantity, 0);
@@ -23,11 +31,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
     setStep("processing");
     
     try {
-      const today = new Date();
-      const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-      const shortDate = dateStr.slice(2); // "YYMMDD"
-      const randomSeq = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
-      const orderRef = `OA-${shortDate}-${randomSeq}`;
+      const orderRef = generateOrderRef();
       
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -203,7 +207,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                 <CheckCircle className="h-20 w-20 text-[#C5A021] mb-6" />
                 <h3 className="text-4xl font-[900] uppercase tracking-tighter mb-4 text-white">Order Confirmed!</h3>
                 <p className="text-sm font-medium text-white/60 mb-8 max-w-sm">
-                  Your mock payment was successful. We'll send a confirmation email with your order details shortly.
+                  Your mock payment was successful. We&apos;ll send a confirmation email with your order details shortly.
                 </p>
                 <button onClick={handleClose} className="w-full rounded-xl border border-white/20 bg-transparent py-4 text-xs font-black uppercase tracking-[0.2em] text-white transition-colors hover:bg-white/10">
                   Continue Shopping

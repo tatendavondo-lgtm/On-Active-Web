@@ -12,7 +12,8 @@ function generateSlug(name) {
 
 async function main() {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile('C:\\Users\\taten\\Documents\\On_Active_Products finnal.xlsx');
+  const EXCEL_FILE_PATH = 'C:/Users/taten/Documents/On_Active.xlsx';
+  await workbook.xlsx.readFile(EXCEL_FILE_PATH);
   
   const sheet = workbook.getWorksheet('Products');
   const productsMap = new Map();
@@ -80,7 +81,7 @@ async function main() {
     }
   });
 
-  const productsList = Array.from(productsMap.values());
+  let productsList = Array.from(productsMap.values());
   
   // Post-process to collect all unique sizes for each product's sizes array
   for (const prod of productsList) {
@@ -93,7 +94,13 @@ async function main() {
     prod.sizes = Array.from(sizeSet);
   }
 
-  console.log(`Parsed ${productsList.length} unique products.`);
+  // Filter to start from "Biker tights"
+  const startIndex = productsList.findIndex(p => p.slug.includes('biker-tights'));
+  if (startIndex !== -1) {
+    productsList = productsList.slice(startIndex);
+  }
+
+  console.log(`Parsed ${productsList.length} valid products.`);
   fs.writeFileSync('scratch/parsed_products.json', JSON.stringify(productsList, null, 2));
   console.log('Saved to scratch/parsed_products.json');
 }

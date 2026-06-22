@@ -13,6 +13,7 @@ export function generateWhatsAppReceipt(data: ReceiptData): string {
     (data.autoDiscount ? `Discount (${data.autoDiscount.percentage}%): -$${data.autoDiscount.amount.toFixed(2)}\n` : '') +
     (data.manualDiscount ? `Manual Discount: -$${data.manualDiscount.amount.toFixed(2)}\n` : '') +
     `*Total: $${data.total.toFixed(2)}*\n\n` +
+    (data.cashTendered !== undefined ? `Cash Tendered: ${data.cashTenderedCurrency} ${data.cashTendered.toFixed(2)}\nChange Due: ${data.changeCurrency} ${(data.changeGiven || 0).toFixed(2)}\n\n` : '') +
     `Exchange Rates:\n` +
     `1 USD = ZIG ${data.exchangeRates.ZIG.toFixed(2)}\n` +
     `1 USD = ZAR ${data.exchangeRates.ZAR.toFixed(2)}\n\n` +

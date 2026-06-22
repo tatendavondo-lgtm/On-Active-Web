@@ -260,18 +260,7 @@ export default function EndOfDay() {
               </h3>
               
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-[var(--pos-bg)] p-4 rounded border border-[var(--pos-border)]">
-                    <span className="text-[10px] text-[var(--pos-text-muted)] uppercase block mb-1">Expected</span>
-                    <span className="text-xl font-mono font-bold text-white">{formatUSD(expectedCash)}</span>
-                  </div>
-                  <div className={`p-4 rounded border ${difference === 0 ? 'bg-emerald-500/10 border-emerald-500/20' : difference > 0 ? 'bg-blue-500/10 border-blue-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                    <span className="text-[10px] text-[var(--pos-text-muted)] uppercase block mb-1">Difference</span>
-                    <span className={`text-xl font-mono font-bold ${difference === 0 ? 'text-emerald-400' : difference > 0 ? 'text-blue-400' : 'text-red-400'}`}>
-                      {difference >= 0 ? '+' : ''}{formatUSD(difference)}
-                    </span>
-                  </div>
-                </div>
+
 
                 <div className="text-center">
                   <label className="text-sm text-[var(--pos-text-secondary)] mb-2 block">Actual Counted Cash</label>

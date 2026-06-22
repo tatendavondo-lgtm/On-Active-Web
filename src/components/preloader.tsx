@@ -8,11 +8,16 @@ export function Preloader() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    
     const hasSeenPreloader = sessionStorage.getItem('on-active-loaded');
+    
+    requestAnimationFrame(() => {
+      setMounted(true);
+      if (hasSeenPreloader) {
+        setIsLoading(false);
+      }
+    });
+    
     if (hasSeenPreloader) {
-      setIsLoading(false);
       return;
     }
 

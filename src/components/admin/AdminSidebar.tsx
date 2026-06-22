@@ -27,8 +27,9 @@ const OWNER_ITEMS = [
   { href: '/admin/products', icon: Shirt, label: 'Products' },
   { href: '/admin/inventory', icon: Box, label: 'Inventory' },
   { href: '/admin/staff', icon: Users, label: 'Staff' },
+  { href: '/admin/shifts', icon: FileText, label: 'Shift Reports' },
   { href: '/admin/logs', icon: FileText, label: 'Audit Logs' },
-  { href: '/admin/ai', icon: Sparkles, label: 'AI Assistant' },
+  // { href: '/admin/ai', icon: Sparkles, label: 'AI Assistant' },
   { href: '/admin/settings/profile', icon: Settings, label: 'My Profile' },
   { href: '/admin/settings', icon: Settings, label: 'Store Settings' },
 ];
@@ -38,7 +39,8 @@ const MANAGER_ITEMS = [
   { href: '/admin/orders', icon: Receipt, label: 'My Store Orders' },
   { href: '/admin/inventory', icon: Box, label: 'My Store Inventory' },
   { href: '/admin/staff', icon: Users, label: 'My Store Staff' },
-  { href: '/admin/ai', icon: Sparkles, label: 'AI Assistant' },
+  { href: '/admin/shifts', icon: FileText, label: 'My Store Shifts' },
+  // { href: '/admin/ai', icon: Sparkles, label: 'AI Assistant' },
   { href: '/admin/settings/profile', icon: Settings, label: 'My Profile' },
 ];
 

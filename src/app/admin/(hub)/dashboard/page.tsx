@@ -6,6 +6,7 @@ import { AIInsightBanner } from '@/components/admin/dashboard/AIInsightBanner';
 import { RevenueChart } from '@/components/admin/dashboard/RevenueChart';
 import { RecentOrdersTable } from '@/components/admin/dashboard/RecentOrdersTable';
 import { TopProducts } from '@/components/admin/dashboard/TopProducts';
+import { ClosedShiftsTable } from '@/components/admin/dashboard/ClosedShiftsTable';
 import type { RevenueDataPoint, TopProduct, StoreContext } from '@/types';
 import { getLiveZigRate } from '@/lib/exchangeRates';
 
@@ -157,7 +158,8 @@ export default async function DashboardPage() {
         <div className="xl:col-span-2">
           <RecentOrdersTable orders={recentOrders ?? []} />
         </div>
-        <div>
+        <div className="flex flex-col gap-6">
+          <ClosedShiftsTable shifts={combinedMetrics.closedShiftsToday} />
           <TopProducts products={topProducts} />
         </div>
       </div>

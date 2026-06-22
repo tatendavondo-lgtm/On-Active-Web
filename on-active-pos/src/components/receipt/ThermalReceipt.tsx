@@ -39,6 +39,13 @@ export function ThermalReceipt({ data }: { data: ReceiptData }) {
         <Row key={i} left={`${p.method} (${p.currency}):`} right={p.localAmount ? `${p.currency} ${p.localAmount.toFixed(2)}` : `$${p.amount.toFixed(2)}`} />
       ))}
       
+      {data.cashTendered !== undefined && (
+        <>
+          <Row left="Cash Tendered:" right={`${data.cashTenderedCurrency} ${data.cashTendered.toFixed(2)}`} />
+          <Row left="Change Due:" right={`${data.changeCurrency} ${(data.changeGiven || 0).toFixed(2)}`} />
+        </>
+      )}
+
       <Line />
       <Text size={{ width: 1, height: 1 }}>Exchange Rates:</Text>
       <Text>  1 USD = ZIG {data.exchangeRates.ZIG.toFixed(2)}</Text>

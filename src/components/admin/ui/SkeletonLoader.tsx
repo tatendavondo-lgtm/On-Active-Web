@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { motion } from 'framer-motion';
 
@@ -31,7 +31,7 @@ export function TableRowSkeleton({ cols = 6 }: { cols?: number }) {
     <tr className="border-b border-[#181818]">
       {Array.from({ length: cols }).map((_, i) => (
         <td key={i} className="px-4 py-3.5">
-          <Skeleton className="h-3.5" style={{ width: `${60 + Math.random() * 40}%` }} />
+          <Skeleton className="h-3.5" style={{ width: `${60 + ((i * 17) % 40)}%` }} />
         </td>
       ))}
     </tr>

@@ -50,7 +50,7 @@ export function ProductGrid() {
     return () => clearInterval(interval);
   }, []);
 
-  let filteredProducts = products.filter(p => {
+  const filteredProducts = products.filter(p => {
     let catMatch = false;
     const cat = p.category.toLowerCase();
     

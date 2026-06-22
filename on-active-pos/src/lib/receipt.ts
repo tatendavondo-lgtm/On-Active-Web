@@ -49,6 +49,7 @@ export interface ReceiptData {
 
 export function transformOrderToReceipt(order: Order, storeInfo: any, cashierName: string, salesmanName?: string): ReceiptData {
   const dateObj = new Date(order.created_at);
+  const cashPayment = (order.payments || []).find(p => p.method === 'cash');
   
   return {
     storeName: storeInfo.name,
@@ -86,6 +87,10 @@ export function transformOrderToReceipt(order: Order, storeInfo: any, cashierNam
       exchangeRate: p.exchange_rate_used,
       reference: p.reference
     })),
+    cashTendered: cashPayment?.tendered,
+    cashTenderedCurrency: cashPayment?.local_currency || 'USD',
+    changeGiven: cashPayment?.change_given,
+    changeCurrency: cashPayment?.local_currency || 'USD',
     exchangeRates: {
       ZIG: order.exchange_rate_zig || 26.5,
       ZAR: order.exchange_rate_zar || 18.2

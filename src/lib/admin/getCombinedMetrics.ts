@@ -41,6 +41,13 @@ export async function getCombinedMetrics(storeIdFilter?: string) {
     .eq('status', 'open')
     .gte('opened_at', todayISO);
 
+  let closedShiftsQuery = adminSupabase
+    .from('shifts')
+    .select('id, store_id, expected_cash, closing_cash, cash_difference, closed_at, employees(full_name)')
+    .eq('status', 'closed')
+    .gte('closed_at', todayISO)
+    .order('closed_at', { ascending: false });
+
   let lowStockQuery = adminSupabase
     .from('store_inventory')
     .select('id, quantity')
@@ -55,12 +62,13 @@ export async function getCombinedMetrics(storeIdFilter?: string) {
     posQuery = posQuery.eq('store_id', storeIdFilter);
     bridgeQuery = bridgeQuery.eq('store_id', storeIdFilter);
     openShiftsQuery = openShiftsQuery.eq('store_id', storeIdFilter);
+    closedShiftsQuery = closedShiftsQuery.eq('store_id', storeIdFilter);
     lowStockQuery = lowStockQuery.eq('store_id', storeIdFilter);
     salesmanQuery = salesmanQuery.eq('store_id', storeIdFilter);
   }
 
   // Fetch in parallel
-  const [webOrders, posOrders, bridgeOrders, openShifts, lowStock, salesmanOrders] = await Promise.all([
+  const [webOrders, posOrders, bridgeOrders, openShifts, lowStock, salesmanOrders, closedShifts] = await Promise.all([
     // Webstore orders today
     supabase
       .from('pending_orders')
@@ -82,6 +90,9 @@ export async function getCombinedMetrics(storeIdFilter?: string) {
 
     // Salesman orders today (all statuses)
     salesmanQuery,
+
+    // Closed shifts today for dashboard reporting
+    closedShiftsQuery,
   ]);
 
   // Webstore Revenue ONLY counts orders processed and confirmed by the POS
@@ -133,6 +144,7 @@ export async function getCombinedMetrics(storeIdFilter?: string) {
     totalRevenue: webRevenue + posRevenue + salesmanRevenue,
     totalOrdersToday: webCount + posCount + pendingSalesmanCount,
     openShifts: shiftsCount,
+    closedShiftsToday: closedShifts.data || [],
     salesmenOnFloor: salesmenOnFloor,
     lowStockCount: lowStock.data?.length || 0,
   };

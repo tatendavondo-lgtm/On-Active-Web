@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -9,8 +9,6 @@ export function ScrambleText({ text, duration = 1.5, delay = 0, className = "" }
   const [displayText, setDisplayText] = useState(text.replace(/./g, "\u00A0")); // fill with non-breaking spaces initially
   
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
-    let frames: number;
 
     const startAnimation = () => {
       let iteration = 0;
@@ -39,7 +37,7 @@ export function ScrambleText({ text, duration = 1.5, delay = 0, className = "" }
       }, 1000 / 60);
     };
 
-    timeout = setTimeout(startAnimation, delay * 1000);
+    const timeout = setTimeout(startAnimation, delay * 1000);
 
     return () => clearTimeout(timeout);
   }, [text, duration, delay]);
