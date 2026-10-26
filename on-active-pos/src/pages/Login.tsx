@@ -331,7 +331,7 @@ export default function Login() {
         </div>
         
         <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--pos-text-muted)] bg-white/5 py-1.5 px-4 rounded-full border border-white/5 inline-block">
-          Demo: 1234 (Sales) &nbsp;|&nbsp; 5678 (Till)
+          Authorized Staff Only &nbsp;·&nbsp; Offline-Ready Terminal
         </div>
       </div>
     </div>
