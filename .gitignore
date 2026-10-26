@@ -135,3 +135,13 @@ dist
 .yarn/install-state.gz
 .pnp.*
 .vercel
+
+# Scratch & local debug files
+/scratch/
+temp_token.txt
+debug_*.mjs
+test_*.mjs
+exhaust_models.mjs
+find_model.mjs
+list_models.mjs
+null
