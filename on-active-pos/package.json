@@ -30,7 +30,10 @@
     "react-router-dom": "^7.15.1",
     "react-thermal-printer": "^0.22.0",
     "tailwindcss": "^4.3.0",
-    "zustand": "^5.0.13"
+    "zustand": "^5.0.13",
+    "react-hot-toast": "^2.6.0",
+    "tailwind-merge": "^3.5.0",
+    "regenerator-runtime": "^0.14.1"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.3.4",

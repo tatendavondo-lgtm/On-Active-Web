@@ -1,0 +1,68 @@
+name: Build On Active POS Android APK
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'on-active-pos/**'
+      - '.github/workflows/build-pos-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install POS dependencies & build web bundle
+        working-directory: on-active-pos
+        env:
+          VITE_SUPABASE_URL: https://hnyilsmevqenwpspuguz.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhueWlsc21ldnFlbndwc3B1Z3V6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODE4NTIsImV4cCI6MjA5MDU1Nzg1Mn0.KPxw54vxL8IaS7gEPuZQbHa89joqeWESDJus_4e3scU
+        run: |
+          npm install --legacy-peer-deps
+          npx vite build
+          npx cap sync android
+
+      - name: Build Signed Android APK
+        working-directory: on-active-pos/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/On-Active-POS.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: On-Active-POS-APK
+          path: on-active-pos/android/app/build/outputs/apk/debug/On-Active-POS.apk
+
+      - name: Publish APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: pos-latest
+          name: "On Active POS — Native Android App (Latest)"
+          body: |
+            ### On Active POS — Native Android APK
+            - **Direct Download:** Tap `On-Active-POS.apk` below to download and install on any Android phone or POS tablet (Android 7.0 – 15.0).
+            - **Features:** Offline-first IndexedDB (Dexie) catalog & queue, GPS store geofencing, Bluetooth thermal receipt printing, Salesman & Till modes, and real-time Supabase sync.
+          files: on-active-pos/android/app/build/outputs/apk/debug/On-Active-POS.apk
+          prerelease: false
