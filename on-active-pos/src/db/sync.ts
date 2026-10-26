@@ -296,6 +296,111 @@ export async function pullUpdates(storeId: string): Promise<void> {
     console.warn('Failed to pull customers:', err);
   }
 
+  // 3.8 Pull open shifts and recent completed POS orders for this store so multi-terminal / cache-cleared sessions stay in sync
+  try {
+    const { data: remoteShifts } = await supabase
+      .from('shifts')
+      .select('*')
+      .eq('store_id', storeId)
+      .eq('status', 'open');
+
+    if (remoteShifts && remoteShifts.length > 0) {
+      for (const rs of remoteShifts) {
+        const localShift = await db.shifts.get(rs.id);
+        if (!localShift) {
+          await db.shifts.put({
+            id: rs.id,
+            store_id: rs.store_id,
+            employee_id: rs.employee_id,
+            opened_at: rs.opened_at,
+            closed_at: rs.closed_at || undefined,
+            opening_cash: Number(rs.opening_cash) || 0,
+            closing_cash: rs.closing_cash != null ? Number(rs.closing_cash) : undefined,
+            expected_cash: rs.expected_cash != null ? Number(rs.expected_cash) : undefined,
+            cash_difference: rs.cash_difference != null ? Number(rs.cash_difference) : undefined,
+            status: rs.status,
+            notes: rs.notes || undefined,
+            device_id: rs.device_id || '',
+          });
+        }
+      }
+    }
+
+    const { data: remotePosOrders } = await supabase
+      .from('pos_orders')
+      .select('*, pos_order_items(*), pos_payments(*)')
+      .eq('store_id', storeId)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (remotePosOrders && remotePosOrders.length > 0) {
+      for (const ro of remotePosOrders) {
+        const localOrder = await db.orders.get(ro.id);
+        if (!localOrder) {
+          await db.orders.put({
+            id: ro.id,
+            order_number: ro.order_number,
+            store_id: ro.store_id,
+            employee_id: ro.employee_id || '',
+            salesman_id: ro.salesman_id || undefined,
+            salesman_order_id: ro.salesman_order_id || undefined,
+            shift_id: ro.shift_id || '',
+            customer_id: ro.customer_id || undefined,
+            source: ro.source || 'walk_in',
+            fulfillment: ro.fulfillment || 'immediate',
+            status: ro.status || 'completed',
+            items: (ro.pos_order_items || []).map((it: any) => ({
+              id: it.id,
+              product_id: it.product_id,
+              variant_id: it.variant_id || null,
+              product_name: it.product_name,
+              variant_name: it.variant_name || undefined,
+              sku: it.sku || '',
+              quantity: Number(it.quantity) || 1,
+              unit_price: Number(it.unit_price) || 0,
+              discount_amount: Number(it.discount_amount) || 0,
+              line_total: Number(it.line_total) || 0,
+              refunded_quantity: Number(it.refunded_quantity) || 0,
+            })),
+            payments: (ro.pos_order_items && ro.pos_payments ? ro.pos_payments : []).map((p: any) => ({
+              id: p.id,
+              order_id: ro.id,
+              method: p.method,
+              amount_usd: Number(p.amount_usd) || 0,
+              amount_local: p.amount_local != null ? Number(p.amount_local) : undefined,
+              local_currency: p.local_currency || undefined,
+              exchange_rate_used: p.exchange_rate_used != null ? Number(p.exchange_rate_used) : undefined,
+              reference: p.reference || undefined,
+              tendered: p.tendered != null ? Number(p.tendered) : undefined,
+              change_given: p.change_given != null ? Number(p.change_given) : undefined,
+              status: p.status || 'completed',
+            })),
+            subtotal: Number(ro.subtotal) || 0,
+            auto_discount_applied: Boolean(ro.auto_discount_applied),
+            auto_discount_amount: Number(ro.auto_discount_amount) || 0,
+            manual_discount_amount: Number(ro.manual_discount_amount) || 0,
+            manual_discount_type: ro.manual_discount_type || undefined,
+            manual_discount_value: ro.manual_discount_value != null ? Number(ro.manual_discount_value) : undefined,
+            total_discount: Number(ro.total_discount) || 0,
+            tax_amount: Number(ro.tax_amount) || 0,
+            total: Number(ro.total) || 0,
+            currency: ro.currency || 'USD',
+            exchange_rate_zig: ro.exchange_rate_zig != null ? Number(ro.exchange_rate_zig) : undefined,
+            exchange_rate_zar: ro.exchange_rate_zar != null ? Number(ro.exchange_rate_zar) : undefined,
+            created_at: ro.created_at,
+            updated_at: ro.updated_at || ro.created_at,
+            completed_at: ro.completed_at || ro.created_at,
+            created_offline: false,
+            synced: true,
+            device_id: ro.device_id || '',
+          } as any);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to pull shifts or POS orders:', err);
+  }
+
   // 4. Pull online orders via the bridge
   try {
     const { data: onlineOrders, error: ooErr } = await supabase

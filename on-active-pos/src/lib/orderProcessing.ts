@@ -1,4 +1,5 @@
 import { db } from '../db/dexie';
+import { processSyncQueue } from '../db/sync';
 import { generateOrderNumber } from './orderNumber';
 import type { CartItem, AutoDiscount } from '../types/cart';
 import type { Payment, Order } from '../types/order';
@@ -45,7 +46,7 @@ export async function processOrder(params: ProcessOrderParams) {
     source: params.source,
     fulfillment: 'immediate',
     status: 'completed',
-    items: params.items,
+    items: params.items.map(it => ({ ...it, id: it.id || generateUUID() })),
     payments: params.payments,
     subtotal: params.subtotal,
     auto_discount_applied: params.autoDiscount.applied,
@@ -82,8 +83,9 @@ export async function processOrder(params: ProcessOrderParams) {
     });
   }
 
-  // 4. Queue for sync
+  // 4. Queue for sync & immediately flush if online
   await queueOrderForSync(order);
+  processSyncQueue().catch(err => console.warn('Immediate order sync deferred to background queue:', err));
 
   // Return the processed order for receipt preview
   return order;
@@ -112,6 +114,8 @@ export async function queueOrderForSync(order: Order): Promise<void> {
       auto_discount_applied: order.auto_discount_applied,
       auto_discount_amount: order.auto_discount_amount,
       manual_discount_amount: order.manual_discount_amount,
+      manual_discount_type: order.manual_discount_type || null,
+      manual_discount_value: order.manual_discount_value ?? null,
       total_discount: order.total_discount,
       tax_amount: order.tax_amount,
       total: order.total,
@@ -119,6 +123,8 @@ export async function queueOrderForSync(order: Order): Promise<void> {
       exchange_rate_zig: order.exchange_rate_zig,
       exchange_rate_zar: order.exchange_rate_zar,
       created_at: order.created_at,
+      updated_at: order.updated_at || order.created_at,
+      completed_at: order.completed_at || order.created_at,
       created_offline: true,
       device_id: order.device_id,
     },
@@ -132,7 +138,7 @@ export async function queueOrderForSync(order: Order): Promise<void> {
       table: 'pos_order_items',
       operation: 'insert',
       data: {
-        id: generateUUID(), // Local only items generated their own IDs when adding to cart
+        id: item.id || generateUUID(),
         order_id: order.id,
         product_id: item.product_id,
         variant_id: item.variant_id,
@@ -201,6 +207,9 @@ export async function queueOrderForSync(order: Order): Promise<void> {
       attempts: 0,
     });
   }
+
+  // Immediately flush refund & restock to Supabase if online
+  processSyncQueue().catch(err => console.warn('Immediate refund sync deferred to background queue:', err));
 }
 
 export interface ProcessRefundParams {

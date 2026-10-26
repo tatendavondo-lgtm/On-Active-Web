@@ -1,3 +1,4 @@
+import { processSyncQueue } from '../../db/sync';
 import { useState } from 'react';
 import { Modal } from '../shared/Modal';
 import { Button } from '../shared/Button';
@@ -60,6 +61,9 @@ export function SendToTillModal({ isOpen, onClose, customerName, setCustomerName
         created_at: now,
         attempts: 0
       });
+
+      // Immediately push to Supabase so Till Realtime receives it in <1s
+      processSyncQueue().catch(err => console.warn('Salesman order sync deferred:', err));
 
       clearCart();
       onSent();

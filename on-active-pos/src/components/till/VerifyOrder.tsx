@@ -1,3 +1,4 @@
+import { logPosAction } from '../../lib/audit';
 import { useState, useEffect, useMemo } from 'react';
 import { CheckSquare, Square, Trash2, Plus, Search, X } from 'lucide-react';
 import { useCartStore } from '../../stores/cartStore';
@@ -112,6 +113,17 @@ export function VerifyOrder({ order, onCancel, onPay }: VerifyOrderProps) {
 
       const receiptData = transformOrderToReceipt(processedOrder as any, store, employee.full_name, order.salesman_name);
       setCompletedReceipt(receiptData);
+
+      logPosAction({
+        userId: employee.id,
+        userName: employee.full_name,
+        userRole: employee.role,
+        action: 'complete_salesman_sale',
+        targetType: 'order',
+        targetId: processedOrder.id,
+        details: { total: processedOrder.total, items: processedOrder.items.length, salesman_order_id: order.id },
+        storeId: store.id,
+      });
 
       setShowPayment(false);
       clearCart();

@@ -1,3 +1,4 @@
+import { processSyncQueue } from '../db/sync';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/dexie';
 import { useSessionStore } from '../stores/sessionStore';
@@ -26,6 +27,8 @@ export function useOnlineOrders() {
       };
       if (newStatus === 'completed') {
         localUpdates.completed_at = now;
+        if (session.shiftId) localUpdates.shift_id = session.shiftId;
+        if (session.employee?.id) localUpdates.employee_id = session.employee.id;
       }
       await db.orders.update(orderId, localUpdates as any);
 
@@ -131,6 +134,8 @@ export function useOnlineOrders() {
           }
         }
       }
+      // Immediately flush online order status & stock changes to Supabase
+      processSyncQueue().catch(err => console.warn('Online order status sync deferred:', err));
     } catch (err) {
       console.error('Failed to move order status:', err);
     }

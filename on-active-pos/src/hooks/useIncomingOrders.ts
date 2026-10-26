@@ -1,3 +1,4 @@
+import { processSyncQueue } from '../db/sync';
 /**
  * Hook for the TILL to receive salesman orders.
  *
@@ -146,6 +147,7 @@ export function useIncomingOrders() {
       created_at: new Date().toISOString(),
       attempts: 0,
     });
+    processSyncQueue().catch(err => console.warn('Incoming order status sync deferred:', err));
     loadLocal();
   }
 
@@ -159,6 +161,7 @@ export function useIncomingOrders() {
       created_at: new Date().toISOString(),
       attempts: 0,
     });
+    processSyncQueue().catch(err => console.warn('Incoming order status sync deferred:', err));
     loadLocal();
   }
 
@@ -174,6 +177,7 @@ export function useIncomingOrders() {
       created_at: new Date().toISOString(),
       attempts: 0,
     });
+    processSyncQueue().catch(err => console.warn('Incoming order status sync deferred:', err));
     loadLocal();
   }
 

@@ -1,3 +1,5 @@
+import { processSyncQueue } from '../../db/sync';
+import { logPosAction } from '../../lib/audit';
 import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/dexie';
@@ -10,7 +12,7 @@ import { ArrowLeft, Lock, Info } from 'lucide-react';
 import type { Order } from '../../types/order';
 
 export default function EndOfDay() {
-  const { employee, shiftId, logout } = useSessionStore();
+  const { employee, store, shiftId, logout } = useSessionStore();
   const navigate = useNavigate();
   const [actualCash, setActualCash] = useState('');
   const [notes, setNotes] = useState('');
@@ -129,7 +131,22 @@ export default function EndOfDay() {
       attempts: 0
     });
 
-    // 3. Logout
+    // 3. Flush shift closure to Supabase & log audit before clearing session
+    await processSyncQueue().catch(err => console.warn('Shift close sync deferred:', err));
+    if (employee && store) {
+      await logPosAction({
+        userId: employee.id,
+        userName: employee.full_name,
+        userRole: employee.role,
+        action: 'close_shift',
+        targetType: 'shift',
+        targetId: shiftId,
+        details: { expected_cash: expectedCash, actual_cash: actualCashNum, cash_difference: difference, notes },
+        storeId: store.id,
+      });
+    }
+
+    // 4. Logout
     logout();
     navigate('/login');
   };

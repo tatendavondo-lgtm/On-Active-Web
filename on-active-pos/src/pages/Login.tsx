@@ -5,7 +5,7 @@ import { useSessionStore } from '../stores/sessionStore';
 import { useGeofence } from '../hooks/useGeofence';
 import { PinPad } from '../components/shared/PinPad';
 import { isSalesmanRole, type Employee } from '../types/employee';
-import { pullUpdates } from '../db/sync';
+import { pullUpdates, processSyncQueue } from '../db/sync';
 import { logPosAction } from '../lib/audit';
 import { playNotificationSound } from '../lib/notification';
 import { Lock } from 'lucide-react';
@@ -167,7 +167,8 @@ export default function Login() {
     try {
       const { db } = await import('../db/dexie');
       
-      // Clear stale cache and pull updates
+      // Flush any pending offline queue before refreshing catalog and state
+      await processSyncQueue().catch(err => console.warn('Pre-login queue flush warning:', err));
       await db.products.clear();
       await pullUpdates(targetStore.id);
 

@@ -1,3 +1,4 @@
+import { logPosAction } from '../../lib/audit';
 import { useState, useMemo } from 'react';
 import { X, AlertCircle } from 'lucide-react';
 import { Button } from '../shared/Button';
@@ -14,7 +15,7 @@ interface RefundModalProps {
 }
 
 export function RefundModal({ order, onClose, onRefundComplete }: RefundModalProps) {
-  const { shiftId } = useSessionStore();
+  const { shiftId, employee, store } = useSessionStore();
   const [returnQuantities, setReturnQuantities] = useState<Record<string, number>>({});
   const [method, setMethod] = useState<'cash' | 'ecocash' | 'innbucks' | 'card'>('cash');
   const [reason, setReason] = useState('');
@@ -64,6 +65,19 @@ export function RefundModal({ order, onClose, onRefundComplete }: RefundModalPro
         refundTotalUsd: refundTotal,
         shiftId
       });
+
+      if (employee && store) {
+        logPosAction({
+          userId: employee.id,
+          userName: employee.full_name,
+          userRole: employee.role,
+          action: 'refund_order',
+          targetType: 'order',
+          targetId: order.id,
+          details: { refund_total_usd: refundTotal, method, reason },
+          storeId: store.id,
+        });
+      }
 
       onRefundComplete();
     } catch (err) {

@@ -1,3 +1,5 @@
+import { processSyncQueue } from '../../db/sync';
+import { logPosAction } from '../../lib/audit';
 import type { ReactNode } from 'react';
 import { TillSidebar } from './TillSidebar';
 import { StatusBar } from './StatusBar';
@@ -39,6 +41,19 @@ export function TillShell({ children }: { children: ReactNode }) {
     });
 
     setShiftId(id);
+    processSyncQueue().catch(err => console.warn('Shift open sync deferred:', err));
+    if (employee && store) {
+      logPosAction({
+        userId: employee.id,
+        userName: employee.full_name,
+        userRole: employee.role,
+        action: 'open_shift',
+        targetType: 'shift',
+        targetId: id,
+        details: { opening_cash: openingCash },
+        storeId: store.id,
+      });
+    }
   };
 
   return (
