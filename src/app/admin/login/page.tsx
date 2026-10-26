@@ -39,7 +39,7 @@ export default function AdminLoginPage() {
       const res = await fetch('/api/admin/verify-role');
       const { role, error: roleError } = await res.json();
 
-      if (roleError || !['owner', 'manager'].includes(role)) {
+      if (roleError || !['owner', 'manager', 'admin'].includes(role?.toLowerCase())) {
         await supabase.auth.signOut();
         toast.error(`Access denied — ${roleError || 'not an admin account.'}`);
         return;

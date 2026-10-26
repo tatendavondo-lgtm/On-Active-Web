@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // 1. Verify standard session via cookies (secure)
     const supabase = await createClient();
@@ -16,13 +16,40 @@ export async function GET(request: NextRequest) {
 
     // 2. Fetch role using privileged client (bypass RLS)
     const adminSupabase = createAdminClient();
-    const { data: profile, error: profileError } = await adminSupabase
+    let { data: profile } = await adminSupabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
 
-    if (profileError || !profile) {
+    // Auto-provision profile if missing:
+    // - If user_metadata has a role (from admin invite), use it
+    // - Or if the profiles table has 0 owners yet, bootstrap the first authenticated user as 'owner'
+    if (!profile) {
+      const metaRole = user.user_metadata?.role;
+      const { count: ownerCount } = await adminSupabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'owner');
+
+      const assignedRole = metaRole || ((ownerCount ?? 0) === 0 ? 'owner' : null);
+
+      if (assignedRole) {
+        const { data: createdProfile } = await adminSupabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Owner',
+            role: assignedRole,
+          })
+          .select('*')
+          .single();
+
+        profile = createdProfile;
+      }
+    }
+
+    if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
