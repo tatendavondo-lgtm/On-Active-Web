@@ -3,8 +3,6 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { UTApi } from 'uploadthing/server';
 
-const utapi = new UTApi();
-
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
@@ -23,7 +21,7 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!profile || !['owner', 'manager'].includes(profile.role)) {
+    if (!profile || !['owner', 'manager', 'admin'].includes(profile.role?.toLowerCase())) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -34,7 +32,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Upload directly to UploadThing
+    // Upload directly to UploadThing via UTApi
+    const utapi = new UTApi();
     const response = await utapi.uploadFiles(file);
 
     if (response.error) {
@@ -42,7 +41,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: response.error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ url: response.data?.url });
+    return NextResponse.json({ url: response.data?.ufsUrl || response.data?.url });
   } catch (err: any) {
     console.error('Server error during upload:', err);
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });

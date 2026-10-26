@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!profile || !['owner', 'manager'].includes(profile.role)) {
+    if (!profile || !['owner', 'manager', 'admin'].includes(profile.role?.toLowerCase())) {
       return NextResponse.json({ error: 'Forbidden. Not an admin.' }, { status: 403 });
     }
 
@@ -197,7 +197,7 @@ export async function DELETE(req: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!profile || !['owner', 'manager'].includes(profile.role)) {
+    if (!profile || !['owner', 'manager', 'admin'].includes(profile.role?.toLowerCase())) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
