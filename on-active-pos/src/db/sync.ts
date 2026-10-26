@@ -16,6 +16,7 @@ const TABLE_COLUMNS: Record<string, string[]> = {
   pos_payments: ['id', 'order_id', 'method', 'amount_usd', 'amount_local', 'local_currency', 'exchange_rate_used', 'reference', 'tendered', 'change_given', 'status', 'created_at'],
   customers: ['id', 'full_name', 'phone', 'email', 'address', 'notes', 'source', 'created_at'],
   online_order_bridge: ['id', 'webstore_order_id', 'pos_order_id', 'store_id', 'fulfillment', 'status', 'assigned_at', 'accepted_at', 'ready_at', 'completed_at', 'customer_name', 'customer_phone', 'customer_email', 'items', 'total', 'order_ref'],
+  pending_orders: ['id', 'status', 'updated_at'],
   products: ['id', 'stock_quantity'], 
 };
 
@@ -358,6 +359,10 @@ export async function pullUpdates(storeId: string): Promise<void> {
           const o: Order = {
             id: bo.id,
             order_number: orderRef,
+            webstore_order_id: bo.webstore_order_id,
+            customer_name: bo.customer_name || 'Online Customer',
+            customer_phone: bo.customer_phone || '',
+            customer_email: bo.customer_email || '',
             source: 'online',
             fulfillment: bo.fulfillment,
             status: bo.status,
@@ -390,6 +395,18 @@ export async function pullUpdates(storeId: string): Promise<void> {
           
           if (exists.status !== bo.status) {
             updates.status = bo.status;
+          }
+          if (!exists.customer_name && bo.customer_name) {
+            updates.customer_name = bo.customer_name;
+          }
+          if (!exists.customer_phone && bo.customer_phone) {
+            updates.customer_phone = bo.customer_phone;
+          }
+          if (!exists.customer_email && bo.customer_email) {
+            updates.customer_email = bo.customer_email;
+          }
+          if (!exists.webstore_order_id && bo.webstore_order_id) {
+            updates.webstore_order_id = bo.webstore_order_id;
           }
           if (needsItemUpdate && items.length > 0) {
             updates.items = items;

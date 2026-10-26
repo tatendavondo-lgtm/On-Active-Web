@@ -9,8 +9,14 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-if ('serviceWorker' in navigator) {
+const isNativeShell =
+  typeof window !== 'undefined' &&
+  (Boolean((window as any).Capacitor?.isNativePlatform?.()) || Boolean((window as any).__TAURI__));
+
+if ('serviceWorker' in navigator && !isNativeShell) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js');
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('Service worker registration skipped:', err);
+    });
   });
 }

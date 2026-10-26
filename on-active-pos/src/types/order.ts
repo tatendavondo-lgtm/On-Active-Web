@@ -35,6 +35,10 @@ export interface Order {
   salesman_order_id?: string;
   shift_id: string;
   customer_id?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
+  webstore_order_id?: string;
   source: 'walk_in' | 'salesman' | 'online';
   fulfillment: 'immediate' | 'collection' | 'delivery';
   status: string;

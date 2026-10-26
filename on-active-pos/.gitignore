@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 
 jdk*.zip
+
+# Scratch & debug files
+/scratch/
+check_stores.mjs
+update-location.mjs

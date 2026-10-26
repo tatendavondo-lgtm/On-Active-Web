@@ -130,9 +130,17 @@ function OrderCard({ order, onAdvance, actionLabel }: { order: any, onAdvance?: 
           </div>
         )}
 
-        {order.customer_name && (
-          <div className="text-xs text-[var(--pos-text-secondary)] font-medium">
-            Customer: <span className="text-white">{order.customer_name}</span>
+        {(order.customer_name || order.customer_phone) && (
+          <div className="text-xs text-[var(--pos-text-secondary)] font-medium space-y-0.5">
+            {order.customer_name && (
+              <div>Customer: <span className="text-white">{order.customer_name}</span></div>
+            )}
+            {order.customer_phone && (
+              <div>Phone: <span className="text-white font-mono">{order.customer_phone}</span></div>
+            )}
+            {order.customer_email && (
+              <div className="text-[11px] text-[var(--pos-text-muted)] truncate">{order.customer_email}</div>
+            )}
           </div>
         )}
       </div>
