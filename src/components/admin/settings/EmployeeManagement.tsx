@@ -299,7 +299,7 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
                   <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-[3px] bg-[#1f1f1f] text-[#555]">
                     {ROLES.find(r => r.id === emp.role)?.label || emp.role}
                   </span>
-                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center opacity-100 sm:opacity-60 sm:group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => handleEdit(emp)}
                       className="p-1.5 text-[#444] hover:text-white hover:bg-white/5 rounded-[4px]"
