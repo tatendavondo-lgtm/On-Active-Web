@@ -1,13 +1,13 @@
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 
 export async function getLiveZigRate(): Promise<number> {
   // 1. Try fetching from Supabase exchange_rates table first
   try {
-    const supabase = createBrowserClient(
+    const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('exchange_rates')
       .select('rate')
       .eq('base_currency', 'USD')

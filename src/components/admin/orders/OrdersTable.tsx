@@ -35,6 +35,10 @@ export interface UnifiedOrder {
   };
   // Webstore specific
   delivery_fee_usd?: number;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  fulfillment?: string | null;
 }
 
 interface OrderFiltersValue {
@@ -74,7 +78,11 @@ export function OrdersTable({ filters, userRole }: { filters: OrderFiltersValue;
           total_usd: w.total_usd,
           created_at: w.created_at,
           items: w.items || [],
-          delivery_fee_usd: w.delivery_fee_usd
+          delivery_fee_usd: w.delivery_fee_usd,
+          customer_name: w.customer_name,
+          customer_phone: w.customer_phone,
+          customer_email: w.customer_email,
+          fulfillment: w.fulfillment
         })));
       }
 

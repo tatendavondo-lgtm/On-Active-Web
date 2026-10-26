@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { useCart } from "@/store/cart";
 import { useRouter } from "next/navigation";
@@ -40,7 +40,7 @@ export function CheckoutForm({ settings }: { settings: any }) {
   const [errors, setErrors] = useState({ name: "", phone: "", address: "" });
   
   // Active store branches from DB
-  const [storesList, setStoresList] = useState<{ name: string; latitude: number; longitude: number }[]>([]);
+  const [storesList, setStoresList] = useState<{ id?: string; name: string; latitude: number; longitude: number }[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -51,7 +51,7 @@ export function CheckoutForm({ settings }: { settings: any }) {
         const supabase = createClient();
         const { data, error } = await supabase
           .from("stores")
-          .select("name, latitude, longitude")
+          .select("id, name, latitude, longitude")
           .eq("is_active", true);
 
         if (!error && data && data.length > 0) {
@@ -77,16 +77,10 @@ export function CheckoutForm({ settings }: { settings: any }) {
     fetchStores();
   }, []);
 
-  // Compute the closest branch based on user GPS coords
-  const closestStoreInfo = useState(() => {
-    if (storesList.length === 0) return { name: "Harare Main Branch", latitude: FALLBACK_STORE_LAT, longitude: FALLBACK_STORE_LNG };
-    return storesList[0];
-  })[0];
-
-  // We use useMemo to find the closest active store to the user
-  const closestStore = typeof window !== 'undefined' ? (() => {
+  // Use useMemo to find the closest active store to the user
+  const closestStore = useMemo(() => {
     if (storesList.length === 0) {
-      return { name: "Harare Main Branch", latitude: FALLBACK_STORE_LAT, longitude: FALLBACK_STORE_LNG };
+      return { id: undefined, name: "Harare Main Branch", latitude: FALLBACK_STORE_LAT, longitude: FALLBACK_STORE_LNG };
     }
     if (!gpsCoords) return storesList[0];
     
@@ -101,7 +95,7 @@ export function CheckoutForm({ settings }: { settings: any }) {
       }
     }
     return closest;
-  })() : { name: "Harare Main Branch", latitude: FALLBACK_STORE_LAT, longitude: FALLBACK_STORE_LNG };
+  }, [storesList, gpsCoords]);
 
   const storeLat = closestStore?.latitude ?? FALLBACK_STORE_LAT;
   const storeLng = closestStore?.longitude ?? FALLBACK_STORE_LNG;
@@ -208,6 +202,11 @@ export function CheckoutForm({ settings }: { settings: any }) {
       delivery_fee_usd: deliveryFee,
       payment_method: paymentMethod,
       delivery_option: deliveryOption,
+      fulfillment_type: deliveryOption === "pickup" ? "collection" : "delivery",
+      customer_name: form.name.trim(),
+      customer_phone: form.phone.trim(),
+      delivery_address: deliveryOption === "delivery" ? form.address.trim() : "",
+      store_id: closestStore?.id || null,
       gps_coords: gpsCoords ? `${gpsCoords.lat},${gpsCoords.lng}` : null
     };
 

@@ -68,7 +68,13 @@ export async function POST(req: NextRequest) {
       });
 
       const productId = result.id;
-      const defaultStoreId = '00000000-0000-0000-0000-000000000001';
+      const { data: activeStore } = await adminSupabase
+        .from('stores')
+        .select('id')
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+      const defaultStoreId = payload.store_id || activeStore?.id || '00000000-0000-0000-0000-000000000001';
 
       // If explicit variants are provided (from the new UI)
       if (incomingVariants && Array.isArray(incomingVariants)) {

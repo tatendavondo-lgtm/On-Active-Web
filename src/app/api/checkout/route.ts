@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
     const payload = await req.json();
     
     // Minimum validation
-    if (!payload.order_ref || !payload.items || payload.total_usd === undefined) {
+    if (!payload.order_ref || !Array.isArray(payload.items) || payload.items.length === 0 || payload.total_usd === undefined) {
       return NextResponse.json({ error: 'Missing required order fields' }, { status: 400 });
     }
 
@@ -41,16 +41,27 @@ export async function POST(req: NextRequest) {
         }
       }
       
-      serverSubtotal += truePrice * Number(item.quantity || 1);
+      const qty = Math.max(1, Number(item.quantity || 1));
+      serverSubtotal += truePrice * qty;
       
       return {
         ...item,
+        quantity: qty,
         price: truePrice, // Override client price with true server price
+        price_usd: truePrice,
       };
     });
 
-    const deliveryFee = Number(payload.delivery_fee_usd || 0);
+    // Guard against negative delivery fee spoofing
+    const rawDeliveryOption = payload.fulfillment_type || payload.delivery_option || 'collection';
+    const fulfillment: 'collection' | 'delivery' = rawDeliveryOption === 'delivery' ? 'delivery' : 'collection';
+    const deliveryFee = fulfillment === 'collection' ? 0 : Math.max(0, Number(payload.delivery_fee_usd || 0));
     const serverTotal = serverSubtotal + deliveryFee;
+
+    const customerName = (payload.customer_name || payload.shipping_name || payload.name || 'Online Customer').trim();
+    const customerPhone = (payload.customer_phone || payload.shipping_phone || payload.phone || '').trim();
+    const customerEmail = (payload.customer_email || payload.email || '').trim();
+    const deliveryAddress = (payload.delivery_address || payload.address || '').trim();
 
     // Sanitize payload for pending_orders
     const orderData = {
@@ -69,36 +80,40 @@ export async function POST(req: NextRequest) {
     }
 
     if (newOrder) {
-      // Determine which store to assign to
-      const { data: defaultStore } = await adminSupabase
-        .from('stores')
-        .select('id')
-        .eq('is_active', true)
-        .limit(1)
-        .single();
+      // Determine which store to assign to (prefer closest store passed from client if valid)
+      let targetStoreId = payload.store_id || null;
 
-      if (defaultStore) {
+      if (!targetStoreId) {
+        const { data: defaultStore } = await adminSupabase
+          .from('stores')
+          .select('id')
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+        targetStoreId = defaultStore?.id || null;
+      }
+
+      if (targetStoreId) {
         const { error: bridgeError } = await adminSupabase.from('online_order_bridge').insert({
           webstore_order_id: newOrder.id,
-          store_id: defaultStore.id,
-          fulfillment: payload.delivery_option || payload.fulfillment_type || 'collection',
+          store_id: targetStoreId,
+          fulfillment,
           status: 'pending',
-          customer_name: payload.customer_name || payload.shipping_name || payload.name || 'Online Customer',
-          customer_phone: payload.customer_phone || payload.shipping_phone || payload.phone || '',
-          customer_email: payload.customer_email || payload.email || '',
+          customer_name: customerName,
+          customer_phone: customerPhone,
+          customer_email: customerEmail || (deliveryAddress ? `Address: ${deliveryAddress}` : ''),
           items: newOrder.items || [],
           total: newOrder.total_usd,
         });
 
-        // --- 4. HANDLE CHECKOUT BRIDGING ERROR ---
+        // --- HANDLE CHECKOUT BRIDGING ERROR ---
         if (bridgeError) {
           console.error('Failed to bridge order to POS:', bridgeError);
-          // Mark the order as needing manual bridging so it doesn't get lost
           await adminSupabase.from('pending_orders').update({ needs_bridge: true }).eq('id', newOrder.id);
         }
       } else {
-         // No active store found
-         await adminSupabase.from('pending_orders').update({ needs_bridge: true }).eq('id', newOrder.id);
+        // No active store found
+        await adminSupabase.from('pending_orders').update({ needs_bridge: true }).eq('id', newOrder.id);
       }
     }
 

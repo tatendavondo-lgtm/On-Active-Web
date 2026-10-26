@@ -84,6 +84,41 @@ export function OrderSlideOver({ order, onClose }: OrderSlideOverProps) {
             {/* Body */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               
+              {/* Webstore Customer Details */}
+              {source === 'webstore' && (order.customer_name || order.customer_phone || order.fulfillment) && (
+                <div className="bg-[#111] border border-[#1a1a1a] rounded-[6px] p-4 space-y-2.5">
+                  <p className="text-[#666] text-[10px] font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
+                    <User size={12} /> Customer & Fulfillment
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {order.customer_name && (
+                      <div>
+                        <p className="text-[#555] text-xs mb-0.5">Customer</p>
+                        <p className="text-white font-medium">{order.customer_name}</p>
+                      </div>
+                    )}
+                    {order.customer_phone && (
+                      <div>
+                        <p className="text-[#555] text-xs mb-0.5">Phone</p>
+                        <p className="text-white font-mono text-xs">{order.customer_phone}</p>
+                      </div>
+                    )}
+                    {order.fulfillment && (
+                      <div>
+                        <p className="text-[#555] text-xs mb-0.5">Fulfillment</p>
+                        <p className="text-[#C5A021] text-xs font-bold uppercase tracking-wider">{order.fulfillment}</p>
+                      </div>
+                    )}
+                    {order.customer_email && (
+                      <div className="col-span-2">
+                        <p className="text-[#555] text-xs mb-0.5">Notes / Address</p>
+                        <p className="text-[#aaa] text-xs">{order.customer_email}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* POS Specific Data */}
               {source.startsWith('pos') && order.pos_data && (
                 <div className="bg-[#111] border border-[#1a1a1a] rounded-[6px] p-4 space-y-3">
