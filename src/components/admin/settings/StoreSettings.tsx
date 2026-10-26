@@ -14,6 +14,8 @@ export function StoreSettings({ initialSettings }: StoreSettingsProps) {
     whatsapp_number: initialSettings.whatsapp_number ?? '',
     delivery_fee_usd: initialSettings.delivery_fee_usd ?? '5.00',
     free_delivery_threshold_usd: initialSettings.free_delivery_threshold_usd ?? '150.00',
+    ecocash_details: initialSettings.ecocash_details ?? '',
+    bank_details: initialSettings.bank_details ?? '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -33,6 +35,8 @@ export function StoreSettings({ initialSettings }: StoreSettingsProps) {
     { key: 'whatsapp_number', label: 'Business WhatsApp', hint: '+263 xxx xxx xxx', type: 'text' },
     { key: 'delivery_fee_usd', label: 'Delivery Fee (USD)', hint: 'Charged per order', type: 'number' },
     { key: 'free_delivery_threshold_usd', label: 'Free Delivery Threshold (USD)', hint: 'Orders above this get free delivery', type: 'number' },
+    { key: 'ecocash_details', label: 'EcoCash Payment Instructions', hint: 'Shown at checkout when EcoCash is selected (e.g. Dial *151*2*2*MerchantCode*Amount#)', type: 'text' },
+    { key: 'bank_details', label: 'Bank Transfer Instructions', hint: 'Shown at checkout when Bank Transfer is selected (e.g. Bank Name, Account Number)', type: 'text' },
   ] as const;
 
   return (

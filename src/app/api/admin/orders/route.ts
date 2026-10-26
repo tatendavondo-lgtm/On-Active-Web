@@ -55,3 +55,61 @@ export async function GET() {
   }
 }
 
+export async function PATCH(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const adminSupabase = createAdminClient();
+    const { data: profile } = await adminSupabase
+      .from('profiles')
+      .select('role, full_name')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile || !['owner', 'manager', 'admin'].includes(profile.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { orderId, status } = await req.json();
+    if (!orderId || !['pending', 'confirmed', 'cancelled'].includes(status)) {
+      return NextResponse.json({ error: 'Invalid orderId or status' }, { status: 400 });
+    }
+
+    const { error } = await adminSupabase
+      .from('pending_orders')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', orderId);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    // Also keep online_order_bridge status synchronized
+    await adminSupabase
+      .from('online_order_bridge')
+      .update({ status })
+      .eq('webstore_order_id', orderId);
+
+    // Record in audit_logs
+    await adminSupabase.from('audit_logs').insert({
+      user_id: user.id,
+      user_name: profile.full_name || 'Admin',
+      user_role: profile.role,
+      source: 'admin',
+      action: status === 'confirmed' ? 'confirm_order' : `order_${status}`,
+      target_type: 'order',
+      target_id: orderId,
+      details: { status },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error('Orders PATCH Error:', err);
+    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+  }
+}

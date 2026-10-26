@@ -128,16 +128,19 @@ export function OrdersTable({ filters, userRole }: { filters: OrderFiltersValue;
   }, [fetchOrders]);
 
   const handleConfirm = async (orderId: string, source: string) => {
-    if (source !== 'webstore') return; // POS orders are auto-confirmed usually
-    const supabase = createClient();
-    const { error } = await supabase
-      .from('pending_orders')
-      .update({ status: 'confirmed', updated_at: new Date().toISOString() })
-      .eq('id', orderId);
-    
-    if (error) { toast.error('Failed to confirm order'); return; }
-    toast.success('Order confirmed');
-    fetchOrders();
+    if (source !== 'webstore') return;
+    try {
+      const res = await fetch('/api/admin/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, status: 'confirmed' }),
+      });
+      if (!res.ok) throw new Error('Failed to confirm order');
+      toast.success('Order confirmed');
+      fetchOrders();
+    } catch {
+      toast.error('Failed to confirm order');
+    }
   };
 
   const filtered = useMemo(() => {

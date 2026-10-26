@@ -28,31 +28,33 @@ export async function GET(request: Request) {
     const endOfYear = new Date(year, 11, 31, 23, 59, 59).toISOString();
 
     const [
-      { data: onlineOrders },
+      { data: confirmedOnlineOrders },
       { data: posOrders },
-      { data: salesmanOrders }
+      { data: pipelineSalesmanOrders }
     ] = await Promise.all([
-      supabase
+      // Only confirmed webstore orders (excludes unpaid 'pending' or 'cancelled')
+      adminSupabase
         .from('pending_orders')
         .select('created_at, total_usd')
         .gte('created_at', startOfYear)
         .lte('created_at', endOfYear)
-        .neq('status', 'cancelled'),
+        .eq('status', 'confirmed'),
+      // Completed POS orders (excludes 'online' source if already counted in confirmedOnlineOrders, or we separate them cleanly)
       adminSupabase
         .from('pos_orders')
-        .select('created_at, total')
+        .select('created_at, total, source')
         .gte('created_at', startOfYear)
         .lte('created_at', endOfYear)
-        .neq('status', 'cancelled'),
+        .eq('status', 'completed'),
+      // Active salesman pipeline orders not yet completed in pos_orders
       adminSupabase
         .from('salesman_orders')
-        .select('created_at, subtotal')
+        .select('created_at, subtotal, status')
         .gte('created_at', startOfYear)
         .lte('created_at', endOfYear)
-        .neq('status', 'cancelled')
+        .not('status', 'in', '("completed","cancelled")')
     ]);
 
-    // Initialize 12 months with 0 revenue
     const monthlyData = Array.from({ length: 12 }, (_, i) => ({
       monthIndex: i,
       label: new Date(year, i, 1).toLocaleDateString('en-GB', { month: 'short' }),
@@ -61,19 +63,24 @@ export async function GET(request: Request) {
 
     const addRevenue = (dateStr: string, amount: number) => {
       const d = new Date(dateStr);
-      const m = d.getMonth(); // 0-11
+      const m = d.getMonth();
       if (m >= 0 && m < 12) {
-        monthlyData[m].revenue += amount;
+        monthlyData[m].revenue += Number(amount || 0);
       }
     };
 
-    for (const order of onlineOrders ?? []) {
+    // Add confirmed webstore orders
+    for (const order of confirmedOnlineOrders ?? []) {
       addRevenue(order.created_at, order.total_usd ?? 0);
     }
+    // Add completed POS orders (excluding source === 'online' to avoid double counting confirmed webstore orders)
     for (const order of posOrders ?? []) {
-      addRevenue(order.created_at, order.total ?? 0);
+      if (order.source !== 'online') {
+        addRevenue(order.created_at, order.total ?? 0);
+      }
     }
-    for (const order of salesmanOrders ?? []) {
+    // Add active salesman pipeline orders not yet completed at POS
+    for (const order of pipelineSalesmanOrders ?? []) {
       addRevenue(order.created_at, order.subtotal ?? 0);
     }
 

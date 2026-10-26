@@ -57,6 +57,8 @@ export interface StoreSettings {
   whatsapp_number: string;
   delivery_fee_usd: number;
   free_delivery_threshold_usd: number;
+  ecocash_details?: string;
+  bank_details?: string;
 }
 
 export interface CartItem {

@@ -433,13 +433,13 @@ export function CheckoutForm({ settings }: { settings: any }) {
             <div className="bg-[#111] p-6 rounded-xl border border-white/5">
               {paymentMethod === 'ecocash' && (
                 <div className="space-y-2">
-                  <p className="text-xs font-black text-white uppercase tracking-widest">Dial: *151*1*1*0777123456*Amount#</p>
+                  <p className="text-xs font-black text-white uppercase tracking-widest">{settings?.ecocash_details || 'Pay via EcoCash — details confirmed on WhatsApp'}</p>
                   <p className="text-[10px] text-white/40 font-medium">Reference: Use your Order Number.</p>
                 </div>
               )}
               {paymentMethod === 'bank' && (
                 <div className="space-y-2">
-                  <p className="text-xs font-black text-white uppercase tracking-widest">CABS: 1234567890 (On Active)</p>
+                  <p className="text-xs font-black text-white uppercase tracking-widest">{settings?.bank_details || 'Bank Transfer — details confirmed on WhatsApp'}</p>
                   <p className="text-[10px] text-white/40 font-medium">Please send your POP to WhatsApp.</p>
                 </div>
               )}
