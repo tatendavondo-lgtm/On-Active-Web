@@ -237,6 +237,24 @@ export function CheckoutForm({ settings }: { settings: any }) {
       msg += `\n*Total*: $${cartTotal.toFixed(2)}`;
       
       const waUrl = `https://wa.me/${settings.whatsapp_number.replace(/\+/g, '')}?text=${encodeURIComponent(msg)}`;
+      try {
+        sessionStorage.setItem(
+          `on_active_order_${orderRef}`,
+          JSON.stringify({
+            orderRef,
+            waUrl,
+            customerName: form.name.trim(),
+            paymentMethod: methodText,
+            deliveryText,
+            items: payload.items,
+            subtotal: cartSubtotal,
+            deliveryFee,
+            total: cartTotal,
+            createdAt: new Date().toISOString()
+          })
+        );
+      } catch {}
+
       window.open(waUrl, '_blank');
       
       clearCart();

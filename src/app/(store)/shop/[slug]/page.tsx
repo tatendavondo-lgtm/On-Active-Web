@@ -10,13 +10,34 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   try {
     const { slug } = await params;
     const supabase = await createClient();
-    const { data } = await supabase.from('products').select('name, description').eq('slug', slug).single();
+    const { data } = await supabase
+      .from('products')
+      .select('name, description, price_usd, images, category')
+      .eq('slug', slug)
+      .single();
     
-    if (!data) return { title: 'Product Not Found' };
+    if (!data) return { title: 'Product Not Found | On Active' };
     
+    const priceText = data.price_usd ? ` — ${Number(data.price_usd).toFixed(2)} USD` : '';
+    const title = `${data.name}${priceText} | On Active`;
+    const description = data.description || `Shop ${data.name} (${data.category || 'Performance Wear'}) at On Active Zimbabwe.`;
+    const ogImage = Array.isArray(data.images) && data.images.length > 0 ? data.images[0] : '/images/products/TGIS 100.jpg';
+
     return {
-      title: `${data.name} | On Active`,
-      description: data.description || `Buy ${data.name} from On Active.`,
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        images: [{ url: ogImage, alt: data.name }],
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [ogImage],
+      },
     };
   } catch (err) {
     return { title: 'On Active Wear' };
@@ -57,9 +78,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     let stock = 0;
     
     if (Array.isArray(inventory)) {
-      stock = inventory[0]?.quantity || 0;
+      stock = inventory.reduce((sum: number, row: any) => sum + (Number(row?.quantity) || 0), 0);
     } else if (inventory && typeof inventory === 'object') {
-      stock = (inventory as any).quantity || 0;
+      stock = Number((inventory as any).quantity) || 0;
     }
 
     return {
