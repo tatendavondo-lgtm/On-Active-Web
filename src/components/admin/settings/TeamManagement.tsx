@@ -16,7 +16,7 @@ interface TeamManagementProps {
 
 export function TeamManagement({ managers: initialManagers, stores }: TeamManagementProps) {
   // Filter out any managers that have been marked as removed
-  const activeManagers = initialManagers.filter(m => m.full_name !== '[REMOVED]');
+  const activeManagers = initialManagers.filter(m => m.full_name !== '[REMOVED]' && m.role !== 'revoked');
   const [managers, setManagers] = useState(activeManagers);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');

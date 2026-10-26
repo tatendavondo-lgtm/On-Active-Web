@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Trash2, UserPlus, Users, Store, Shield, Wallet, Briefcase, UserCircle, Edit2, X, Phone, Mail } from 'lucide-react';
+import { Loader2, Trash2, UserPlus, Users, Store, Shield, Wallet, Briefcase, UserCircle, Edit2, X, Phone, Mail, Eye, EyeOff } from 'lucide-react';
 import { ConfirmModal } from '../ConfirmModal';
 import { EmptyState } from '../ui/EmptyState';
 import toast from 'react-hot-toast';
@@ -38,6 +38,7 @@ const ROLES = [
 export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagementProps) {
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees.filter(e => e.is_active));
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [revealedPins, setRevealedPins] = useState<Record<string, boolean>>({});
   
   const [form, setForm] = useState({
     fullName: '',
@@ -83,8 +84,13 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
       return;
     }
 
-    if (!editingId && (!form.pin.trim() || form.pin.length < 4)) {
-      toast.error('A 4-digit PIN is required for new staff');
+    if (!editingId && !/^\d{4}$/.test(form.pin.trim())) {
+      toast.error('A 4-digit numeric PIN is required for new staff');
+      return;
+    }
+
+    if (editingId && form.pin.trim() !== '' && !/^\d{4}$/.test(form.pin.trim())) {
+      toast.error('New PIN must be exactly 4 digits (or leave blank to keep current PIN)');
       return;
     }
 
@@ -289,8 +295,16 @@ export function EmployeeManagement({ initialEmployees, stores }: EmployeeManagem
                       <span className="text-[#222] text-[10px]">•</span>
                       <div className="flex items-center gap-1.5">
                         <span className="text-[#C5A021] text-[10px] font-mono font-bold tracking-widest">
-                          PIN: ••••
+                          PIN: {revealedPins[emp.id] ? (/^\d{4}$/.test(emp.pin) ? emp.pin : 'Not Set') : '••••'}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => setRevealedPins(prev => ({ ...prev, [emp.id]: !prev[emp.id] }))}
+                          className="text-[#555] hover:text-white transition-colors"
+                          title={revealedPins[emp.id] ? 'Hide PIN' : 'Show PIN'}
+                        >
+                          {revealedPins[emp.id] ? <EyeOff size={11} /> : <Eye size={11} />}
+                        </button>
                       </div>
                     </div>
                   </div>

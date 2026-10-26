@@ -56,19 +56,24 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { fullName, role, pin, storeId, email, phone } = body;
 
-    if (!fullName || !role || !pin || !storeId) {
+    if (!fullName?.trim() || !role || !pin || !storeId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const pinHash = await bcrypt.hash(pin, 10);
+    if (!/^\d{4}$/.test(String(pin).trim())) {
+      return NextResponse.json({ error: 'PIN must be exactly 4 digits' }, { status: 400 });
+    }
+
+    const cleanPin = String(pin).trim();
+    const pinHash = await bcrypt.hash(cleanPin, 10);
     const adminSupabase = createAdminClient();
 
     const { data: employee, error } = await adminSupabase
       .from('employees')
       .insert({
-        full_name: fullName,
+        full_name: fullName.trim(),
         role,
-        pin,
+        pin: cleanPin,
         pin_hash: pinHash,
         store_id: storeId,
         email: email?.trim() || null,
@@ -81,12 +86,12 @@ export async function POST(request: Request) {
 
     if (error) {
       if (error.code === '23505') {
-        return NextResponse.json({ error: 'A staff member already exists with this email, phone, or PIN.' }, { status: 409 });
+        return NextResponse.json({ error: 'A staff member already exists with this email, phone, or 4-digit PIN.' }, { status: 409 });
       }
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    await logAction(user.id, 'create', 'employee', employee.id, { name: fullName, role });
+    await logAction(user.id, 'create', 'employee', employee.id, { name: fullName.trim(), role });
 
     return NextResponse.json(employee);
   } catch (err: any) {
@@ -107,22 +112,26 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const { id, fullName, role, pin, storeId, email, phone } = body;
 
-    if (!id || !fullName || !role || !storeId) {
+    if (!id || !fullName?.trim() || !role || !storeId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const adminSupabase = createAdminClient();
     const updates: any = {
-      full_name: fullName,
+      full_name: fullName.trim(),
       role,
       store_id: storeId,
       email: email?.trim() || null,
       phone: phone?.trim() || null,
     };
 
-    if (pin) {
-      updates.pin = pin;
-      updates.pin_hash = await bcrypt.hash(pin, 10);
+    if (pin !== undefined && String(pin).trim() !== '') {
+      const cleanPin = String(pin).trim();
+      if (!/^\d{4}$/.test(cleanPin)) {
+        return NextResponse.json({ error: 'New PIN must be exactly 4 digits' }, { status: 400 });
+      }
+      updates.pin = cleanPin;
+      updates.pin_hash = await bcrypt.hash(cleanPin, 10);
     }
 
     const { data: employee, error } = await adminSupabase
@@ -134,12 +143,12 @@ export async function PUT(request: Request) {
 
     if (error) {
       if (error.code === '23505') {
-        return NextResponse.json({ error: 'A staff member already exists with this email, phone, or PIN.' }, { status: 409 });
+        return NextResponse.json({ error: 'A staff member already exists with this email, phone, or 4-digit PIN.' }, { status: 409 });
       }
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    await logAction(user.id, 'update', 'employee', id, { name: fullName, role, pinChanged: !!pin });
+    await logAction(user.id, 'update', 'employee', id, { name: fullName.trim(), role, pinChanged: !!pin });
 
     return NextResponse.json(employee);
   } catch (err: any) {
@@ -169,11 +178,11 @@ export async function DELETE(request: Request) {
 
     const { error } = await adminSupabase
       .from('employees')
-      .update({ 
+      .update({
         is_active: false,
-        pin: `del_${id.substring(0, 8)}`,
+        pin: `del_${id.substring(0, 8)}_${Date.now().toString(36)}`,
         email: null,
-        phone: null
+        phone: null,
       })
       .eq('id', id);
 

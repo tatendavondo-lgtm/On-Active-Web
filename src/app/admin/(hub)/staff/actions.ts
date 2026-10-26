@@ -159,7 +159,7 @@ export async function deactivateStaffMember(id: string) {
 
   const { data: employee } = await adminSupabase.from('employees').select('full_name').eq('id', id).single();
   
-  const { error } = await adminSupabase.from('employees').update({ is_active: false }).eq('id', id);
+  const { error } = await adminSupabase.from('employees').update({ is_active: false, pin: `del_${id.substring(0, 8)}_${Date.now().toString(36)}`, email: null, phone: null }).eq('id', id);
   if (error) throw new Error(error.message);
 
   await logAction('deactivate', 'employee', id, { name: employee?.full_name });
