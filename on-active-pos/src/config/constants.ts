@@ -21,5 +21,6 @@ export const CATEGORIES = [
   { id: 'all', label: 'All' },
   { id: 'upper', label: 'Upper' },
   { id: 'lower', label: 'Lower' },
+  { id: 'sets', label: 'Sets' },
   { id: 'accessories', label: 'Accessories' },
 ] as const;

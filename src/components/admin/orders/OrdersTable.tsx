@@ -151,11 +151,25 @@ export function OrdersTable({ filters, userRole }: { filters: OrderFiltersValue;
       if (sourceFilter === 'pos_salesman' && o.source !== 'pos_salesman') return false;
       if (sourceFilter === 'online' && o.source !== 'webstore') return false; // same for now
       
-      // Status filter
-      if (filters.status !== 'all' && o.status !== filters.status) return false;
+      // Status filter (harmonized across Webstore & POS statuses)
+      if (filters.status !== 'all') {
+        if (filters.status === 'confirmed') {
+          if (!['confirmed', 'completed'].includes(o.status)) return false;
+        } else if (filters.status === 'cancelled') {
+          if (!['cancelled', 'refunded', 'partially_refunded', 'voided'].includes(o.status)) return false;
+        } else if (o.status !== filters.status) {
+          return false;
+        }
+      }
       
-      // Search filter
-      if (filters.search && !o.order_ref.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      // Search filter (matches order_ref, customer name/phone, or POS staff name)
+      if (filters.search) {
+        const q = filters.search.toLowerCase().trim();
+        const matchRef = (o.order_ref || '').toLowerCase().includes(q);
+        const matchCustomer = (o.customer_name || '').toLowerCase().includes(q) || (o.customer_phone || '').toLowerCase().includes(q);
+        const matchStaff = (o.pos_data?.salesman || '').toLowerCase().includes(q) || (o.pos_data?.till_operator || '').toLowerCase().includes(q);
+        if (!matchRef && !matchCustomer && !matchStaff) return false;
+      }
       
       return true;
     });

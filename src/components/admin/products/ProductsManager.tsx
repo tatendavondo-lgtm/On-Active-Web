@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Shirt } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, Shirt, Search } from 'lucide-react';
 import type { Product } from '@/types';
 import { createClient } from '@/lib/supabase/client';
 import { formatUSD } from '@/lib/admin/utils';
@@ -16,11 +16,18 @@ interface ProductsManagerProps {
   userRole: string;
 }
 
+type ProductSortOption = 'newest' | 'name_asc' | 'price_asc' | 'price_desc' | 'stock_asc' | 'stock_desc';
+
 export function ProductsManager({ userRole }: ProductsManagerProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [editTarget, setEditTarget] = useState<Product | null | 'new'>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'hidden' | 'low_stock'>('all');
+  const [sortBy, setSortBy] = useState<ProductSortOption>('newest');
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -35,6 +42,40 @@ export function ProductsManager({ userRole }: ProductsManagerProps) {
   }, []);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach(p => { if (p.category) set.add(p.category); });
+    return Array.from(set).sort();
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    const list = products.filter(p => {
+      if (categoryFilter !== 'all' && (p.category || '').toLowerCase() !== categoryFilter.toLowerCase()) {
+        return false;
+      }
+      if (statusFilter === 'active' && !p.is_active) return false;
+      if (statusFilter === 'hidden' && p.is_active) return false;
+      if (statusFilter === 'low_stock' && (p.stock_quantity || 0) > 5) return false;
+      if (q) {
+        const matchName = p.name.toLowerCase().includes(q);
+        const matchSlug = (p.slug || '').toLowerCase().includes(q);
+        const matchCat = (p.category || '').toLowerCase().includes(q);
+        if (!matchName && !matchSlug && !matchCat) return false;
+      }
+      return true;
+    });
+
+    return [...list].sort((a, b) => {
+      if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
+      if (sortBy === 'price_asc') return (Number(a.price_usd) || 0) - (Number(b.price_usd) || 0);
+      if (sortBy === 'price_desc') return (Number(b.price_usd) || 0) - (Number(a.price_usd) || 0);
+      if (sortBy === 'stock_asc') return (Number(a.stock_quantity) || 0) - (Number(b.stock_quantity) || 0);
+      if (sortBy === 'stock_desc') return (Number(b.stock_quantity) || 0) - (Number(a.stock_quantity) || 0);
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    });
+  }, [products, search, categoryFilter, statusFilter, sortBy]);
 
   const toggleActive = async (product: Product) => {
     const supabase = createClient();
@@ -65,11 +106,59 @@ export function ProductsManager({ userRole }: ProductsManagerProps) {
 
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2 flex-1">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#444]" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search products..."
+              className="w-full bg-[#111] border border-[#1f1f1f] rounded-[6px] pl-9 pr-3 py-2 text-white text-xs outline-none focus:border-[#C5A021]/50 placeholder:text-[#444]"
+            />
+          </div>
+
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="bg-[#111] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-xs outline-none focus:border-[#C5A021]/50"
+          >
+            <option value="all">All Categories</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="bg-[#111] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-xs outline-none focus:border-[#C5A021]/50"
+          >
+            <option value="all">All Statuses</option>
+            <option value="active">Active Only</option>
+            <option value="hidden">Hidden Only</option>
+            <option value="low_stock">Low / Out of Stock (≤5)</option>
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as ProductSortOption)}
+            className="bg-[#111] border border-[#1f1f1f] rounded-[6px] px-3 py-2 text-white text-xs outline-none focus:border-[#C5A021]/50"
+          >
+            <option value="newest">Sort: Newest</option>
+            <option value="name_asc">Sort: Name (A–Z)</option>
+            <option value="price_asc">Price: Low → High</option>
+            <option value="price_desc">Price: High → Low</option>
+            <option value="stock_asc">Stock: Low → High</option>
+            <option value="stock_desc">Stock: High → Low</option>
+          </select>
+        </div>
+
         <button
           id="add-product-btn"
           onClick={() => setEditTarget('new')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#C5A021] text-black text-sm font-bold rounded-[6px] hover:bg-[#A6861C] transition-colors"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#C5A021] text-black text-sm font-bold rounded-[6px] hover:bg-[#A6861C] transition-colors shrink-0"
         >
           <Plus size={16} />
           Add Product
@@ -89,6 +178,15 @@ export function ProductsManager({ userRole }: ProductsManagerProps) {
             action={{ label: 'Add Product', onClick: () => setEditTarget('new') }}
           />
         </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="bg-[#111] border border-[#1f1f1f] rounded-[8px]">
+          <EmptyState
+            icon={Shirt}
+            title="No matching products"
+            description="Try adjusting your search or filter criteria."
+            action={{ label: 'Reset Filters', onClick: () => { setSearch(''); setCategoryFilter('all'); setStatusFilter('all'); } }}
+          />
+        </div>
       ) : (
         <div className="bg-[#111] border border-[#1f1f1f] rounded-[8px] overflow-hidden">
           <div className="overflow-x-auto">
@@ -103,7 +201,7 @@ export function ProductsManager({ userRole }: ProductsManagerProps) {
                 </tr>
               </thead>
               <tbody>
-                {products.map((product, i) => (
+                {filteredProducts.map((product, i) => (
                   <motion.tr
                     key={product.id}
                     initial={{ opacity: 0, y: 5 }}

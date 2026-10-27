@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { generateSlug, formatUSD } from '@/lib/admin/utils';
 import toast from 'react-hot-toast';
 
-const CATEGORIES = ['Tops', 'Bottoms', 'Leggings', 'Sports Bras', 'Shorts', 'Accessories', 'Outerwear'];
+const CATEGORIES = ['Tops', 'Bottoms', 'Leggings', 'Sports Bras', 'Shorts', 'Sets', 'Accessories', 'Outerwear'];
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'];
 
 interface Variant {

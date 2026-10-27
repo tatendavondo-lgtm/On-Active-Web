@@ -8,22 +8,59 @@ import { CATEGORIES } from '../../config/constants';
 import type { LocalProduct } from '../../db/dexie';
 import { useCartStore } from '../../stores/cartStore';
 
+type SortOption = 'name_asc' | 'price_asc' | 'price_desc' | 'stock_desc';
+
+function matchesPosCategory(productCategory: string | undefined, selectedCategory: string): boolean {
+  if (selectedCategory === 'all') return true;
+  const cat = (productCategory || '').toLowerCase().trim();
+  const sel = selectedCategory.toLowerCase().trim();
+  if (sel === 'upper') {
+    return ['upper', 'tops', 'top', 'outerwear', 'sports bras', 'bras', 'jackets', 'hoodies', 't-shirts', 'shirts'].includes(cat);
+  }
+  if (sel === 'lower') {
+    return ['lower', 'bottoms', 'bottom', 'leggings', 'shorts', 'joggers', 'pants', 'sweatpants'].includes(cat);
+  }
+  if (sel === 'sets') {
+    return ['sets', 'set', 'tracksuits', 'tracksuit', 'twinsets'].includes(cat);
+  }
+  if (sel === 'accessories') {
+    return ['accessories', 'accessory', 'bags', 'socks', 'caps', 'hats', 'bottles', 'gear'].includes(cat);
+  }
+  return cat === sel;
+}
+
 export function ProductBrowser() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
+  const [sortBy, setSortBy] = useState<SortOption>('name_asc');
   const addItem = useCartStore(s => s.addItem);
 
   const products: LocalProduct[] = useLiveQuery(() => db.products.toArray()) || [];
 
   const filtered = useMemo(() => {
-    return products.filter((p) => {
-      const matchCat = category === 'all' || p.category.toLowerCase() === category.toLowerCase();
-      const matchSearch = !search || 
-        p.name.toLowerCase().includes(search.toLowerCase()) || 
-        p.sku.toLowerCase().includes(search.toLowerCase());
+    const q = search.toLowerCase().trim();
+    const list = products.filter((p) => {
+      const matchCat = matchesPosCategory(p.category, category);
+      const matchSearch = !q ||
+        p.name.toLowerCase().includes(q) ||
+        (p.sku && p.sku.toLowerCase().includes(q)) ||
+        (p.category && p.category.toLowerCase().includes(q)) ||
+        (p.variants && p.variants.some(v => v.sku?.toLowerCase().includes(q) || v.name?.toLowerCase().includes(q)));
       return matchCat && matchSearch;
     });
-  }, [products, search, category]);
+
+    return [...list].sort((a, b) => {
+      const priceA = Number(a.variants?.[0]?.price) || Number((a as any).price_usd) || 0;
+      const priceB = Number(b.variants?.[0]?.price) || Number((b as any).price_usd) || 0;
+      const stockA = (a.variants || []).reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+      const stockB = (b.variants || []).reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+
+      if (sortBy === 'price_asc') return priceA - priceB;
+      if (sortBy === 'price_desc') return priceB - priceA;
+      if (sortBy === 'stock_desc') return stockB - stockA;
+      return a.name.localeCompare(b.name);
+    });
+  }, [products, search, category, sortBy]);
 
   const handleSearchSubmit = () => {
     if (!search) return;
@@ -76,10 +113,21 @@ export function ProductBrowser() {
 
   return (
     <div className="flex flex-col h-full p-4 gap-4 overflow-hidden">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <div className="flex-1">
           <SearchBar value={search} onChange={setSearch} onSubmit={handleSearchSubmit} />
         </div>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortOption)}
+          aria-label="Sort products"
+          className="h-12 px-3 rounded-xl bg-[var(--pos-bg-surface)] border border-[var(--pos-border)] text-xs font-bold text-[var(--pos-text-primary)] outline-none focus:border-[var(--pos-accent)]"
+        >
+          <option value="name_asc">Sort: Name (A–Z)</option>
+          <option value="price_asc">Price: Low → High</option>
+          <option value="price_desc">Price: High → Low</option>
+          <option value="stock_desc">Stock: High → Low</option>
+        </select>
       </div>
       
       <div>
@@ -92,8 +140,17 @@ export function ProductBrowser() {
 
       <div className="flex-1 overflow-y-auto pr-2 pb-20 custom-scrollbar">
         {filtered.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-[var(--pos-text-muted)]">
-            No products found.
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-[var(--pos-text-muted)]">
+            <span>No products found.</span>
+            {(category !== 'all' || search) && (
+              <button
+                type="button"
+                onClick={() => { setCategory('all'); setSearch(''); }}
+                className="px-4 py-1.5 rounded-lg bg-[var(--pos-bg-elevated)] border border-[var(--pos-border)] text-xs font-bold text-[var(--pos-accent)] hover:opacity-80"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">

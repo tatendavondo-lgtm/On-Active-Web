@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 const CATEGORIES = ["ALL", "UPPER", "LOWER", "SETS", "ACCESSORIES"];
 const GENDERS = ["ALL", "MEN", "WOMEN"];
+type SortOption = "trending" | "newest" | "price_asc" | "price_desc";
 
 export function ProductGrid() {
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [activeGender, setActiveGender] = useState("ALL");
+  const [sortBy, setSortBy] = useState<SortOption>("trending");
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,14 +28,15 @@ export function ProductGrid() {
 
         if (error) throw error;
 
-          const dbMapped = (data || []).map(p => ({
+        const dbMapped = (data || []).map(p => ({
           id: p.id,
           name: p.name,
           slug: p.slug,
-          price: p.price_usd,
+          price: Number(p.price_usd) || 0,
           category: p.category?.toLowerCase() || 'uncategorized',
           gender: p.gender?.toLowerCase() || 'all',
           is_trending: p.is_trending || false,
+          created_at: p.created_at || '',
           image: p.images?.[0] || null
         }));
 
@@ -50,49 +53,58 @@ export function ProductGrid() {
     return () => clearInterval(interval);
   }, []);
 
-  const filteredProducts = products.filter(p => {
-    let catMatch = false;
-    const cat = p.category.toLowerCase();
-    
-    if (activeCategory === "ALL") catMatch = true;
-    else if (activeCategory === "UPPER") {
-      catMatch = ['tops', 'top', 'outerwear', 'sports bras', 'bras'].includes(cat);
-    }
-    else if (activeCategory === "LOWER") {
-      catMatch = ['bottoms', 'bottom', 'leggings', 'shorts'].includes(cat);
-    }
-    else if (activeCategory === "SETS") {
-      catMatch = ['sets', 'set', 'tracksuits', 'tracksuit'].includes(cat);
-    }
-    else if (activeCategory === "ACCESSORIES") {
-      catMatch = ['accessories', 'accessory'].includes(cat);
-    }
-    else catMatch = cat === activeCategory.toLowerCase();
+  const filteredProducts = useMemo(() => {
+    const list = products.filter(p => {
+      let catMatch = false;
+      const cat = p.category.toLowerCase();
+      
+      if (activeCategory === "ALL") catMatch = true;
+      else if (activeCategory === "UPPER") {
+        catMatch = ['upper', 'tops', 'top', 'outerwear', 'sports bras', 'bras'].includes(cat);
+      }
+      else if (activeCategory === "LOWER") {
+        catMatch = ['lower', 'bottoms', 'bottom', 'leggings', 'shorts'].includes(cat);
+      }
+      else if (activeCategory === "SETS") {
+        catMatch = ['sets', 'set', 'tracksuits', 'tracksuit'].includes(cat);
+      }
+      else if (activeCategory === "ACCESSORIES") {
+        catMatch = ['accessories', 'accessory'].includes(cat);
+      }
+      else catMatch = cat === activeCategory.toLowerCase();
 
-    let genderMatch = false;
-    const gen = p.gender.toLowerCase();
-    if (activeGender === "ALL") genderMatch = true;
-    else genderMatch = (gen === activeGender.toLowerCase() || gen === "unisex" || gen === "all");
+      let genderMatch = false;
+      const gen = p.gender.toLowerCase();
+      if (activeGender === "ALL") genderMatch = true;
+      else genderMatch = (gen === activeGender.toLowerCase() || gen === "unisex" || gen === "all");
 
-    return catMatch && genderMatch;
-  });
+      return catMatch && genderMatch;
+    });
 
-  filteredProducts.sort((a, b) => {
-    if (a.is_trending === b.is_trending) return 0;
-    return a.is_trending ? -1 : 1;
-  });
+    return [...list].sort((a, b) => {
+      if (sortBy === "price_asc") return a.price - b.price;
+      if (sortBy === "price_desc") return b.price - a.price;
+      if (sortBy === "newest") {
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      }
+      if (a.is_trending === b.is_trending) {
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      }
+      return a.is_trending ? -1 : 1;
+    });
+  }, [products, activeCategory, activeGender, sortBy]);
 
   return (
     <section id="trending-now" className="bg-[#0A0A0A] py-24 text-white sm:py-32">
       <div className="container mx-auto px-4 sm:px-10">
-        <div className="mb-16 flex flex-col items-end justify-between gap-8 md:flex-row md:items-center">
+        <div className="mb-16 flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
           <div className="space-y-4">
             <span className="text-[10px] font-black uppercase tracking-[0.6em] text-[#C5A021]">TRENDING NOW</span>
             <h2 className="text-5xl font-[900] uppercase tracking-tighter sm:text-7xl">
               PRODUCT <span className="text-white/20">ARCHIVE.</span>
             </h2>
           </div>
-          <div className="flex flex-col gap-4 items-end">
+          <div className="flex flex-col gap-4 md:items-end w-full md:w-auto">
             <div className="flex flex-wrap gap-4 border-b border-white/10 pb-4">
               {CATEGORIES.map((cat) => (
                 <button
@@ -106,18 +118,31 @@ export function ProductGrid() {
                 </button>
               ))}
             </div>
-            <div className="flex flex-wrap gap-4 border-b border-white/10 pb-4">
-              {GENDERS.map((gen) => (
-                <button
-                  key={gen}
-                  onClick={() => setActiveGender(gen)}
-                  className={`text-[10px] font-black uppercase tracking-widest transition-all ${
-                    activeGender === gen ? "text-[#C5A021]" : "text-white/40 hover:text-white"
-                  }`}
-                >
-                  {gen}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center justify-between md:justify-end gap-6 border-b border-white/10 pb-4">
+              <div className="flex flex-wrap gap-4">
+                {GENDERS.map((gen) => (
+                  <button
+                    key={gen}
+                    onClick={() => setActiveGender(gen)}
+                    className={`text-[10px] font-black uppercase tracking-widest transition-all ${
+                      activeGender === gen ? "text-[#C5A021]" : "text-white/40 hover:text-white"
+                    }`}
+                  >
+                    {gen}
+                  </button>
+                ))}
+              </div>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                aria-label="Sort archive products"
+                className="bg-[#111] border border-white/10 rounded px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-[#C5A021] outline-none focus:border-[#C5A021]"
+              >
+                <option value="trending">SORT: TRENDING</option>
+                <option value="newest">SORT: NEWEST</option>
+                <option value="price_asc">PRICE: LOW → HIGH</option>
+                <option value="price_desc">PRICE: HIGH → LOW</option>
+              </select>
             </div>
           </div>
         </div>
@@ -131,6 +156,18 @@ export function ProductGrid() {
                 <div className="h-4 w-1/4 animate-pulse rounded bg-[#1A1A1A]" />
               </div>
             ))}
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center space-y-5 border border-white/5 rounded-2xl bg-[#111]/40">
+            <p className="text-sm font-black uppercase tracking-widest text-white/40">
+              No products found in this category yet.
+            </p>
+            <button
+              onClick={() => { setActiveCategory("ALL"); setActiveGender("ALL"); }}
+              className="border border-[#C5A021] px-6 py-2.5 text-[10px] font-black uppercase tracking-[0.3em] text-[#C5A021] hover:bg-[#C5A021] hover:text-black transition-all"
+            >
+              Show All Products
+            </button>
           </div>
         ) : (
           <motion.div 
