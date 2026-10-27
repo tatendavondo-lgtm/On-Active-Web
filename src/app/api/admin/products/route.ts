@@ -25,7 +25,25 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = await req.json();
-    const { variants: incomingVariants, ...productData } = payload;
+    const { variants: incomingVariants, store_id: requestedStoreId, ...productData } = payload;
+
+    // Ensure unique slug so duplicate product names never fail with unique constraint error
+    if (productData.slug) {
+      const baseSlug = String(productData.slug).trim().toLowerCase();
+      let candidateSlug = baseSlug;
+      let suffix = 2;
+      while (true) {
+        let slugQuery = adminSupabase.from('products').select('id').eq('slug', candidateSlug);
+        if (payload.id) {
+          slugQuery = slugQuery.neq('id', payload.id);
+        }
+        const { data: existingSlug } = await slugQuery.maybeSingle();
+        if (!existingSlug) break;
+        candidateSlug = `${baseSlug}-${suffix}`;
+        suffix++;
+      }
+      productData.slug = candidateSlug;
+    }
 
     // Check for removed images to delete from UploadThing
     if (payload.id && productData.images) {
@@ -54,8 +72,8 @@ export async function POST(req: NextRequest) {
       : await adminSupabase.from('products').insert(productData).select().single();
 
     if (error) {
-       console.error('Database error in products API:', error);
-       return NextResponse.json({ error: error.message }, { status: 400 });
+      console.error('Database error in products API:', error);
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
     if (result) {
@@ -74,46 +92,63 @@ export async function POST(req: NextRequest) {
         .eq('is_active', true)
         .limit(1)
         .maybeSingle();
-      const defaultStoreId = payload.store_id || activeStore?.id || '00000000-0000-0000-0000-000000000001';
+      const defaultStoreId = requestedStoreId || activeStore?.id || '00000000-0000-0000-0000-000000000001';
 
-      // If explicit variants are provided (from the new UI)
-      if (incomingVariants && Array.isArray(incomingVariants)) {
+      // Fetch all existing variants for this product once
+      const { data: existingVariants } = await adminSupabase
+        .from('product_variants')
+        .select('id, size, color')
+        .eq('product_id', productId);
+
+      const existingList = existingVariants || [];
+      const keptVariantIds = new Set<string>();
+
+      // If explicit variants are provided
+      if (incomingVariants && Array.isArray(incomingVariants) && incomingVariants.length > 0) {
         for (const v of incomingVariants) {
-          // Check if variant already exists
-          const { data: existing } = await adminSupabase
-            .from('product_variants')
-            .select('id')
-            .eq('product_id', productId)
-            .eq('size', v.size)
-            .eq('color', v.color)
-            .maybeSingle();
+          const normSize = (v.size || 'One Size').trim();
+          const normColor = (v.color || '').trim();
+          const variantName = normColor ? `${normSize} / ${normColor}` : normSize;
+          const variantPrice = Number(v.price) || Number(result.price_usd) || 0;
+          const variantStock = Math.max(0, Number(v.stock) || 0);
 
-          let variantId = existing?.id;
+          const matched = existingList.find(
+            (ev) => (ev.size || '').trim().toLowerCase() === normSize.toLowerCase() &&
+                    (ev.color || '').trim().toLowerCase() === normColor.toLowerCase() &&
+                    !keptVariantIds.has(ev.id)
+          );
+
+          let variantId = matched?.id;
 
           if (!variantId) {
             const { data: newV } = await adminSupabase
               .from('product_variants')
               .insert({
                 product_id: productId,
-                name: `${v.size} / ${v.color}`,
-                size: v.size,
-                color: v.color,
-                price: v.price || result.price_usd,
+                name: variantName,
+                size: normSize,
+                color: normColor,
+                price: variantPrice,
                 created_at: new Date().toISOString()
               })
-              .select()
+              .select('id')
               .single();
             variantId = newV?.id;
           } else {
-            // Update price if it changed
             await adminSupabase
               .from('product_variants')
-              .update({ price: v.price || result.price_usd })
+              .update({
+                name: variantName,
+                size: normSize,
+                color: normColor,
+                price: variantPrice,
+              })
               .eq('id', variantId);
           }
 
           if (variantId) {
-            // Ensure inventory record exists
+            keptVariantIds.add(variantId);
+
             const { data: inv } = await adminSupabase
               .from('store_inventory')
               .select('id')
@@ -127,54 +162,78 @@ export async function POST(req: NextRequest) {
                 store_id: defaultStoreId,
                 product_id: productId,
                 variant_id: variantId,
-                quantity: v.stock || 0
+                quantity: variantStock
               });
-            } else if (v.stock !== undefined) {
-              // Update stock if provided
-              await adminSupabase.from('store_inventory').update({ quantity: v.stock }).eq('id', inv.id);
+            } else {
+              await adminSupabase
+                .from('store_inventory')
+                .update({ quantity: variantStock, updated_at: new Date().toISOString() })
+                .eq('id', inv.id);
             }
           }
         }
+
+        // Clean up any old variants that were removed during product edit so ghost stock never lingers
+        const removedVariants = existingList.filter(ev => !keptVariantIds.has(ev.id));
+        for (const rem of removedVariants) {
+          await adminSupabase.from('store_inventory').delete().eq('variant_id', rem.id);
+          const { error: delVarErr } = await adminSupabase.from('product_variants').delete().eq('id', rem.id);
+          if (delVarErr) {
+            // Variant is referenced by past pos_order_items; keep it with 0 inventory
+            console.warn('Kept historical variant with 0 stock:', rem.id);
+          }
+        }
       } else {
-        // LEGACY/FALLBACK: Auto-generate variants from the 'sizes' array if no explicit variants provided
-        const sizes = result.sizes || [];
-        const targetSizes = sizes.length > 0 ? sizes : ['Standard'];
+        // Fallback: Auto-generate a single 'One Size' or size-based variant if no explicit variants provided
+        const sizes = Array.isArray(result.sizes) && result.sizes.length > 0 ? result.sizes : ['One Size'];
+        for (let i = 0; i < sizes.length; i++) {
+          const size = sizes[i];
+          const matched = existingList.find(ev => (ev.size || '') === size && !(ev.color || ''));
+          let variantId = matched?.id;
 
-        for (const size of targetSizes) {
-          const { data: existing } = await adminSupabase
-            .from('product_variants')
-            .select('id')
-            .eq('product_id', productId)
-            .eq('size', size)
-            .maybeSingle();
-
-          if (!existing) {
+          if (!variantId) {
             const { data: newVar } = await adminSupabase
               .from('product_variants')
               .insert({
                 product_id: productId,
                 name: size,
                 size: size,
+                color: '',
                 price: result.price_usd,
                 created_at: new Date().toISOString()
               })
-              .select()
+              .select('id')
               .single();
+            variantId = newVar?.id;
+          }
 
-            if (newVar) {
+          if (variantId) {
+            keptVariantIds.add(variantId);
+            const qty = i === 0 ? (Number(result.stock_quantity) || 0) : 0;
+            const { data: inv } = await adminSupabase
+              .from('store_inventory')
+              .select('id')
+              .eq('store_id', defaultStoreId)
+              .eq('product_id', productId)
+              .eq('variant_id', variantId)
+              .maybeSingle();
+
+            if (!inv) {
               await adminSupabase.from('store_inventory').insert({
                 store_id: defaultStoreId,
                 product_id: productId,
-                variant_id: newVar.id,
-                quantity: sizes.length > 0 ? 0 : (result.stock_quantity || 0)
+                variant_id: variantId,
+                quantity: qty
               });
+            } else {
+              await adminSupabase.from('store_inventory').update({ quantity: qty }).eq('id', inv.id);
             }
           }
         }
       }
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, product: result });
   } catch (err: any) {
     console.error('Server error in products API:', err);
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
@@ -211,8 +270,6 @@ export async function DELETE(req: NextRequest) {
     // Fetch product images to delete from UploadThing
     const { data: product } = await adminSupabase.from('products').select('images').eq('id', id).single();
 
-    // Associated variants and inventory will be deleted via ON DELETE CASCADE if configured in DB,
-    // otherwise we handle it manually here to be safe.
     await adminSupabase.from('store_inventory').delete().eq('product_id', id);
     await adminSupabase.from('product_variants').delete().eq('product_id', id);
     const { error } = await adminSupabase.from('products').delete().eq('id', id);
@@ -247,7 +304,7 @@ export async function DELETE(req: NextRequest) {
     console.error('Delete error:', err);
     if (err.message?.includes('violates foreign key constraint')) {
       return NextResponse.json({ 
-        error: 'This product cannot be permanently deleted because it is linked to past sales or inventory records. Please mark it as "Inactive" instead to hide it from your stores.' 
+        error: 'This product cannot be permanently deleted because it is linked to past sales or inventory records. Please mark it as "Hidden" instead to hide it from your stores.' 
       }, { status: 400 });
     }
     return NextResponse.json({ error: err.message }, { status: 500 });

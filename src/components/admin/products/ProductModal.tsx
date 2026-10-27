@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, Upload } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import type { Product } from '@/types';
 import { createClient } from '@/lib/supabase/client';
-import { generateSlug, formatUSD } from '@/lib/admin/utils';
+import { generateSlug } from '@/lib/admin/utils';
 import toast from 'react-hot-toast';
 
 const CATEGORIES = ['Tops', 'Bottoms', 'Leggings', 'Sports Bras', 'Shorts', 'Sets', 'Accessories', 'Outerwear'];
-const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'];
+const SIZES = ['One Size', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'];
 
 interface Variant {
   id?: string;
@@ -39,7 +39,8 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
     images: [] as string[], is_active: true, is_featured: false, is_trending: false,
   });
   const [hierarchicalSizes, setHierarchicalSizes] = useState<HierarchicalSize[]>([]);
-  
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+
   const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [activeSizeTab, setActiveSizeTab] = useState<string | null>(null);
@@ -60,25 +61,33 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
         is_featured: product.is_featured ?? false,
         is_trending: product.is_trending ?? false,
       });
-      
+      setSlugManuallyEdited(true);
+
       const fetchVariants = async () => {
         const supabase = createClient();
         const { data: vars } = await supabase
           .from('product_variants')
           .select('*, store_inventory(quantity)')
           .eq('product_id', product.id);
-        
-        if (vars) {
-          const mappedVariants = vars.map(v => ({
-            id: v.id,
-            size: v.size || '',
-            color: v.color || '',
-            price: v.price || product.price_usd,
-            stock: v.store_inventory?.[0]?.quantity || 0
-          }));
+
+        if (vars && vars.length > 0) {
+          const mappedVariants = vars.map(v => {
+            const inv = v.store_inventory;
+            const stock = Array.isArray(inv)
+              ? inv.reduce((sum: number, r: any) => sum + (Number(r?.quantity) || 0), 0)
+              : (Number((inv as any)?.quantity) || 0);
+            return {
+              id: v.id,
+              size: v.size || 'One Size',
+              color: (v.color || '').trim(),
+              price: v.price || product.price_usd,
+              stock
+            };
+          });
 
           const h: HierarchicalSize[] = [];
           mappedVariants.forEach(v => {
+            // Skip zero-stock historical variants if other variants have stock
             let sizeEntry = h.find(s => s.size === v.size);
             if (!sizeEntry) {
               sizeEntry = { size: v.size, quantity: 0, colors: [] };
@@ -90,6 +99,10 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
             }
           });
           setHierarchicalSizes(h);
+          if (h.length > 0) setActiveSizeTab(h[0].size);
+        } else {
+          setHierarchicalSizes([]);
+          setActiveSizeTab(null);
         }
       };
       fetchVariants();
@@ -99,19 +112,24 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
       setHierarchicalSizes([]);
       setFiles([]);
       setActiveSizeTab(null);
+      setSlugManuallyEdited(false);
     }
   }, [product, isOpen]);
 
+  // Build derived variants from hierarchicalSizes.
+  // If a size has colors defined but their sum is less than s.quantity, keep the remainder as an uncolored/standard entry OR surface mismatch clearly.
   const derivedVariants: Variant[] = [];
   hierarchicalSizes.forEach(s => {
     if (s.colors.length > 0) {
       s.colors.forEach(c => {
-        derivedVariants.push({
-          size: s.size,
-          color: c.color,
-          price: parseFloat(form.price_usd) || 0,
-          stock: c.quantity
-        });
+        if (c.quantity > 0) {
+          derivedVariants.push({
+            size: s.size,
+            color: c.color.trim(),
+            price: parseFloat(form.price_usd) || 0,
+            stock: c.quantity
+          });
+        }
       });
     } else if (s.quantity > 0) {
       derivedVariants.push({
@@ -123,11 +141,47 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
     }
   });
 
+  const totalStockNum = parseInt(form.stock_quantity) || 0;
   const totalAllocatedToSizes = hierarchicalSizes.reduce((sum, s) => sum + s.quantity, 0);
-  const remainingForSizes = (parseInt(form.stock_quantity) || 0) - totalAllocatedToSizes;
+  const remainingForSizes = totalStockNum - totalAllocatedToSizes;
+
+  // Check if any size has colors whose sum doesn't match the size's quantity
+  const sizeWithColorMismatch = hierarchicalSizes.find(s => {
+    if (s.colors.length === 0) return false;
+    const colorSum = s.colors.reduce((sum, c) => sum + c.quantity, 0);
+    return colorSum !== s.quantity;
+  });
+
+  const commitPendingColorInput = (currentSizes: HierarchicalSize[]): HierarchicalSize[] => {
+    if (!activeSizeTab) return currentSizes;
+    const nameEl = document.getElementById(`color-name-${activeSizeTab}`) as HTMLInputElement | null;
+    const qtyEl = document.getElementById(`color-qty-${activeSizeTab}`) as HTMLInputElement | null;
+    const pendingName = nameEl?.value?.trim();
+    const pendingQty = parseInt(qtyEl?.value || '');
+    if (pendingName && !isNaN(pendingQty) && pendingQty > 0) {
+      nameEl!.value = '';
+      qtyEl!.value = '';
+      return currentSizes.map(s => {
+        if (s.size !== activeSizeTab) return s;
+        const nextColors = [...s.colors, { color: pendingName, quantity: pendingQty }];
+        const colorSum = nextColors.reduce((sum, c) => sum + c.quantity, 0);
+        return {
+          ...s,
+          quantity: Math.max(s.quantity, colorSum),
+          colors: nextColors
+        };
+      });
+    }
+    return currentSizes;
+  };
 
   const handleSave = async () => {
-    // 1. Detailed Validation & Friendly Error Messages
+    // Auto-commit any typed color + quantity that the user didn't click "Add" on yet
+    const effectiveSizes = commitPendingColorInput(hierarchicalSizes);
+    if (effectiveSizes !== hierarchicalSizes) {
+      setHierarchicalSizes(effectiveSizes);
+    }
+
     if (!form.name.trim()) {
       toast.error('Please enter a Product Name.', { id: 'val-name' });
       return;
@@ -145,14 +199,53 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
       return;
     }
 
-    const totalAllocated = derivedVariants.reduce((sum, v) => sum + v.stock, 0);
-    if (totalAllocated !== totalStock) {
-      toast.error(`Allocation Mismatch: You have ${totalStock} total items, but allocated ${totalAllocated} to sizes. They must match exactly!`, { id: 'val-alloc', duration: 5000 });
+    // Check color sum vs size sum first
+    for (const s of effectiveSizes) {
+      if (s.colors.length > 0) {
+        const colorSum = s.colors.reduce((sum, c) => sum + c.quantity, 0);
+        if (colorSum !== s.quantity) {
+          toast.error(
+            `Size ${s.size} has ${s.quantity} total units, but its colours add up to ${colorSum}. Please allocate the remaining ${s.quantity - colorSum} units to a colour or adjust the total for ${s.size}.`,
+            { id: 'val-color-alloc', duration: 6000 }
+          );
+          setActiveSizeTab(s.size);
+          return;
+        }
+      }
+    }
+
+    // Build final variants from effectiveSizes
+    const finalVariants: Variant[] = [];
+    effectiveSizes.forEach(s => {
+      if (s.colors.length > 0) {
+        s.colors.forEach(c => {
+          if (c.quantity > 0) {
+            finalVariants.push({
+              size: s.size,
+              color: c.color.trim(),
+              price,
+              stock: c.quantity
+            });
+          }
+        });
+      } else if (s.quantity > 0) {
+        finalVariants.push({
+          size: s.size,
+          color: '',
+          price,
+          stock: s.quantity
+        });
+      }
+    });
+
+    const totalAllocated = finalVariants.reduce((sum, v) => sum + v.stock, 0);
+    if (totalStock > 0 && finalVariants.length === 0) {
+      toast.error('Please select at least one size (or "One Size") below to allocate your inventory.', { id: 'val-size', duration: 5000 });
       return;
     }
 
-    if (derivedVariants.length === 0 && totalStock > 0) {
-      toast.error('Please allocate the stock to at least one size (e.g. click "M" and enter the quantity).', { id: 'val-size', duration: 5000 });
+    if (totalAllocated !== totalStock) {
+      toast.error(`Allocation Mismatch: Total inventory is ${totalStock}, but sizes have ${totalAllocated} allocated. They must match!`, { id: 'val-alloc', duration: 5000 });
       return;
     }
 
@@ -164,7 +257,6 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
     setSaving(true);
 
     try {
-      // 2. Upload Images Concurrently (Massive Speed Boost)
       const uploadPromises = files.map(async (file) => {
         const formData = new FormData();
         formData.append('file', file);
@@ -178,41 +270,41 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
 
       const uploadedUrls = await Promise.all(uploadPromises);
 
-    const payload = {
-      name: form.name,
-      slug: form.slug || generateSlug(form.name),
-      description: form.description || null,
-      category: form.category || null,
-      gender: form.gender,
-      price_usd: parseFloat(form.price_usd),
-      sizes: Array.from(new Set(derivedVariants.map(v => v.size))),
-      stock_quantity: totalStock,
-      images: [...form.images, ...uploadedUrls],
-      is_active: form.is_active,
-      is_featured: form.is_featured,
-      is_trending: form.is_trending,
-      variants: derivedVariants,
-      updated_at: new Date().toISOString(),
-    };
+      const payload = {
+        name: form.name.trim(),
+        slug: (form.slug || generateSlug(form.name)).trim(),
+        description: form.description || null,
+        category: form.category || null,
+        gender: form.gender,
+        price_usd: price,
+        sizes: Array.from(new Set(finalVariants.map(v => v.size))),
+        stock_quantity: totalStock,
+        images: [...form.images, ...uploadedUrls],
+        is_active: form.is_active,
+        is_featured: form.is_featured,
+        is_trending: form.is_trending,
+        variants: finalVariants,
+        updated_at: new Date().toISOString(),
+      };
 
-    const finalPayload = product 
-      ? { ...payload, id: product.id } 
-      : { ...payload, created_at: new Date().toISOString() };
+      const finalPayload = product 
+        ? { ...payload, id: product.id } 
+        : { ...payload, created_at: new Date().toISOString() };
 
-    const res = await fetch('/api/admin/products', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(finalPayload)
-    });
-    
-    const result = await res.json();
-    if (result.error) {
-      toast.error(`Product error: ${result.error}`);
-    } else {
-      toast.success(product ? 'Product updated' : 'Product created');
-      onSaved();
-      onClose();
-    }
+      const res = await fetch('/api/admin/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(finalPayload)
+      });
+      
+      const result = await res.json();
+      if (result.error) {
+        toast.error(`Product error: ${result.error}`);
+      } else {
+        toast.success(product ? 'Product updated' : 'Product created');
+        onSaved();
+        onClose();
+      }
     } catch (error: any) {
       toast.error(error.message || 'An unexpected error occurred.');
     } finally {
@@ -255,7 +347,14 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                     <label className="label-admin">Name *</label>
                     <input
                       value={form.name}
-                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value, slug: generateSlug(e.target.value) }))}
+                      onChange={(e) => {
+                        const nextName = e.target.value;
+                        setForm((f) => ({
+                          ...f,
+                          name: nextName,
+                          slug: slugManuallyEdited ? f.slug : generateSlug(nextName),
+                        }));
+                      }}
                       className="input-admin"
                       placeholder="Product Name"
                     />
@@ -264,7 +363,10 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                     <label className="label-admin">Slug</label>
                     <input
                       value={form.slug}
-                      onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+                      onChange={(e) => {
+                        setSlugManuallyEdited(true);
+                        setForm((f) => ({ ...f, slug: e.target.value }));
+                      }}
                       className="input-admin font-mono text-xs"
                     />
                   </div>
@@ -304,8 +406,14 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                   <div className="sm:col-span-2">
                     <div className="flex items-center justify-between">
                       <label className="label-admin !mb-1">Total Product Inventory *</label>
-                      <span className={`text-[10px] font-black uppercase tracking-widest ${remainingForSizes === 0 ? 'text-green-500' : remainingForSizes < 0 ? 'text-red-500' : 'text-[#C5A021]'}`}>
-                        {remainingForSizes === 0 ? 'Fully Allocated' : remainingForSizes > 0 ? `${remainingForSizes} Remaining` : `${Math.abs(remainingForSizes)} Over-allocated`}
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${remainingForSizes === 0 && !sizeWithColorMismatch ? 'text-green-500' : remainingForSizes < 0 || sizeWithColorMismatch ? 'text-red-500' : 'text-[#C5A021]'}`}>
+                        {sizeWithColorMismatch
+                          ? `Colour mismatch in ${sizeWithColorMismatch.size}`
+                          : remainingForSizes === 0
+                            ? 'Fully Allocated'
+                            : remainingForSizes > 0
+                              ? `${remainingForSizes} Remaining to Allocate`
+                              : `${Math.abs(remainingForSizes)} Over-allocated`}
                       </span>
                     </div>
                     <input
@@ -350,7 +458,22 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                   </div>
 
                   <div className="sm:col-span-2 mt-2 p-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-[10px]">
-                    <h3 className="text-white text-[10px] font-black uppercase tracking-[0.2em] mb-4 text-[#C5A021]">1. Allocate to Sizes</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#C5A021]">1. Allocate to Sizes</h3>
+                      {remainingForSizes > 0 && activeSizeTab && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHierarchicalSizes(hierarchicalSizes.map(s =>
+                              s.size === activeSizeTab ? { ...s, quantity: s.quantity + remainingForSizes } : s
+                            ));
+                          }}
+                          className="text-[10px] font-black uppercase tracking-wider text-[#C5A021] hover:underline"
+                        >
+                          + Assign remaining {remainingForSizes} to {activeSizeTab}
+                        </button>
+                      )}
+                    </div>
                     <div className="flex flex-wrap gap-2 mb-6">
                       {SIZES.map((size) => {
                         const existing = hierarchicalSizes.find(s => s.size === size);
@@ -358,13 +481,16 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                           <button
                             key={size}
                             type="button"
-                            disabled={!form.stock_quantity || (remainingForSizes <= 0 && !existing)}
+                            disabled={!form.stock_quantity}
                             onClick={() => {
                               if (existing) {
-                                setHierarchicalSizes(hierarchicalSizes.filter(s => s.size !== size));
-                                if (activeSizeTab === size) setActiveSizeTab(null);
+                                const next = hierarchicalSizes.filter(s => s.size !== size);
+                                setHierarchicalSizes(next);
+                                if (activeSizeTab === size) setActiveSizeTab(next[0]?.size || null);
                               } else {
-                                setHierarchicalSizes([...hierarchicalSizes, { size, quantity: 0, colors: [] }]);
+                                // Auto-allocate remaining stock if this is the first size clicked!
+                                const autoQty = hierarchicalSizes.length === 0 && remainingForSizes > 0 ? remainingForSizes : 0;
+                                setHierarchicalSizes([...hierarchicalSizes, { size, quantity: autoQty, colors: [] }]);
                                 setActiveSizeTab(size);
                               }
                             }}
@@ -384,12 +510,13 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                           {hierarchicalSizes.map((s) => (
                             <button
                               key={s.size}
+                              type="button"
                               onClick={() => setActiveSizeTab(s.size)}
                               className={`flex-shrink-0 px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-t-[6px] transition-all ${
                                 activeSizeTab === s.size ? 'bg-[#1a1a1a] text-[#C5A021] border-x border-t border-[#1a1a1a]' : 'text-[#444] hover:text-white'
                               }`}
                             >
-                              {s.size}
+                              {s.size} ({s.quantity})
                             </button>
                           ))}
                         </div>
@@ -400,7 +527,7 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                               <label className="label-admin">Total for {activeSizeTab}</label>
                               <input
                                 type="number"
-                                value={hierarchicalSizes.find(s => s.size === activeSizeTab)?.quantity || ''}
+                                value={hierarchicalSizes.find(s => s.size === activeSizeTab)?.quantity ?? ''}
                                 onChange={(e) => {
                                   const val = parseInt(e.target.value) || 0;
                                   setHierarchicalSizes(hierarchicalSizes.map(s => s.size === activeSizeTab ? { ...s, quantity: val } : s));
@@ -412,34 +539,61 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
 
                             <div className="bg-[#111] p-4 rounded-[8px] border border-[#1a1a1a]">
                               <div className="flex items-center justify-between mb-4">
-                                <h4 className="text-white text-[10px] font-black uppercase tracking-widest">2. Allocate {activeSizeTab} Colours</h4>
-                                <span className="text-[9px] font-bold text-[#444] uppercase tracking-widest">
+                                <h4 className="text-white text-[10px] font-black uppercase tracking-widest">2. Allocate {activeSizeTab} Colours (Optional)</h4>
+                                <span className="text-[9px] font-bold text-[#888] uppercase tracking-widest">
                                   {(() => {
                                     const sizeData = hierarchicalSizes.find(s => s.size === activeSizeTab);
-                                    const allocated = sizeData?.colors.reduce((sum, c) => sum + c.quantity, 0) || 0;
-                                    const rem = (sizeData?.quantity || 0) - allocated;
-                                    return rem === 0 ? 'Allocated' : rem > 0 ? `${rem} left` : `${Math.abs(rem)} over`;
+                                    if (!sizeData || sizeData.colors.length === 0) return 'No colours split (uses size total)';
+                                    const allocated = sizeData.colors.reduce((sum, c) => sum + c.quantity, 0);
+                                    const rem = (sizeData.quantity || 0) - allocated;
+                                    return rem === 0 ? 'All colours allocated' : rem > 0 ? `${rem} left for colours` : `${Math.abs(rem)} over`;
                                   })()}
                                 </span>
                               </div>
 
                               <div className="grid grid-cols-3 gap-2 mb-4">
-                                <input id={`color-name-${activeSizeTab}`} placeholder="Color" className="input-admin !py-2 text-xs" />
-                                <input id={`color-qty-${activeSizeTab}`} type="number" placeholder="Qty" className="input-admin !py-2 text-xs" />
-                                <button 
+                                <input id={`color-name-${activeSizeTab}`} placeholder="Colour (e.g. Black)" className="input-admin !py-2 text-xs" />
+                                <input
+                                  id={`color-qty-${activeSizeTab}`}
+                                  type="number"
+                                  placeholder="Qty"
+                                  defaultValue={(() => {
+                                    const sizeData = hierarchicalSizes.find(s => s.size === activeSizeTab);
+                                    const allocated = sizeData?.colors.reduce((sum, c) => sum + c.quantity, 0) || 0;
+                                    const rem = (sizeData?.quantity || 0) - allocated;
+                                    return rem > 0 ? rem : '';
+                                  })()}
+                                  className="input-admin !py-2 text-xs"
+                                />
+                                <button
+                                  type="button"
                                   onClick={() => {
                                     const nameEl = document.getElementById(`color-name-${activeSizeTab}`) as HTMLInputElement;
                                     const qtyEl = document.getElementById(`color-qty-${activeSizeTab}`) as HTMLInputElement;
-                                    if (!nameEl.value || !qtyEl.value) return;
+                                    const colName = nameEl.value.trim();
+                                    const colQty = parseInt(qtyEl.value);
+                                    if (!colName || isNaN(colQty) || colQty <= 0) {
+                                      toast.error('Enter both a colour name and quantity');
+                                      return;
+                                    }
                                     setHierarchicalSizes(hierarchicalSizes.map(s => {
-                                      if (s.size === activeSizeTab) return { ...s, colors: [...s.colors, { color: nameEl.value, quantity: parseInt(qtyEl.value) }] };
+                                      if (s.size === activeSizeTab) {
+                                        const nextColors = [...s.colors, { color: colName, quantity: colQty }];
+                                        const colorSum = nextColors.reduce((sum, c) => sum + c.quantity, 0);
+                                        return {
+                                          ...s,
+                                          quantity: Math.max(s.quantity, colorSum),
+                                          colors: nextColors
+                                        };
+                                      }
                                       return s;
                                     }));
-                                    nameEl.value = ''; qtyEl.value = '';
+                                    nameEl.value = '';
+                                    qtyEl.value = '';
                                   }}
-                                  className="bg-white text-black text-[9px] font-black uppercase rounded-[4px]"
+                                  className="bg-white text-black text-[9px] font-black uppercase rounded-[4px] hover:bg-[#C5A021] transition-colors"
                                 >
-                                  Add
+                                  Add Colour
                                 </button>
                               </div>
 
@@ -449,12 +603,18 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                                     <span className="text-xs font-bold text-white uppercase tracking-widest">{c.color}</span>
                                     <div className="flex items-center gap-3">
                                       <span className="text-[10px] font-black text-[#C5A021]">{c.quantity} QTY</span>
-                                      <button onClick={() => {
-                                        setHierarchicalSizes(hierarchicalSizes.map(s => {
-                                          if (s.size === activeSizeTab) return { ...s, colors: s.colors.filter((_, i) => i !== idx) };
-                                          return s;
-                                        }));
-                                      }} className="text-red-500/40 hover:text-red-500"><X size={12} /></button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setHierarchicalSizes(hierarchicalSizes.map(s => {
+                                            if (s.size === activeSizeTab) return { ...s, colors: s.colors.filter((_, i) => i !== idx) };
+                                            return s;
+                                          }));
+                                        }}
+                                        className="text-red-500/40 hover:text-red-500"
+                                      >
+                                        <X size={12} />
+                                      </button>
                                     </div>
                                   </div>
                                 ))}
@@ -481,7 +641,7 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                       type="file"
                       multiple
                       accept="image/*"
-                      onChange={(e) => e.target.files && setFiles(Array.from(e.target.files))}
+                      onChange={(e) => e.target.files && setFiles(prev => [...prev, ...Array.from(e.target.files!)])}
                       className="input-admin cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-[#C5A021] file:text-black hover:file:bg-[#A6861C]"
                     />
                     <div className="flex gap-2 mt-3 flex-wrap pt-2">
@@ -491,7 +651,7 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                           <button
                             type="button"
                             onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }))}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
+                            className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg z-10"
                           >
                             <X size={12} />
                           </button>
@@ -503,7 +663,7 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
                           <button
                             type="button"
                             onClick={() => setFiles(fs => fs.filter((_, idx) => idx !== i))}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
+                            className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg z-10"
                           >
                             <X size={12} />
                           </button>
@@ -515,15 +675,16 @@ export function ProductModal({ isOpen, product, onClose, onSaved }: ProductModal
               </div>
 
               <div className="px-6 py-4 border-t border-[#1f1f1f] flex items-center justify-between gap-3 flex-shrink-0">
-                <div className="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]">
-                  {derivedVariants.length} Combinations Defined
+                <div className="text-[10px] font-bold text-[#888] uppercase tracking-[0.2em]">
+                  {derivedVariants.length} {derivedVariants.length === 1 ? 'Variant' : 'Variants'} • {totalAllocatedToSizes}/{totalStockNum} Allocated
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={onClose} className="px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#555] hover:text-white rounded-[6px]">Discard</button>
+                  <button type="button" onClick={onClose} className="px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#555] hover:text-white rounded-[6px]">Discard</button>
                   <button
+                    type="button"
                     onClick={handleSave}
-                    disabled={saving || remainingForSizes !== 0}
-                    className="px-8 py-2.5 bg-[#C5A021] text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-[6px] hover:bg-[#A6861C] disabled:opacity-30 transition-all"
+                    disabled={saving}
+                    className="px-8 py-2.5 bg-[#C5A021] text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-[6px] hover:bg-[#A6861C] disabled:opacity-30 transition-all flex items-center"
                   >
                     {saving && <Loader2 size={12} className="animate-spin mr-2" />}
                     {product ? 'Sync Changes' : 'Launch Product'}

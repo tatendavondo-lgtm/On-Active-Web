@@ -118,8 +118,8 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
   }, [liveProduct, hasVariants]);
 
   const selectedVariant = useMemo(() => {
-    if (!hasVariants) return null;
-    return variants.find((v: any) => v && v.size === selectedSize && v.color === selectedColor) || null;
+    if (!hasVariants || !selectedSize) return null;
+    return variants.find((v: any) => v && v.size === selectedSize && (v.color || '') === (selectedColor || '')) || null;
   }, [variants, hasVariants, selectedSize, selectedColor]);
 
   // 3. Status Flags
@@ -261,7 +261,11 @@ export function ProductView({ product, zigRate }: { product: any; zigRate: numbe
                       <button
                         key={size}
                         disabled={totalSizeStock <= 0}
-                        onClick={() => { setSelectedSize(size); setSelectedColor(""); }}
+                        onClick={() => {
+                          setSelectedSize(size);
+                          const sizeColors = Array.from(new Set(variants.filter((v: any) => v?.size === size && (Number(v?.stock) || 0) > 0).map((v: any) => v.color).filter(Boolean))) as string[];
+                          setSelectedColor(sizeColors.length === 1 ? sizeColors[0] : "");
+                        }}
                         className={`group relative h-14 min-w-[64px] px-4 rounded-xl border transition-all disabled:opacity-20 ${
                           selectedSize === size ? "border-[#C5A021] bg-[#C5A021]/10 text-[#C5A021]" : "border-white/10 text-white/70 hover:border-white/30"
                         }`}
